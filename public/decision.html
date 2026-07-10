@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forge - Contraintes</title>
+    <title>Forge - Matrice de décision pondérée</title>
     <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="constraints">
+<body data-page="decision">
     <header class="topbar">
         <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
 
@@ -58,7 +58,7 @@
                 <a class="nav-link" href="objectifs.html">Objectifs</a>
                 <a class="nav-link" href="enjeux.html">Enjeux</a>
                 <a class="nav-link" href="perimetre.html">Périmètre</a>
-                <a class="nav-link active" href="contraintes.html">Contraintes</a>
+                <a class="nav-link" href="contraintes.html">Contraintes</a>
                 <a class="nav-link" href="hypotheses.html">Hypothèses</a>
                 <a class="nav-link" href="succes.html">Critères succès</a>
             </div>
@@ -68,7 +68,7 @@
             <div class="nav-group-links">
                 <a class="nav-link" href="competences.html">Compétences</a>
                 <a class="nav-link" href="swot.html">SWOT</a>
-                <a class="nav-link" href="decision.html">Décision pondérée</a>
+                <a class="nav-link active" href="decision.html">Décision pondérée</a>
             </div>
         </div>
         <div class="nav-group">
@@ -92,40 +92,58 @@
         </div>
     </nav>
 
-    <main class="container redaction-container">
-        <section class="card redaction-card" data-redaction-section="constraints">
-            <div class="card-header">
-                <h2>Contraintes</h2>
-            </div>
-
-            <div class="redaction-intro">
-                <p>Liste les contraintes du projet une par une.</p>
-            </div>
-
-            <div class="table-wrapper redaction-table-wrapper">
-                <table class="redaction-table">
-                    <thead>
-                        <tr>
-                            <th class="select-col">
-                                <input id="select-all-redaction" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
-                            </th>
-                            <th>N°</th>
-                            
-                            <th>Contrainte</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody id="redaction-table-body"></tbody>
-                </table>
-            </div>
-
-            <div class="table-actions">
-                <div class="left-actions">
-                    <button class="btn icon-action-btn icon-add-btn" id="add-redaction-row-btn" type="button" title="Ajouter une contrainte" aria-label="Ajouter une contrainte">+</button>
-                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-redaction-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+    <main class="container decision-container">
+        <section class="decision-layout">
+            <aside class="card decision-criteria-card">
+                <div class="card-header">
+                    <h2>Critères</h2>
                 </div>
-                <button class="btn btn-danger btn-reset" id="reset-redaction-btn" type="button">Réinitialiser contraintes</button>
-            </div>
+
+                <div class="table-wrapper">
+                    <table class="decision-criteria-table">
+                        <colgroup>
+                            <col class="phase-col-number" />
+                            <col class="phase-col-name" />
+                            <col class="decision-col-weight" />
+                            <col class="select-col" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>N°</th>
+                                <th>Critère</th>
+                                <th>Poids %</th>
+                                <th class="select-col"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="decision-criteria-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-actions">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-decision-criterion-btn" type="button" title="Ajouter un critère" aria-label="Ajouter un critère">+</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="reset-decision-btn" type="button">Réinitialiser</button>
+                </div>
+
+                <p class="decision-hint" id="decision-weight-sum">Somme des poids : 0%</p>
+                <p class="decision-hint">Note chaque option de 1 (faible) à 10 (excellent) pour chaque critère. Le score pondéré se calcule tout seul, sur 10.</p>
+            </aside>
+
+            <section class="card decision-options-card">
+                <div class="card-header">
+                    <h2>Options</h2>
+                </div>
+
+                <div class="table-wrapper" id="decision-options-wrapper"></div>
+
+                <div class="table-actions">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-decision-option-btn" type="button" title="Ajouter une option" aria-label="Ajouter une option">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-decision-options-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                    </div>
+                </div>
+            </section>
         </section>
     </main>
 

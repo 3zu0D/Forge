@@ -113,6 +113,9 @@ let raciData = {};
 let ganttPeriods = [];
 let decoupagePhases = [];
 let decoupageSteps = [];
+let decisionCriteria = [];
+let decisionOptions = [];
+let selectedDecisionOptions = new Set();
 let selectedSwotItems = { strengths: new Set(), weaknesses: new Set(), opportunities: new Set(), threats: new Set() };
 
 const currentPage = document.body.dataset.page;
@@ -9084,6 +9087,7 @@ async function bootstrapForgeAsync() {
     if (currentPage === "kpis") initKpisPage();
     if (currentPage === "vmsizing" && typeof initVmSizingPage === "function") initVmSizingPage();
     if (currentPage === "decoupage") initDecoupagePage();
+    if (currentPage === "decision") initDecisionPage();
 
     initCaptureButtons();
     initForgeDbNavigationSync();
@@ -9882,6 +9886,379 @@ if (typeof helpTexts !== "undefined") {
     helpTexts.wbs = `
         ${helpTexts.wbs || ""}
         <p><strong>V78 :</strong> les colonnes "Jour début" et "Jour fin" sont désormais modifiables directement : les changer déplace ou redimensionne la tâche sans toucher aux autres.</p>
+    `;
+}
+
+/* V83 — Matrice de décision pondérée */
+
+function loadDecisionCriteria() {
+    const savedData = localStorage.getItem(getProjectKey("decision_criteria"));
+    if (!savedData) return [];
+
+    try {
+        const parsed = JSON.parse(savedData);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((criterion) => ({
+            id: criterion.id || createId(),
+            name: criterion.name || "",
+            weight: Number.isFinite(Number(criterion.weight)) ? Number(criterion.weight) : 0
+        }));
+    } catch (error) {
+        console.error("Impossible de charger les critères de décision :", error);
+        return [];
+    }
+}
+
+function saveDecisionCriteria() {
+    localStorage.setItem(getProjectKey("decision_criteria"), JSON.stringify(decisionCriteria));
+}
+
+function loadDecisionOptions() {
+    const savedData = localStorage.getItem(getProjectKey("decision_options"));
+    if (!savedData) return [];
+
+    try {
+        const parsed = JSON.parse(savedData);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((option) => ({
+            id: option.id || createId(),
+            name: option.name || "",
+            scores: option.scores && typeof option.scores === "object" ? option.scores : {}
+        }));
+    } catch (error) {
+        console.error("Impossible de charger les options de décision :", error);
+        return [];
+    }
+}
+
+function saveDecisionOptions() {
+    localStorage.setItem(getProjectKey("decision_options"), JSON.stringify(decisionOptions));
+}
+
+function calculateDecisionWeightedScore(option, criteria, totalWeight) {
+    if (!totalWeight) return 0;
+
+    const sum = criteria.reduce((accumulator, criterion) => {
+        const score = parsePositiveInteger(option.scores?.[criterion.id]) || 0;
+        const weight = Number(criterion.weight) || 0;
+        return accumulator + score * weight;
+    }, 0);
+
+    return sum / totalWeight;
+}
+
+function renderDecisionCriteriaTable() {
+    const tbody = document.getElementById("decision-criteria-table-body");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    if (decisionCriteria.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun critère pour le moment.</td></tr>`;
+    } else {
+        decisionCriteria.forEach((criterion, index) => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td class="editable decision-criterion-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(criterion.name)}</td>
+                <td class="decision-weight-cell">
+                    <input class="decision-weight-input" type="number" min="0" max="100" step="1" data-index="${index}" value="${escapeHtml(String(criterion.weight || ""))}" aria-label="Poids du critère ${index + 1}" />
+                </td>
+                <td class="select-col">
+                    <button class="row-delete-btn" type="button" data-remove-decision-criterion="${index}" title="Supprimer le critère" aria-label="Supprimer le critère">&times;</button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        });
+
+        bindDecisionCriteriaEvents();
+    }
+
+    const weightSumEl = document.getElementById("decision-weight-sum");
+    if (weightSumEl) {
+        const totalWeight = decisionCriteria.reduce((sum, criterion) => sum + (Number(criterion.weight) || 0), 0);
+        weightSumEl.textContent = `Somme des poids : ${totalWeight}%`;
+    }
+
+    renderDecisionOptionsTable();
+}
+
+function bindDecisionCriteriaEvents() {
+    const tbody = document.getElementById("decision-criteria-table-body");
+    if (!tbody) return;
+
+    tbody.querySelectorAll(".editable").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const index = Number(event.target.dataset.index);
+            if (!decisionCriteria[index]) return;
+
+            decisionCriteria[index].name = event.target.textContent.trim();
+            saveDecisionCriteria();
+        });
+
+        cell.addEventListener("blur", () => {
+            renderDecisionOptionsTable();
+        });
+    });
+
+    tbody.querySelectorAll(".decision-weight-input").forEach((input) => {
+        input.addEventListener("change", (event) => {
+            const index = Number(event.target.dataset.index);
+            if (!decisionCriteria[index]) return;
+
+            const value = Math.max(0, Math.min(100, Math.round(Number(event.target.value)) || 0));
+            decisionCriteria[index].weight = value;
+            event.target.value = value || "";
+
+            saveDecisionCriteria();
+            renderDecisionCriteriaTable();
+        });
+    });
+
+    tbody.querySelectorAll("[data-remove-decision-criterion]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const index = Number(event.currentTarget.dataset.removeDecisionCriterion);
+            const removed = decisionCriteria[index];
+            if (!removed) return;
+
+            decisionCriteria = decisionCriteria.filter((_, itemIndex) => itemIndex !== index);
+            decisionOptions = decisionOptions.map((option) => {
+                if (!option.scores || !(removed.id in option.scores)) return option;
+                const remainingScores = { ...option.scores };
+                delete remainingScores[removed.id];
+                return { ...option, scores: remainingScores };
+            });
+
+            saveDecisionCriteria();
+            saveDecisionOptions();
+            renderDecisionCriteriaTable();
+        });
+    });
+}
+
+function buildDecisionOptionsTable() {
+    if (decisionCriteria.length === 0) {
+        return `<div class="empty-state">Ajoute au moins un critère à gauche pour commencer à noter des options.</div>`;
+    }
+
+    const criteriaHeaderCells = decisionCriteria.map((criterion) => `
+        <th class="decision-criterion-header">${escapeHtml(criterion.name || "Critère sans nom")}<br><span class="decision-criterion-weight">${escapeHtml(String(criterion.weight || 0))}%</span></th>
+    `).join("");
+
+    if (decisionOptions.length === 0) {
+        return `
+            <table class="decision-options-table">
+                <thead>
+                    <tr>
+                        <th class="select-col"></th>
+                        <th>N°</th>
+                        <th>Option</th>
+                        ${criteriaHeaderCells}
+                        <th class="decision-score-header">Score<br>pondéré /10</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="${4 + decisionCriteria.length}" class="empty-state">Aucune option pour le moment.</td></tr>
+                </tbody>
+            </table>
+        `;
+    }
+
+    const totalWeight = decisionCriteria.reduce((sum, criterion) => sum + (Number(criterion.weight) || 0), 0);
+    const scored = decisionOptions.map((option) => ({
+        option,
+        weightedScore: calculateDecisionWeightedScore(option, decisionCriteria, totalWeight)
+    }));
+    const bestScore = Math.max(...scored.map((item) => item.weightedScore));
+
+    return `
+        <table class="decision-options-table">
+            <thead>
+                <tr>
+                    <th class="select-col">
+                        <input id="select-all-decision-options" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
+                    </th>
+                    <th>N°</th>
+                    <th>Option</th>
+                    ${criteriaHeaderCells}
+                    <th class="decision-score-header">Score<br>pondéré /10</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${scored.map(({ option, weightedScore }, index) => buildDecisionOptionRow(option, index, weightedScore, bestScore)).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+function buildDecisionOptionRow(option, index, weightedScore, bestScore) {
+    const isSelected = selectedDecisionOptions.has(index);
+    const isBest = decisionOptions.length > 1 && weightedScore > 0 && weightedScore === bestScore;
+
+    const scoreCells = decisionCriteria.map((criterion) => `
+        <td class="decision-score-cell">
+            <input class="decision-score-input" type="number" min="1" max="10" step="1" data-index="${index}" data-criterion-id="${escapeHtml(criterion.id)}" value="${escapeHtml(String(option.scores?.[criterion.id] || ""))}" aria-label="Note pour ${escapeHtml(criterion.name || "ce critère")}" />
+        </td>
+    `).join("");
+
+    return `
+        <tr class="${isSelected ? "selected-row" : ""}${isBest ? " decision-best-row" : ""}" title="${isBest ? "Meilleure option" : ""}">
+            <td class="select-col">
+                <input class="row-checkbox decision-option-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner l'option ${index + 1}" ${isSelected ? "checked" : ""} />
+            </td>
+            <td>${index + 1}</td>
+            <td class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(option.name)}</td>
+            ${scoreCells}
+            <td class="decision-weighted-cell">${weightedScore ? weightedScore.toFixed(1) : "—"}</td>
+        </tr>
+    `;
+}
+
+function renderDecisionOptionsTable() {
+    const wrapper = document.getElementById("decision-options-wrapper");
+    if (!wrapper) return;
+
+    wrapper.innerHTML = buildDecisionOptionsTable();
+    bindDecisionOptionsEvents();
+    updateDecisionOptionsSelectionControls();
+}
+
+function bindDecisionOptionsEvents() {
+    const wrapper = document.getElementById("decision-options-wrapper");
+    if (!wrapper) return;
+
+    wrapper.querySelectorAll(".editable").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const index = Number(event.target.dataset.index);
+            if (!decisionOptions[index]) return;
+
+            decisionOptions[index].name = event.target.textContent.trim();
+            saveDecisionOptions();
+        });
+    });
+
+    wrapper.querySelectorAll(".decision-score-input").forEach((input) => {
+        input.addEventListener("change", (event) => {
+            const index = Number(event.target.dataset.index);
+            const criterionId = event.target.dataset.criterionId;
+            if (!decisionOptions[index] || !criterionId) return;
+
+            const value = Math.max(1, Math.min(10, Math.round(Number(event.target.value)) || 0)) || null;
+
+            if (!decisionOptions[index].scores) decisionOptions[index].scores = {};
+
+            if (value) {
+                decisionOptions[index].scores[criterionId] = value;
+            } else {
+                delete decisionOptions[index].scores[criterionId];
+            }
+
+            saveDecisionOptions();
+            renderDecisionOptionsTable();
+        });
+    });
+
+    wrapper.querySelectorAll(".decision-option-checkbox").forEach((checkbox) => {
+        checkbox.addEventListener("change", (event) => {
+            const index = Number(event.target.dataset.index);
+
+            if (event.target.checked) {
+                selectedDecisionOptions.add(index);
+            } else {
+                selectedDecisionOptions.delete(index);
+            }
+
+            updateDecisionOptionsSelectionControls();
+        });
+    });
+
+    document.getElementById("select-all-decision-options")?.addEventListener("change", (event) => {
+        selectedDecisionOptions.clear();
+
+        if (event.target.checked) {
+            decisionOptions.forEach((_, index) => selectedDecisionOptions.add(index));
+        }
+
+        renderDecisionOptionsTable();
+    });
+}
+
+function updateDecisionOptionsSelectionControls() {
+    const deleteButton = document.getElementById("delete-selected-decision-options-btn");
+    if (deleteButton) deleteButton.disabled = selectedDecisionOptions.size === 0;
+}
+
+function addDecisionCriterion() {
+    decisionCriteria.push({ id: createId(), name: "", weight: 10 });
+    saveDecisionCriteria();
+    renderDecisionCriteriaTable();
+
+    document.querySelector("#decision-criteria-table-body tr:last-child .editable")?.focus();
+}
+
+function addDecisionOption() {
+    decisionOptions.push({ id: createId(), name: "", scores: {} });
+    saveDecisionOptions();
+    renderDecisionOptionsTable();
+
+    document.querySelector(`#decision-options-wrapper .decision-option-cell[data-index="${decisionOptions.length - 1}"]`)?.focus();
+}
+
+function initDecisionPage() {
+    const criteriaBody = document.getElementById("decision-criteria-table-body");
+    if (!criteriaBody) return;
+
+    decisionCriteria = loadDecisionCriteria();
+    decisionOptions = loadDecisionOptions();
+    selectedDecisionOptions = new Set();
+
+    renderDecisionCriteriaTable();
+
+    document.getElementById("add-decision-criterion-btn")?.addEventListener("click", addDecisionCriterion);
+
+    document.getElementById("reset-decision-btn")?.addEventListener("click", () => {
+        if (decisionCriteria.length === 0 && decisionOptions.length === 0) return;
+
+        const confirmation = confirm("Tu veux vraiment réinitialiser la matrice de décision (critères ET options) ?");
+        if (!confirmation) return;
+
+        decisionCriteria = [];
+        decisionOptions = [];
+        selectedDecisionOptions.clear();
+        saveDecisionCriteria();
+        saveDecisionOptions();
+        renderDecisionCriteriaTable();
+    });
+
+    document.getElementById("add-decision-option-btn")?.addEventListener("click", addDecisionOption);
+
+    document.getElementById("delete-selected-decision-options-btn")?.addEventListener("click", () => {
+        if (selectedDecisionOptions.size === 0) return;
+
+        const confirmation = confirm("Tu veux vraiment supprimer les options cochées ?");
+        if (!confirmation) return;
+
+        decisionOptions = decisionOptions.filter((_, index) => !selectedDecisionOptions.has(index));
+        selectedDecisionOptions.clear();
+        saveDecisionOptions();
+        renderDecisionOptionsTable();
+    });
+}
+
+if (typeof helpTexts !== "undefined") {
+    helpTexts.decision = `
+        <p>Cette page sert à comparer plusieurs options de façon objective, à partir de critères pondérés.</p>
+        <ul>
+            <li>Le tableau de gauche définit les critères de décision et leur poids (en %). Le poids reflète l’importance relative de chaque critère.</li>
+            <li>Le tableau de droite liste les options à comparer. Note chaque option de 1 (faible) à 10 (excellent) pour chaque critère.</li>
+            <li>Le score pondéré (sur 10) se calcule automatiquement à partir des notes et des poids. L’option avec le meilleur score est surlignée.</li>
+            <li>Supprimer un critère retire automatiquement les notes associées dans toutes les options.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+        </ul>
     `;
 }
 
