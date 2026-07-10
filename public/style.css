@@ -392,6 +392,14 @@ th:nth-child(2) {
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.nav-group-links {
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    box-shadow:
+        0 24px 55px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .color-menu.hidden,
 .modal-overlay.hidden {
     display: none;
@@ -2657,7 +2665,7 @@ th,
 
 .page-nav {
     position: sticky;
-    top: 86px;
+    top: 70px;
     z-index: 45;
     background: linear-gradient(180deg, rgba(7, 10, 18, 0.92), rgba(9, 13, 23, 0.78));
     backdrop-filter: blur(12px);
@@ -3455,6 +3463,14 @@ body[data-theme="light"] .page-nav {
     background: rgba(255, 255, 255, 0.86);
     border-color: rgba(15, 23, 42, 0.12);
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+}
+
+body[data-theme="light"] .nav-group-links {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.98));
+    border-color: rgba(15, 23, 42, 0.12);
+    box-shadow:
+        0 20px 50px rgba(15, 23, 42, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 body[data-theme="light"] .card,
@@ -6569,6 +6585,17 @@ body[data-theme="orange"] .grouped-page-nav {
         inset 0 1px 0 rgba(255, 237, 213, 0.06);
 }
 
+body[data-theme="orange"] .nav-group-links {
+    background:
+        radial-gradient(circle at top left, rgba(249, 115, 22, 0.08), transparent 16rem),
+        linear-gradient(180deg, rgba(43, 26, 13, 0.98), rgba(24, 15, 9, 0.96));
+    border-color: rgba(251, 146, 60, 0.20);
+    box-shadow:
+        0 22px 50px rgba(0, 0, 0, 0.36),
+        0 0 26px rgba(249, 115, 22, 0.05),
+        inset 0 1px 0 rgba(255, 237, 213, 0.06);
+}
+
 body[data-theme="orange"] .card,
 body[data-theme="orange"] .modal,
 body[data-theme="orange"] .color-menu {
@@ -8480,6 +8507,16 @@ body[data-theme="executive"] .topbar {
     border-top: 4px solid #1e3a5f;
 }
 
+body[data-theme="executive"] .nav-group-links {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
+    border-color: rgba(30, 41, 59, 0.13);
+    box-shadow:
+        0 16px 38px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    color: #111827;
+}
+
 body[data-theme="executive"] .card,
 body[data-theme="executive"] .modal,
 body[data-theme="executive"] .color-menu,
@@ -10251,4 +10288,103 @@ body[data-theme="light"] .vmsizing-field span {
 
 body[data-theme="light"] .vmsizing-server-name-cell {
     color: #102033;
+}
+
+/* V82 — Menu de navigation compact avec sous-menus au survol.
+   Seuls les libellés de section restent visibles en permanence ; les liens
+   de chaque section n'apparaissent qu'au survol (ou au focus clavier) du
+   groupe correspondant, dans un petit menu flottant sous le libellé. */
+.structured-page-nav {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    grid-template-columns: none !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding: 7px 16px !important;
+    overflow: visible !important;
+}
+
+.structured-page-nav .nav-group {
+    position: relative;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    display: block;
+    gap: 0;
+}
+
+.structured-page-nav .nav-group-label {
+    display: flex !important;
+    align-items: center !important;
+    width: auto !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    font-size: 0.58rem !important;
+    white-space: nowrap;
+    cursor: default;
+    border: 1px solid rgba(103, 232, 249, 0.13);
+    transition: border-color 0.15s ease, filter 0.15s ease;
+}
+
+.structured-page-nav .nav-group:hover .nav-group-label,
+.structured-page-nav .nav-group:focus-within .nav-group-label,
+.structured-page-nav .nav-group:has(.nav-link.active) .nav-group-label {
+    border-color: rgba(34, 211, 238, 0.55);
+    filter: brightness(1.12);
+}
+
+.structured-page-nav .nav-group-links {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 80;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex-wrap: nowrap !important;
+    gap: 4px;
+    min-width: 190px;
+    padding: 7px;
+    border-radius: 10px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+}
+
+.structured-page-nav .nav-group:hover .nav-group-links,
+.structured-page-nav .nav-group:focus-within .nav-group-links {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.structured-page-nav .nav-group:last-child .nav-group-links {
+    left: auto;
+    right: 0;
+}
+
+.structured-page-nav .nav-link {
+    display: flex !important;
+    align-items: center !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    flex: none !important;
+    width: 100% !important;
+    font-size: 0.67rem !important;
+}
+
+@media (max-width: 780px) {
+    .structured-page-nav .nav-group-links {
+        min-width: 160px;
+    }
 }
