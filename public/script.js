@@ -691,6 +691,10 @@ function bindPhasesTableEvents() {
             savePhases();
             renderWbsTable();
         });
+
+        cell.addEventListener("blur", () => {
+            reconcileWbsDecoupage("wbs");
+        });
     });
 
     phasesTableBody.querySelectorAll(".phase-number-btn").forEach((button) => {
@@ -7651,6 +7655,7 @@ function moveWbsRow(currentIndex, direction) {
     wbsRows[targetIndex] = current;
 
     saveWbsRowsWithSchedule();
+    reconcileWbsDecoupage("wbs");
     renderWbsTable();
 }
 
@@ -7693,6 +7698,10 @@ function initWbsPage() {
     stakeholders = loadStakeholders();
     phases = loadPhases();
     wbsRows = loadWbsRows();
+    decoupagePhases = loadDecoupagePhases();
+    decoupageSteps = loadDecoupageSteps();
+
+    reconcileWbsDecoupage("wbs");
 
     renderColorMenu();
     renderPhasesTable();
@@ -7733,6 +7742,7 @@ function initWbsPage() {
         selectedPhases.clear();
         savePhases();
         saveWbsRowsWithSchedule();
+        reconcileWbsDecoupage("wbs");
         hideColorMenu();
         renderPhasesTable();
         renderWbsTable();
@@ -7757,6 +7767,7 @@ function initWbsPage() {
 
         savePhases();
         saveWbsRowsWithSchedule();
+        reconcileWbsDecoupage("wbs");
         hideColorMenu();
         renderPhasesTable();
         renderWbsTable();
@@ -7785,6 +7796,7 @@ function initWbsPage() {
         wbsRows = wbsRows.filter((_, index) => !selectedWbsRows.has(index));
         selectedWbsRows.clear();
         saveWbsRowsWithSchedule();
+        reconcileWbsDecoupage("wbs");
         renderWbsTable();
     });
 
@@ -7795,6 +7807,7 @@ function initWbsPage() {
         wbsRows = createDefaultWbsRowsForReset();
         selectedWbsRows.clear();
         saveWbsRowsWithSchedule();
+        reconcileWbsDecoupage("wbs");
         renderWbsTable();
     });
 
@@ -7982,6 +7995,8 @@ function bindWbsTableEvents() {
 
             if (field === "duree") {
                 applyWbsDurationEdit(index, event.target.textContent.trim());
+            } else if (field === "task") {
+                reconcileWbsDecoupage("wbs");
             }
         });
     });
@@ -9302,14 +9317,16 @@ function isDateInGanttTaskWithSettings(day, task, wbsSettings = loadWbsSettings(
     return current >= task.start && current <= task.end;
 }
 
-/* V80 — Découpage : phases/étapes simplifiées, synchronisées automatiquement vers le WBS */
+/* V80 — Découpage : phases/étapes simplifiées, synchronisées avec le WBS */
+/* V81 — Synchro bidirectionnelle WBS <-> Découpage (voir reconcileWbsDecoupage) */
 
 // Le Découpage ne stocke jamais rien directement dans "phases" / "wbsRows" :
 // il a ses propres tableaux (decoupagePhases / decoupageSteps), et
-// syncDecoupageToWbs() se contente d'y faire correspondre des entrées dans
-// le WBS réel via un id partagé. Comme decoupagePhases/decoupageSteps sont
-// vides tant qu'on n'a rien créé sur la page Découpage, la synchro ne touche
-// jamais un WBS existant qui n'a pas été construit depuis cette page.
+// reconcileWbsDecoupage() se contente d'y faire correspondre des entrées
+// dans le WBS réel (et vice versa) via un id partagé. Un id qui n'a jamais
+// été vu des deux côtés est traité comme une création à propager ; un id
+// qui avait déjà été réconcilié mais a disparu d'un côté est traité comme
+// une suppression à répercuter de l'autre côté (voir decoupage_synced).
 function loadDecoupagePhases() {
     const savedData = localStorage.getItem(getProjectKey("decoupage_phases"));
     if (!savedData) return [];
@@ -9392,46 +9409,115 @@ function createNewWbsRowFromDecoupage(step) {
     };
 }
 
-// Synchro à sens unique Découpage -> WBS. On ne touche jamais une phase ou
-// une ligne WBS qui n'a pas été créée depuis le Découpage : on ne supprime
-// que ce que la synchro précédente avait elle-même créé (via decoupage_synced).
-function syncDecoupageToWbs() {
+// Réconciliation bidirectionnelle WBS <-> Découpage. On compare l'état
+// courant des deux côtés à decoupage_synced (le dernier état connu sur les
+// deux côtés à la fin de la précédente réconciliation) pour distinguer,
+// pour chaque id présent d'un seul côté :
+//  - "nouveau" (jamais synchronisé) -> on le crée de l'autre côté
+//  - "disparu" (il était synchronisé) -> il a été supprimé de l'autre côté -> on le supprime ici aussi
+// Pour un id présent des deux côtés, `authoritative` dit quel côté vient de
+// changer et doit donc écraser le nom/la phase de l'autre. C'est le même
+// principe que la synchro à sens unique d'origine, juste appliqué dans les
+// deux sens avec le même filet de sécurité (rien n'est jamais touché tant
+// que ce n'est pas déjà passé par une réconciliation au moins une fois).
+function reconcileWbsDecoupage(authoritative) {
     const previousSynced = loadDecoupageSynced();
-    const currentPhaseIds = decoupagePhases.map((phase) => phase.id);
-    const currentStepIds = decoupageSteps.map((step) => step.id);
-    const currentPhaseIdSet = new Set(currentPhaseIds);
-    const currentStepIdSet = new Set(currentStepIds);
+    const prevPhaseIds = new Set(previousSynced.phaseIds);
+    const prevStepIds = new Set(previousSynced.stepIds);
 
-    phases = phases.filter((phase) => !(previousSynced.phaseIds.includes(phase.id) && !currentPhaseIdSet.has(phase.id)));
+    const wbsPhaseIds = new Set(phases.map((phase) => phase.id));
+    const decoupagePhaseIds = new Set(decoupagePhases.map((phase) => phase.id));
+    const allPhaseIds = new Set([...wbsPhaseIds, ...decoupagePhaseIds, ...prevPhaseIds]);
+    const nextPhaseIds = new Set();
 
-    decoupagePhases.forEach((dPhase) => {
-        const existing = phases.find((phase) => phase.id === dPhase.id);
-        if (existing) {
-            existing.name = dPhase.name;
-        } else {
-            phases.push({
-                id: dPhase.id,
-                name: dPhase.name,
-                color: predefinedColors[phases.length % predefinedColors.length]
-            });
+    allPhaseIds.forEach((id) => {
+        const inWbs = wbsPhaseIds.has(id);
+        const inDecoupage = decoupagePhaseIds.has(id);
+        const wasSynced = prevPhaseIds.has(id);
+
+        if (inWbs && inDecoupage) {
+            const wbsPhase = phases.find((phase) => phase.id === id);
+            const dPhase = decoupagePhases.find((phase) => phase.id === id);
+
+            if (authoritative === "wbs") {
+                dPhase.name = wbsPhase.name;
+            } else {
+                wbsPhase.name = dPhase.name;
+            }
+
+            nextPhaseIds.add(id);
+        } else if (inWbs && !inDecoupage) {
+            if (wasSynced) {
+                phases = phases.filter((phase) => phase.id !== id);
+                wbsRows = wbsRows.map((row) => (row.phaseId === id ? { ...row, phaseId: "" } : row));
+            } else {
+                const wbsPhase = phases.find((phase) => phase.id === id);
+                decoupagePhases.push({ id, name: wbsPhase.name });
+                nextPhaseIds.add(id);
+            }
+        } else if (!inWbs && inDecoupage) {
+            if (wasSynced) {
+                decoupagePhases = decoupagePhases.filter((phase) => phase.id !== id);
+                decoupageSteps = decoupageSteps.map((step) => (step.phaseId === id ? { ...step, phaseId: "" } : step));
+            } else {
+                const dPhase = decoupagePhases.find((phase) => phase.id === id);
+                phases.push({
+                    id,
+                    name: dPhase.name,
+                    color: predefinedColors[phases.length % predefinedColors.length]
+                });
+                nextPhaseIds.add(id);
+            }
         }
     });
 
-    wbsRows = wbsRows.filter((row) => !(previousSynced.stepIds.includes(row.id) && !currentStepIdSet.has(row.id)));
+    const wbsRowIds = new Set(wbsRows.map((row) => row.id));
+    const decoupageStepIds = new Set(decoupageSteps.map((step) => step.id));
+    const allStepIds = new Set([...wbsRowIds, ...decoupageStepIds, ...prevStepIds]);
+    const nextStepIds = new Set();
 
-    decoupageSteps.forEach((step) => {
-        const existing = wbsRows.find((row) => row.id === step.id);
-        if (existing) {
-            existing.task = step.label;
-            existing.phaseId = step.phaseId;
-        } else {
-            wbsRows.push(createNewWbsRowFromDecoupage(step));
+    allStepIds.forEach((id) => {
+        const inWbs = wbsRowIds.has(id);
+        const inDecoupage = decoupageStepIds.has(id);
+        const wasSynced = prevStepIds.has(id);
+
+        if (inWbs && inDecoupage) {
+            const wbsRow = wbsRows.find((row) => row.id === id);
+            const step = decoupageSteps.find((item) => item.id === id);
+
+            if (authoritative === "wbs") {
+                step.label = wbsRow.task;
+                step.phaseId = wbsRow.phaseId;
+            } else {
+                wbsRow.task = step.label;
+                wbsRow.phaseId = step.phaseId;
+            }
+
+            nextStepIds.add(id);
+        } else if (inWbs && !inDecoupage) {
+            if (wasSynced) {
+                wbsRows = wbsRows.filter((row) => row.id !== id);
+            } else {
+                const wbsRow = wbsRows.find((row) => row.id === id);
+                decoupageSteps.push({ id, phaseId: wbsRow.phaseId, label: wbsRow.task });
+                nextStepIds.add(id);
+            }
+        } else if (!inWbs && inDecoupage) {
+            if (wasSynced) {
+                decoupageSteps = decoupageSteps.filter((step) => step.id !== id);
+            } else {
+                const step = decoupageSteps.find((item) => item.id === id);
+                wbsRows.push(createNewWbsRowFromDecoupage(step));
+                nextStepIds.add(id);
+            }
         }
     });
 
     savePhases();
     saveWbsRowsWithSchedule();
-    saveDecoupageSynced({ phaseIds: currentPhaseIds, stepIds: currentStepIds });
+    saveDecoupagePhases();
+    saveDecoupageSteps();
+    saveDecoupageSynced({ phaseIds: [...nextPhaseIds], stepIds: [...nextStepIds] });
 }
 
 function groupDecoupageStepsForEditor() {
@@ -9523,7 +9609,7 @@ function bindDecoupagePhasesEvents() {
             const index = Number(event.target.dataset.index);
             const phase = decoupagePhases[index];
 
-            syncDecoupageToWbs();
+            reconcileWbsDecoupage("decoupage");
 
             // Mise à jour ciblée du titre dans le tableau des étapes plutôt
             // qu'un re-rendu complet : reconstruire le tbody ici pourrait
@@ -9552,7 +9638,7 @@ function bindDecoupagePhasesEvents() {
             saveDecoupageSteps();
             renderDecoupagePhasesTable();
             renderDecoupageStepsTable();
-            syncDecoupageToWbs();
+            reconcileWbsDecoupage("decoupage");
         });
     });
 }
@@ -9563,7 +9649,6 @@ function addDecoupageStepToPhase(phaseId) {
     regroupDecoupageStepsByPhase();
     saveDecoupageSteps();
     renderDecoupageStepsTable();
-    syncDecoupageToWbs();
 
     document.querySelector(`#decoupage-steps-table tr[data-step-id="${newStep.id}"] .decoupage-step-cell`)?.focus();
 }
@@ -9586,7 +9671,7 @@ function moveDecoupageStep(currentIndex, direction) {
 
     saveDecoupageSteps();
     renderDecoupageStepsTable();
-    syncDecoupageToWbs();
+    reconcileWbsDecoupage("decoupage");
 }
 
 function renderDecoupageStepsTable() {
@@ -9686,7 +9771,7 @@ function bindDecoupageStepsEvents() {
         });
 
         cell.addEventListener("blur", () => {
-            syncDecoupageToWbs();
+            reconcileWbsDecoupage("decoupage");
         });
     });
 
@@ -9719,7 +9804,7 @@ function bindDecoupageStepsEvents() {
 
             saveDecoupageSteps();
             renderDecoupageStepsTable();
-            syncDecoupageToWbs();
+            reconcileWbsDecoupage("decoupage");
         });
     });
 }
@@ -9735,14 +9820,13 @@ function initDecoupagePage() {
 
     renderDecoupagePhasesTable();
     renderDecoupageStepsTable();
-    syncDecoupageToWbs();
+    reconcileWbsDecoupage("decoupage");
 
     document.getElementById("add-decoupage-phase-btn")?.addEventListener("click", () => {
         const newPhase = { id: createId(), name: "" };
         decoupagePhases.push(newPhase);
         saveDecoupagePhases();
         renderDecoupagePhasesTable();
-        syncDecoupageToWbs();
         renderDecoupageStepsTable();
 
         document.querySelector("#decoupage-phases-table tr:last-child .editable")?.focus();
@@ -9760,7 +9844,7 @@ function initDecoupagePage() {
         saveDecoupageSteps();
         renderDecoupagePhasesTable();
         renderDecoupageStepsTable();
-        syncDecoupageToWbs();
+        reconcileWbsDecoupage("decoupage");
     });
 }
 
@@ -9771,8 +9855,8 @@ if (typeof helpTexts !== "undefined") {
             <li>Le tableau de gauche gère les phases (juste un nom).</li>
             <li>Le tableau de droite gère les étapes, regroupées par phase.</li>
             <li>Utilise les flèches ▲▼ pour réordonner une étape, y compris en la faisant changer de phase.</li>
-            <li>Chaque phase et étape créée ici est automatiquement envoyée dans le WBS, où tu pourras ensuite ajouter responsable, dates et avancement.</li>
-            <li>Renommer ou supprimer une phase/étape ici met à jour ou retire la ligne correspondante dans le WBS. Les lignes WBS que tu as créées directement dans le WBS ne sont jamais touchées par cette synchro.</li>
+            <li>La synchro avec le WBS est désormais bidirectionnelle : chaque phase/étape créée, renommée, déplacée ou supprimée ici se répercute dans le WBS (et inversement, tes phases et tâches WBS existantes apparaissent automatiquement ici).</li>
+            <li>Renommer ou supprimer une phase/étape d'un côté met à jour ou retire l'élément correspondant de l'autre côté. Les champs propres au WBS (responsable, dates, avancement) ne sont jamais écrasés par cette synchro.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
         </ul>
     `;
