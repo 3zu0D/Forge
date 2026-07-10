@@ -146,7 +146,6 @@ const newProjectButton = document.getElementById("new-project-btn");
 const exportDataButton = document.getElementById("export-data-btn");
 const importDataButton = document.getElementById("import-data-btn");
 const importDataInput = document.getElementById("import-data-input");
-const exportExcelButton = document.getElementById("export-excel-btn");
 
 const swotAddButtons = document.querySelectorAll(".swot-add-btn");
 const swotDeleteButtons = document.querySelectorAll(".swot-delete-btn");
@@ -367,10 +366,6 @@ function initPortableDataControls() {
 
     exportDataButton.addEventListener("click", exportForgeData);
 
-    if (exportExcelButton) {
-        exportExcelButton.addEventListener("click", exportActiveProjectToExcel);
-    }
-
     importDataButton.addEventListener("click", () => {
         importDataInput.click();
     });
@@ -382,51 +377,6 @@ function initPortableDataControls() {
 
 
 
-function buildRaciRowsForExcel(exportStakeholders, exportPhases, exportWbsRows, exportRaci) {
-    const rows = [
-        ["Phase", "N°", "Tâche / Livrable", ...exportStakeholders.map(getStakeholderLabel)]
-    ];
-
-    const groups = [];
-    const groupMap = new Map();
-
-    exportWbsRows.forEach((row, originalIndex) => {
-        const phaseId = row.phaseId || "__no_phase__";
-
-        if (!groupMap.has(phaseId)) {
-            const phase = exportPhases.find((item) => item.id === row.phaseId) || null;
-            const group = {
-                phase,
-                rows: []
-            };
-
-            groupMap.set(phaseId, group);
-            groups.push(group);
-        }
-
-        groupMap.get(phaseId).rows.push({ row, originalIndex });
-    });
-
-    groups.forEach((group) => {
-        const phaseName = group.phase ? group.phase.name || "Phase sans nom" : "Sans phase";
-        rows.push([`PHASE : ${phaseName}`, "", "", ...exportStakeholders.map(() => "")]);
-
-        group.rows.forEach(({ row, originalIndex }) => {
-            rows.push([
-                phaseName,
-                originalIndex + 1,
-                row.task || "Tâche / livrable sans nom",
-                ...exportStakeholders.map((person) => {
-                    const rowId = getWbsRowId(row, originalIndex);
-                    const stakeholderId = getStakeholderId(person);
-                    return exportRaci[rowId]?.[stakeholderId] || "";
-                })
-            ]);
-        });
-    });
-
-    return rows;
-}
 
 function buildRaciWidths(exportStakeholders) {
     return [
@@ -437,139 +387,10 @@ function buildRaciWidths(exportStakeholders) {
     ];
 }
 
-function buildExcelWorkbookXml(sheets) {
-    const worksheets = sheets.map((sheet) => {
-        const columnsXml = sheet.widths.map((width) => `<Column ss:Width="${width}"/>`).join("");
-        const rowsXml = sheet.rows.map((row, rowIndex) => {
-            const isHeader = rowIndex === 0;
-            const isPhaseRow = sheet.name === "RACI" && String(row[0] || "").startsWith("PHASE :");
 
-            const cellsXml = row.map((value, cellIndex) => {
-                let styleId = "";
 
-                if (isHeader) {
-                    styleId = "Header";
-                } else if (isPhaseRow) {
-                    styleId = "Phase";
-                } else if (sheet.name === "RACI" && cellIndex >= 3) {
-                    styleId = getRaciExcelStyle(value);
-                } else {
-                    styleId = "Body";
-                }
 
-                return excelCell(value, styleId);
-            }).join("");
 
-            return `<Row>${cellsXml}</Row>`;
-        }).join("");
-
-        return `
-            <Worksheet ss:Name="${excelEscape(sheet.name)}">
-                <Table>
-                    ${columnsXml}
-                    ${rowsXml}
-                </Table>
-                <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
-                    <FreezePanes/>
-                    <FrozenNoSplit/>
-                    <SplitHorizontal>1</SplitHorizontal>
-                    <TopRowBottomPane>1</TopRowBottomPane>
-                    <ActivePane>2</ActivePane>
-                </WorksheetOptions>
-            </Worksheet>
-        `;
-    }).join("");
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook
-    xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-    xmlns:o="urn:schemas-microsoft-com:office:office"
-    xmlns:x="urn:schemas-microsoft-com:office:excel"
-    xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-    xmlns:html="http://www.w3.org/TR/REC-html40">
-    <Styles>
-        <Style ss:ID="Body">
-            <Alignment ss:Vertical="Center" ss:WrapText="1"/>
-            <Borders>
-                <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D9E2F3"/>
-                <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D9E2F3"/>
-                <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D9E2F3"/>
-                <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D9E2F3"/>
-            </Borders>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Color="#111827"/>
-        </Style>
-        <Style ss:ID="Header">
-            <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
-            <Borders>
-                <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1F2937"/>
-                <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1F2937"/>
-                <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1F2937"/>
-                <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1F2937"/>
-            </Borders>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
-            <Interior ss:Color="#0F172A" ss:Pattern="Solid"/>
-        </Style>
-        <Style ss:ID="Phase">
-            <Alignment ss:Vertical="Center" ss:WrapText="0"/>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
-            <Interior ss:Color="#334155" ss:Pattern="Solid"/>
-        </Style>
-        <Style ss:ID="RaciR">
-            <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#14532D"/>
-            <Interior ss:Color="#BBF7D0" ss:Pattern="Solid"/>
-        </Style>
-        <Style ss:ID="RaciA">
-            <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#7C2D12"/>
-            <Interior ss:Color="#FED7AA" ss:Pattern="Solid"/>
-        </Style>
-        <Style ss:ID="RaciC">
-            <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#164E63"/>
-            <Interior ss:Color="#BAE6FD" ss:Pattern="Solid"/>
-        </Style>
-        <Style ss:ID="RaciI">
-            <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-            <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#581C87"/>
-            <Interior ss:Color="#E9D5FF" ss:Pattern="Solid"/>
-        </Style>
-    </Styles>
-    ${worksheets}
-</Workbook>`;
-}
-
-function excelCell(value, styleId = "Body") {
-    const dataType = typeof value === "number" ? "Number" : "String";
-    return `<Cell ss:StyleID="${styleId}"><Data ss:Type="${dataType}">${excelEscape(value)}</Data></Cell>`;
-}
-
-function getRaciExcelStyle(value) {
-    if (value === "R") return "RaciR";
-    if (value === "A") return "RaciA";
-    if (value === "C") return "RaciC";
-    if (value === "I") return "RaciI";
-    return "Body";
-}
-
-function excelEscape(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&apos;");
-}
-
-function slugifyFileName(value) {
-    return String(value)
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .toLowerCase() || "projet";
-}
 
 
 function readJsonFromStorage(key, fallbackValue) {
@@ -1309,378 +1130,24 @@ function clampNumber(value, min, max) {
    Cette fonction redéfinit l'ancien export .xls compatible en vrai .xlsx Office Open XML.
 */
 
-function buildRaciRowsForXlsx(exportStakeholders, exportPhases, exportWbsRows, exportRaci) {
-    const rows = [
-        ["Phase", "N°", "Tâche / Livrable", ...exportStakeholders.map(getStakeholderLabel)]
-    ];
 
-    const groups = [];
-    const groupMap = new Map();
 
-    exportWbsRows.forEach((row, originalIndex) => {
-        const phaseId = row.phaseId || "__no_phase__";
 
-        if (!groupMap.has(phaseId)) {
-            const phase = exportPhases.find((item) => item.id === row.phaseId) || null;
-            const group = {
-                phase,
-                rows: []
-            };
 
-            groupMap.set(phaseId, group);
-            groups.push(group);
-        }
 
-        groupMap.get(phaseId).rows.push({ row, originalIndex });
-    });
 
-    groups.forEach((group) => {
-        const phaseName = group.phase ? group.phase.name || "Phase sans nom" : "Sans phase";
-        rows.push([`PHASE : ${phaseName}`, "", "", ...exportStakeholders.map(() => "")]);
 
-        group.rows.forEach(({ row, originalIndex }) => {
-            rows.push([
-                phaseName,
-                originalIndex + 1,
-                row.task || "Tâche / livrable sans nom",
-                ...exportStakeholders.map((person) => {
-                    const rowId = getWbsRowId(row, originalIndex);
-                    const stakeholderId = getStakeholderId(person);
-                    return exportRaci[rowId]?.[stakeholderId] || "";
-                })
-            ]);
-        });
-    });
 
-    return rows;
-}
 
-function buildRaciXlsxWidths(exportStakeholders) {
-    return [
-        22,
-        8,
-        44,
-        ...exportStakeholders.map(() => 10)
-    ];
-}
 
-function getRaciPhaseRowIndexesForXlsx(rows) {
-    return rows
-        .map((row, index) => String(row[0] || "").startsWith("PHASE :") ? index + 1 : null)
-        .filter(Boolean);
-}
 
-function buildForgeXlsxWorkbook(sheets) {
-    const files = [];
-    const sheetRels = sheets.map((sheet, index) => ({
-        id: `rId${index + 1}`,
-        target: `worksheets/sheet${index + 1}.xml`,
-        name: sheet.name
-    }));
 
-    files.push({ name: "[Content_Types].xml", content: buildXlsxContentTypesXml(sheets.length) });
-    files.push({ name: "_rels/.rels", content: buildXlsxRootRelationshipsXml() });
-    files.push({ name: "docProps/app.xml", content: buildXlsxAppXml(sheets) });
-    files.push({ name: "docProps/core.xml", content: buildXlsxCoreXml() });
-    files.push({ name: "xl/workbook.xml", content: buildXlsxWorkbookXml(sheetRels) });
-    files.push({ name: "xl/_rels/workbook.xml.rels", content: buildXlsxWorkbookRelationshipsXml(sheetRels) });
-    files.push({ name: "xl/styles.xml", content: buildXlsxStylesXml() });
 
-    sheets.forEach((sheet, index) => {
-        files.push({
-            name: `xl/worksheets/sheet${index + 1}.xml`,
-            content: buildXlsxWorksheetXml(sheet)
-        });
-    });
 
-    const zipBytes = createForgeZipFile(files);
 
-    return new Blob([zipBytes], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    });
-}
 
-function buildXlsxContentTypesXml(sheetCount) {
-    const sheetOverrides = Array.from({ length: sheetCount }, (_, index) => `
-        <Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`
-    ).join("");
 
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-    <Default Extension="xml" ContentType="application/xml"/>
-    <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-    <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-    <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-    <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
-    ${sheetOverrides}
-</Types>`;
-}
 
-function buildXlsxRootRelationshipsXml() {
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
-    <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
-</Relationships>`;
-}
-
-function buildXlsxAppXml(sheets) {
-    const sheetNames = sheets.map((sheet) => `<vt:lpstr>${xmlEscapeXlsx(sheet.name)}</vt:lpstr>`).join("");
-
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
-    xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-    <Application>Forge</Application>
-    <DocSecurity>0</DocSecurity>
-    <ScaleCrop>false</ScaleCrop>
-    <HeadingPairs>
-        <vt:vector size="2" baseType="variant">
-            <vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant>
-            <vt:variant><vt:i4>${sheets.length}</vt:i4></vt:variant>
-        </vt:vector>
-    </HeadingPairs>
-    <TitlesOfParts>
-        <vt:vector size="${sheets.length}" baseType="lpstr">
-            ${sheetNames}
-        </vt:vector>
-    </TitlesOfParts>
-    <Company>Forge</Company>
-    <LinksUpToDate>false</LinksUpToDate>
-    <SharedDoc>false</SharedDoc>
-    <HyperlinksChanged>false</HyperlinksChanged>
-    <AppVersion>1.0</AppVersion>
-</Properties>`;
-}
-
-function buildXlsxCoreXml() {
-    const now = new Date().toISOString();
-
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<cp:coreProperties
-    xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
-    xmlns:dc="http://purl.org/dc/elements/1.1/"
-    xmlns:dcterms="http://purl.org/dc/terms/"
-    xmlns:dcmitype="http://purl.org/dc/dcmitype/"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <dc:creator>Forge</dc:creator>
-    <cp:lastModifiedBy>Forge</cp:lastModifiedBy>
-    <dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created>
-    <dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified>
-</cp:coreProperties>`;
-}
-
-function buildXlsxWorkbookXml(sheetRels) {
-    const sheetsXml = sheetRels.map((sheet, index) => `
-        <sheet name="${xmlEscapeXlsx(limitXlsxSheetName(sheet.name))}" sheetId="${index + 1}" r:id="${sheet.id}"/>`
-    ).join("");
-
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook
-    xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-    xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-    <workbookPr date1904="false"/>
-    <bookViews>
-        <workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="14000"/>
-    </bookViews>
-    <sheets>
-        ${sheetsXml}
-    </sheets>
-    <calcPr calcId="0"/>
-</workbook>`;
-}
-
-function buildXlsxWorkbookRelationshipsXml(sheetRels) {
-    const sheetRelationships = sheetRels.map((sheet) => `
-        <Relationship Id="${sheet.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="${sheet.target}"/>`
-    ).join("");
-
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    ${sheetRelationships}
-    <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
-}
-
-function buildXlsxStylesXml() {
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-    <fonts count="3">
-        <font><sz val="11"/><color rgb="FF111827"/><name val="Calibri"/></font>
-        <font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
-        <font><b/><sz val="11"/><color rgb="FF111827"/><name val="Calibri"/></font>
-    </fonts>
-    <fills count="8">
-        <fill><patternFill patternType="none"/></fill>
-        <fill><patternFill patternType="gray125"/></fill>
-        <fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/><bgColor indexed="64"/></patternFill></fill>
-        <fill><patternFill patternType="solid"><fgColor rgb="FF334155"/><bgColor indexed="64"/></patternFill></fill>
-        <fill><patternFill patternType="solid"><fgColor rgb="FFBBF7D0"/><bgColor indexed="64"/></patternFill></fill>
-        <fill><patternFill patternType="solid"><fgColor rgb="FFFED7AA"/><bgColor indexed="64"/></patternFill></fill>
-        <fill><patternFill patternType="solid"><fgColor rgb="FFBAE6FD"/><bgColor indexed="64"/></patternFill></fill>
-        <fill><patternFill patternType="solid"><fgColor rgb="FFE9D5FF"/><bgColor indexed="64"/></patternFill></fill>
-    </fills>
-    <borders count="2">
-        <border><left/><right/><top/><bottom/><diagonal/></border>
-        <border>
-            <left style="thin"><color rgb="FFD9E2F3"/></left>
-            <right style="thin"><color rgb="FFD9E2F3"/></right>
-            <top style="thin"><color rgb="FFD9E2F3"/></top>
-            <bottom style="thin"><color rgb="FFD9E2F3"/></bottom>
-            <diagonal/>
-        </border>
-    </borders>
-    <cellStyleXfs count="1">
-        <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
-    </cellStyleXfs>
-    <cellXfs count="8">
-        <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
-        <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-        <xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="0"/></xf>
-        <xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
-        <xf numFmtId="0" fontId="2" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
-        <xf numFmtId="0" fontId="2" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
-        <xf numFmtId="0" fontId="2" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
-        <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
-    </cellXfs>
-    <cellStyles count="1">
-        <cellStyle name="Normal" xfId="0" builtinId="0"/>
-    </cellStyles>
-    <dxfs count="0"/>
-    <tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
-</styleSheet>`;
-}
-
-function buildXlsxWorksheetXml(sheet) {
-    const maxColumns = Math.max(...sheet.rows.map((row) => row.length), 1);
-    const sheetRef = `A1:${getXlsxColumnLetter(maxColumns)}${Math.max(sheet.rows.length, 1)}`;
-    const columnsXml = buildXlsxColumnsXml(sheet.widths, maxColumns);
-    const rowsXml = sheet.rows.map((row, rowIndex) => buildXlsxRowXml(row, rowIndex + 1, sheet)).join("");
-    const freezeXml = sheet.freezeHeader ? `
-        <sheetViews>
-            <sheetView workbookViewId="0">
-                <pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>
-                <selection pane="bottomLeft"/>
-            </sheetView>
-        </sheetViews>` : `<sheetViews><sheetView workbookViewId="0"/></sheetViews>`;
-    const autoFilterXml = sheet.autoFilter && sheet.rows.length > 1 ? `<autoFilter ref="${sheetRef}"/>` : "";
-    const mergeCellsXml = buildXlsxMergeCellsXml(sheet, maxColumns);
-
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet
-    xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-    xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-    ${freezeXml}
-    <sheetFormatPr defaultRowHeight="18"/>
-    ${columnsXml}
-    <sheetData>
-        ${rowsXml}
-    </sheetData>
-    ${autoFilterXml}
-    ${mergeCellsXml}
-    <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>
-</worksheet>`;
-}
-
-function buildXlsxColumnsXml(widths, maxColumns) {
-    const columns = [];
-
-    for (let index = 0; index < maxColumns; index++) {
-        const width = widths[index] || 14;
-        const colNumber = index + 1;
-        columns.push(`<col min="${colNumber}" max="${colNumber}" width="${width}" customWidth="1"/>`);
-    }
-
-    return `<cols>${columns.join("")}</cols>`;
-}
-
-function buildXlsxRowXml(row, rowNumber, sheet) {
-    const isHeader = rowNumber === 1;
-    const isPhaseRow = Array.isArray(sheet.phaseRows) && sheet.phaseRows.includes(rowNumber);
-
-    const cells = row.map((value, columnIndex) => {
-        const cellRef = `${getXlsxColumnLetter(columnIndex + 1)}${rowNumber}`;
-        const styleId = getXlsxStyleId(value, columnIndex + 1, isHeader, isPhaseRow, sheet);
-        return buildXlsxCell(cellRef, value, styleId);
-    }).join("");
-
-    return `<row r="${rowNumber}">${cells}</row>`;
-}
-
-function buildXlsxMergeCellsXml(sheet, maxColumns) {
-    if (!Array.isArray(sheet.phaseRows) || sheet.phaseRows.length === 0) {
-        return "";
-    }
-
-    const merges = sheet.phaseRows.map((rowNumber) => {
-        return `<mergeCell ref="A${rowNumber}:${getXlsxColumnLetter(maxColumns)}${rowNumber}"/>`;
-    }).join("");
-
-    return `<mergeCells count="${sheet.phaseRows.length}">${merges}</mergeCells>`;
-}
-
-function getXlsxStyleId(value, columnNumber, isHeader, isPhaseRow, sheet) {
-    if (isHeader) return 1;
-    if (isPhaseRow) return 2;
-
-    if (sheet.name === "RACI" && columnNumber >= (sheet.raciStartColumn || 4)) {
-        if (value === "R") return 3;
-        if (value === "A") return 4;
-        if (value === "C") return 5;
-        if (value === "I") return 6;
-        return 7;
-    }
-
-    return 0;
-}
-
-function buildXlsxCell(cellRef, value, styleId = 0) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-        return `<c r="${cellRef}" s="${styleId}"><v>${value}</v></c>`;
-    }
-
-    return `<c r="${cellRef}" t="inlineStr" s="${styleId}"><is><t>${xmlEscapeXlsx(value)}</t></is></c>`;
-}
-
-function getXlsxColumnLetter(columnNumber) {
-    let dividend = columnNumber;
-    let columnName = "";
-
-    while (dividend > 0) {
-        const modulo = (dividend - 1) % 26;
-        columnName = String.fromCharCode(65 + modulo) + columnName;
-        dividend = Math.floor((dividend - modulo) / 26);
-    }
-
-    return columnName;
-}
-
-function createForgeZipFile(files) {
-    const encoder = new TextEncoder();
-    const localParts = [];
-    const centralParts = [];
-    let offset = 0;
-
-    files.forEach((file) => {
-        const nameBytes = encoder.encode(file.name);
-        const contentBytes = typeof file.content === "string" ? encoder.encode(file.content) : file.content;
-        const crc = crc32Forge(contentBytes);
-        const localHeader = createForgeLocalFileHeader(nameBytes, contentBytes.length, crc);
-        const centralHeader = createForgeCentralDirectoryHeader(nameBytes, contentBytes.length, crc, offset);
-
-        localParts.push(localHeader, contentBytes);
-        centralParts.push(centralHeader);
-
-        offset += localHeader.length + contentBytes.length;
-    });
-
-    const centralDirectorySize = centralParts.reduce((total, part) => total + part.length, 0);
-    const centralDirectoryOffset = offset;
-    const endRecord = createForgeEndOfCentralDirectoryRecord(files.length, centralDirectorySize, centralDirectoryOffset);
-
-    return concatForgeUint8Arrays([...localParts, ...centralParts, endRecord]);
-}
 
 function createForgeLocalFileHeader(nameBytes, size, crc) {
     const header = new Uint8Array(30 + nameBytes.length);
@@ -1794,20 +1261,7 @@ function buildForgeCrc32Table() {
     return table;
 }
 
-function xmlEscapeXlsx(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&apos;");
-}
 
-function limitXlsxSheetName(name) {
-    return String(name || "Feuille")
-        .replace(/[\\/?*\[\]:]/g, " ")
-        .slice(0, 31);
-}
 
 
 
@@ -5269,90 +4723,35 @@ function getSmartObjectiveLabel(smart) {
 
 
 /* V44 — Export / import avec rédactionnel détaillé */
-function getV44ContextExportRows(contextData) {
-    const labels = [
-        ["Résumé exécutif", contextData.summary || ""],
-        ["Origine / déclencheur", contextData.origin || ""],
-        ["Livrables attendus", contextData.deliverables || ""]
-    ];
 
-    return [["Section", "Contenu"], ...labels];
-}
 
-function buildRedactionRowsForExcel(rows, pointLabel = "Point", includeType = false) {
-    const header = includeType
-        ? ["N°", "Type", pointLabel, "Description"]
-        : ["N°", pointLabel, "Description"];
+// Sauvegarde réelle et complète : on exporte telles quelles toutes les clés
+// forge_* présentes dans le localStorage (découvertes dynamiquement via
+// getForgeLocalStorageKeys), plutôt qu'une liste de champs maintenue à la
+// main qui finit toujours par oublier les nouvelles fonctionnalités
+// (Découpage, périodes GANTT, dimensionnement VM, etc.). C'est le même
+// contenu que ce que Forge synchronise vers SQLite, donc une vraie copie
+// de travail utilisable hors de l'écosystème NAS/Docker.
+function exportForgeData() {
+    const data = {};
 
-    const output = [header];
-
-    rows.forEach((row, index) => {
-        if (includeType) {
-            output.push([
-                index + 1,
-                row.type || "",
-                row.title || "",
-                row.description || ""
-            ]);
-        } else {
-            output.push([
-                index + 1,
-                row.title || "",
-                row.description || ""
-            ]);
-        }
+    getForgeLocalStorageKeys().forEach((key) => {
+        data[key] = localStorage.getItem(key) ?? "";
     });
 
-    return output;
-}
-
-function exportForgeData() {
     const exportPayload = {
         app: "Forge",
-        version: 8,
+        version: 9,
         exportedAt: new Date().toISOString(),
-        theme: loadForgeTheme(),
-        projects: loadProjects(),
-        activeProjectId: localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY) || activeProjectId,
-        projectData: {}
+        data
     };
-
-    exportPayload.projects.forEach((project) => {
-        exportPayload.projectData[project.id] = {
-            context: readJsonFromStorage(`forge_project_${project.id}_context_v1`, { summary: "", origin: "", deliverables: "" }),
-            objectives: readJsonFromStorage(`forge_project_${project.id}_objectives_v1`, []),
-            stakes: readJsonFromStorage(`forge_project_${project.id}_stakes_v1`, []),
-            scope: readJsonFromStorage(`forge_project_${project.id}_scope_v1`, []),
-            constraints: readJsonFromStorage(`forge_project_${project.id}_constraints_v1`, []),
-            assumptions: readJsonFromStorage(`forge_project_${project.id}_assumptions_v1`, []),
-            successCriteria: readJsonFromStorage(`forge_project_${project.id}_success_criteria_v1`, []),
-            stakeholders: readJsonFromStorage(`forge_project_${project.id}_stakeholders_v1`, []),
-            competenceCategories: readJsonFromStorage(`forge_project_${project.id}_competence_categories_v1`, structuredClone(defaultCompetenceCategories)),
-            competenceMatrices: readJsonFromStorage(`forge_project_${project.id}_competence_matrices_v1`, {}),
-            phases: readJsonFromStorage(`forge_project_${project.id}_phases_v1`, []),
-            wbs: readJsonFromStorage(`forge_project_${project.id}_wbs_v1`, []),
-            wbsSettings: readJsonFromStorage(`forge_project_${project.id}_wbs_settings_v1`, structuredClone(WBS_SETTINGS_DEFAULT)),
-            swot: readJsonFromStorage(`forge_project_${project.id}_swot_v1`, {
-                strengths: [],
-                weaknesses: [],
-                opportunities: [],
-                threats: []
-            }),
-            riskTypes: readJsonFromStorage(`forge_project_${project.id}_risk_types_v1`, structuredClone(defaultRiskTypes)),
-            risks: readJsonFromStorage(`forge_project_${project.id}_risks_v1`, []),
-            raci: readJsonFromStorage(`forge_project_${project.id}_raci_v1`, {}),
-            smart: readJsonFromStorage(`forge_project_${project.id}_smart_v1`, []),
-            kpiTypes: readJsonFromStorage(`forge_project_${project.id}_kpi_types_v1`, structuredClone(defaultKpiTypes)),
-            kpis: readJsonFromStorage(`forge_project_${project.id}_kpis_v1`, [])
-        };
-    });
 
     const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
         type: "application/json"
     });
 
     const date = new Date().toISOString().slice(0, 10);
-    const fileName = `forge-data-${date}.json`;
+    const fileName = `forge-sauvegarde-${date}.json`;
     const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
@@ -5372,52 +4771,41 @@ function importForgeData(event) {
 
     const reader = new FileReader();
 
-    reader.onload = () => {
+    reader.onload = async () => {
         try {
             const payload = JSON.parse(reader.result);
 
-            if (!payload || payload.app !== "Forge" || !Array.isArray(payload.projects) || !payload.projectData) {
+            if (!payload || payload.app !== "Forge" || !payload.data || typeof payload.data !== "object") {
                 alert("Le fichier sélectionné ne semble pas être une sauvegarde Forge valide.");
                 return;
             }
 
-            const confirmation = confirm("Importer cette sauvegarde va remplacer les projets Forge actuellement stockés dans ce navigateur. Continuer ?");
+            const confirmation = confirm("Importer cette sauvegarde va remplacer TOUTES les données Forge actuellement stockées (tous les projets, thème compris). Continuer ?");
             if (!confirmation) return;
 
-            localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(payload.projects));
-            localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, payload.activeProjectId || payload.projects[0]?.id || "");
+            forgeDbBridgeHydrating = true;
 
-            if (payload.theme) saveForgeTheme(normalizeForgeTheme(payload.theme));
+            try {
+                getForgeLocalStorageKeys().forEach((key) => localStorage.removeItem(key));
 
-            payload.projects.forEach((project) => {
-                const data = payload.projectData[project.id] || {};
+                Object.entries(payload.data).forEach(([key, value]) => {
+                    if (isForgeStorageKey(key) && typeof value === "string") {
+                        localStorage.setItem(key, value);
+                    }
+                });
+            } finally {
+                forgeDbBridgeHydrating = false;
+            }
 
-                localStorage.setItem(`forge_project_${project.id}_context_v1`, JSON.stringify(data.context || { summary: "", origin: "", deliverables: "" }));
-                localStorage.setItem(`forge_project_${project.id}_objectives_v1`, JSON.stringify(data.objectives || []));
-                localStorage.setItem(`forge_project_${project.id}_stakes_v1`, JSON.stringify(data.stakes || []));
-                localStorage.setItem(`forge_project_${project.id}_scope_v1`, JSON.stringify(data.scope || []));
-                localStorage.setItem(`forge_project_${project.id}_constraints_v1`, JSON.stringify(data.constraints || []));
-                localStorage.setItem(`forge_project_${project.id}_assumptions_v1`, JSON.stringify(data.assumptions || []));
-                localStorage.setItem(`forge_project_${project.id}_success_criteria_v1`, JSON.stringify(data.successCriteria || []));
-                localStorage.setItem(`forge_project_${project.id}_stakeholders_v1`, JSON.stringify(data.stakeholders || []));
-                localStorage.setItem(`forge_project_${project.id}_competence_categories_v1`, JSON.stringify(data.competenceCategories || structuredClone(defaultCompetenceCategories)));
-                localStorage.setItem(`forge_project_${project.id}_competence_matrices_v1`, JSON.stringify(data.competenceMatrices || {}));
-                localStorage.setItem(`forge_project_${project.id}_phases_v1`, JSON.stringify(data.phases || []));
-                localStorage.setItem(`forge_project_${project.id}_wbs_v1`, JSON.stringify(data.wbs || []));
-                localStorage.setItem(`forge_project_${project.id}_wbs_settings_v1`, JSON.stringify(data.wbsSettings || structuredClone(WBS_SETTINGS_DEFAULT)));
-                localStorage.setItem(`forge_project_${project.id}_swot_v1`, JSON.stringify(data.swot || {
-                    strengths: [],
-                    weaknesses: [],
-                    opportunities: [],
-                    threats: []
-                }));
-                localStorage.setItem(`forge_project_${project.id}_risk_types_v1`, JSON.stringify(data.riskTypes || structuredClone(defaultRiskTypes)));
-                localStorage.setItem(`forge_project_${project.id}_risks_v1`, JSON.stringify(data.risks || []));
-                localStorage.setItem(`forge_project_${project.id}_raci_v1`, JSON.stringify(data.raci || {}));
-                localStorage.setItem(`forge_project_${project.id}_smart_v1`, JSON.stringify(data.smart || []));
-                localStorage.setItem(`forge_project_${project.id}_kpi_types_v1`, JSON.stringify(data.kpiTypes || structuredClone(defaultKpiTypes)));
-                localStorage.setItem(`forge_project_${project.id}_kpis_v1`, JSON.stringify(data.kpis || []));
-            });
+            if (forgeDbBridgeActive) {
+                try {
+                    await fetch("/api/storage", { method: "DELETE" });
+                } catch (error) {
+                    console.warn("Forge DB : purge backend impossible avant import.", error);
+                }
+
+                await syncAllForgeStorageToDb();
+            }
 
             alert("Sauvegarde Forge importée avec succès.");
             location.reload();
@@ -5432,213 +4820,6 @@ function importForgeData(event) {
     reader.readAsText(file);
 }
 
-function exportActiveProjectToExcel() {
-    const project = getActiveProject();
-
-    if (!project) {
-        alert("Aucun projet actif à exporter.");
-        return;
-    }
-
-    const exportContext = loadProjectContext();
-    const exportObjectives = loadRedactionRows("objectives");
-    const exportStakes = loadRedactionRows("stakes");
-    const exportScope = loadRedactionRows("scope");
-    const exportConstraints = loadRedactionRows("constraints");
-    const exportAssumptions = loadRedactionRows("assumptions");
-    const exportSuccessCriteria = loadRedactionRows("success_criteria");
-    const exportStakeholders = loadStakeholders();
-    const exportCompetenceCategories = loadCompetenceCategories();
-    const exportCompetenceMatrices = loadCompetenceMatrices();
-    const exportPhases = loadPhases();
-    const exportWbsRows = loadWbsRows();
-    const exportSwot = loadSwot();
-    const exportRiskTypes = loadRiskTypes();
-    const exportRisks = loadRisks();
-    const exportRaci = loadRaci();
-    const exportSmart = loadSmartObjectives();
-    const exportKpiTypes = loadKpiTypes();
-    const exportKpis = loadKpis();
-
-    const projectInfoRows = [
-        ["Champ", "Valeur"],
-        ["Nom du projet", project.name || ""],
-        ["Date de début", project.startDate || ""],
-        ["Date de fin", project.endDate || ""],
-        ["Thème", loadForgeTheme() === "light" ? "Clair" : "Cyber dark"],
-        ["Export généré le", new Date().toLocaleString("fr-FR")]
-    ];
-
-    const competenceHeader = ["Catégorie", "Compétence", ...exportStakeholders.map((person) => getStakeholderLabel(person))];
-    const competenceRowsForExcel = [competenceHeader];
-
-    exportCompetenceCategories.forEach((category) => {
-        const skills = exportCompetenceMatrices[category.id] || [];
-
-        if (skills.length === 0) {
-            competenceRowsForExcel.push([category.name || "", "", ...exportStakeholders.map(() => "")]);
-            return;
-        }
-
-        skills.forEach((skill) => {
-            competenceRowsForExcel.push([
-                category.name || "",
-                skill.name || "",
-                ...exportStakeholders.map((person) => {
-                    const stakeholderId = getStakeholderId(person);
-                    const level = skill.levels?.[stakeholderId] || "";
-                    return level ? competenceLevelLabels[level] || level : "";
-                })
-            ]);
-        });
-    });
-
-    const swotRows = [["Catégorie", "Élément"]];
-    Object.entries(swotLabels).forEach(([category, label]) => {
-        const items = Array.isArray(exportSwot[category]) ? exportSwot[category] : [];
-        if (items.length === 0) {
-            swotRows.push([label, ""]);
-        } else {
-            items.forEach((item) => swotRows.push([label, item.text || ""]));
-        }
-    });
-
-    const riskTypeRows = [["N°", "Type"]];
-    exportRiskTypes.forEach((type, index) => riskTypeRows.push([index + 1, type.name || ""]));
-
-    const riskRowsForExcel = [
-        ["N°", "Type", "Risque", "Source", "Probabilité", "Gravité", "Criticité", "Réponse", "Responsable", "Mitigation"]
-    ];
-    exportRisks.forEach((risk, index) => {
-        const type = exportRiskTypes.find((item) => item.id === risk.typeId);
-        riskRowsForExcel.push([
-            index + 1,
-            type?.name || "",
-            risk.risk || "",
-            risk.source || "",
-            risk.probability || "",
-            risk.severity || "",
-            calculateRiskCriticality(risk),
-            risk.response || "",
-            risk.responsable || "",
-            risk.mitigation || ""
-        ]);
-    });
-
-    const stakeholderRows = [["N°", "Nom", "Prénom", "Fonction", "Rôle", "Responsabilité"]];
-    exportStakeholders.forEach((person, index) => {
-        stakeholderRows.push([
-            index + 1,
-            person.nom || "",
-            person.prenom || "",
-            person.fonction || "",
-            person.role || "",
-            person.description || ""
-        ]);
-    });
-
-    const wbsRowsForExcel = [
-        ["N°", "Phase", "Tâche / Livrable", "Responsable", "Jour début", "Durée (j)", "Jour fin", "Date début", "Date fin", "Avanc. %", "Commentaire"]
-    ];
-    exportWbsRows.forEach((row, index) => {
-        const phase = exportPhases.find((item) => item.id === row.phaseId);
-        wbsRowsForExcel.push([
-            index + 1,
-            phase?.name || "",
-            row.task || "",
-            row.responsable || "",
-            row.jourDebut || "",
-            row.duree || "",
-            row.jourFin || "",
-            row.dateDebut || "",
-            row.dateFin || "",
-            row.avancement || "",
-            row.commentaire || ""
-        ]);
-    });
-
-    const smartRowsForExcel = [
-        ["N°", "Objectif lié", "Spécifique", "Mesurable", "Atteignable", "Réaliste", "Temporel", "Échéance", "Responsable", "Statut", "Note"]
-    ];
-    exportSmart.forEach((smart, index) => {
-        const objective = exportObjectives.find((item) => item.id === smart.objectiveId);
-        smartRowsForExcel.push([
-            index + 1,
-            objective?.title || smart.objective || "",
-            smart.specific || "",
-            smart.measurable || "",
-            smart.achievable || "",
-            smart.realistic || "",
-            smart.timebound || "",
-            smart.dueDate || "",
-            smart.responsable || "",
-            smart.status || "",
-            smart.note || ""
-        ]);
-    });
-
-    const kpiTypeRows = [["N°", "Type"]];
-    exportKpiTypes.forEach((type, index) => kpiTypeRows.push([index + 1, type.name || ""]));
-
-    const kpiRowsForExcel = [
-        ["N°", "Objectif SMART lié", "Type", "KPI", "Objectif KPI", "Unité", "Cible", "Actuel", "Écart", "Statut", "Fréquence", "Responsable"]
-    ];
-    exportKpis.forEach((kpi, index) => {
-        const type = exportKpiTypes.find((item) => item.id === kpi.typeId);
-        const smart = exportSmart.find((item) => item.id === kpi.smartId);
-        kpiRowsForExcel.push([
-            index + 1,
-            smart ? getSmartObjectiveLabel(smart) : "",
-            type?.name || "",
-            kpi.name || "",
-            kpi.objective || "",
-            kpi.unit || "",
-            kpi.target || "",
-            kpi.current || "",
-            calculateKpiGap(kpi),
-            kpi.status || "",
-            kpi.frequency || "",
-            kpi.responsable || ""
-        ]);
-    });
-
-    const raciRows = buildRaciRowsForXlsx(exportStakeholders, exportPhases, exportWbsRows, exportRaci);
-
-    const workbookBlob = buildForgeXlsxWorkbook([
-        { name: "Infos projet", rows: projectInfoRows, widths: [22, 42], freezeHeader: true, autoFilter: true },
-        { name: "Contexte", rows: getV44ContextExportRows(exportContext), widths: [28, 100], freezeHeader: true, autoFilter: true },
-        { name: "Objectifs", rows: buildRedactionRowsForExcel(exportObjectives, "Objectif"), widths: [8, 42, 100], freezeHeader: true, autoFilter: true },
-        { name: "Enjeux", rows: buildRedactionRowsForExcel(exportStakes, "Enjeu"), widths: [8, 42, 100], freezeHeader: true, autoFilter: true },
-        { name: "Périmètre", rows: buildRedactionRowsForExcel(exportScope, "Élément", true), widths: [8, 20, 42, 100], freezeHeader: true, autoFilter: true },
-        { name: "Contraintes", rows: buildRedactionRowsForExcel(exportConstraints, "Contrainte"), widths: [8, 42, 100], freezeHeader: true, autoFilter: true },
-        { name: "Hypothèses", rows: buildRedactionRowsForExcel(exportAssumptions, "Hypothèse"), widths: [8, 42, 100], freezeHeader: true, autoFilter: true },
-        { name: "Critères succès", rows: buildRedactionRowsForExcel(exportSuccessCriteria, "Critère"), widths: [8, 42, 100], freezeHeader: true, autoFilter: true },
-        { name: "Compétences", rows: competenceRowsForExcel, widths: [24, 34, ...exportStakeholders.map(() => 18)], freezeHeader: true, autoFilter: true },
-        { name: "SWOT", rows: swotRows, widths: [22, 72], freezeHeader: true, autoFilter: true },
-        { name: "Types risques", rows: riskTypeRows, widths: [8, 28], freezeHeader: true, autoFilter: true },
-        { name: "Risques", rows: riskRowsForExcel, widths: [8, 22, 42, 42, 14, 14, 14, 18, 24, 64], freezeHeader: true, autoFilter: true },
-        { name: "Parties Prenantes", rows: stakeholderRows, widths: [8, 18, 18, 26, 22, 64], freezeHeader: true, autoFilter: true },
-        { name: "WBS", rows: wbsRowsForExcel, widths: [8, 22, 44, 24, 12, 12, 12, 15, 15, 12, 58], freezeHeader: true, autoFilter: true },
-        { name: "RACI", rows: raciRows, widths: buildRaciXlsxWidths(exportStakeholders), freezeHeader: true, autoFilter: true, phaseRows: getRaciPhaseRowIndexesForXlsx(raciRows), raciStartColumn: 4 },
-        { name: "SMART", rows: smartRowsForExcel, widths: [8, 42, 34, 34, 34, 34, 34, 15, 24, 18, 54], freezeHeader: true, autoFilter: true },
-        { name: "Types KPIs", rows: kpiTypeRows, widths: [8, 28], freezeHeader: true, autoFilter: true },
-        { name: "KPIs", rows: kpiRowsForExcel, widths: [8, 42, 22, 34, 54, 12, 14, 14, 14, 18, 18, 24], freezeHeader: true, autoFilter: true }
-    ]);
-
-    const safeProjectName = slugifyFileName(project.name || "projet");
-    const date = new Date().toISOString().slice(0, 10);
-    const fileName = `forge-${safeProjectName}-${date}.xlsx`;
-    const downloadUrl = URL.createObjectURL(workbookBlob);
-    const link = document.createElement("a");
-
-    link.href = downloadUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(downloadUrl);
-}
 
 
 

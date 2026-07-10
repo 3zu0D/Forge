@@ -37,8 +37,8 @@ body {
 }
 
 .help-btn {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     flex: 0 0 auto;
     border: 1px solid rgba(34, 211, 238, 0.42);
     border-radius: 6px;
@@ -900,8 +900,9 @@ body {
 }
 
 .project-field:first-child input {
-    font-size: 2rem;
-    height: 50px;
+    font-size: 0.98rem;
+    font-weight: 800;
+    height: 34px;
 }
 
 .project-field:not(:first-child) {
@@ -1999,21 +2000,6 @@ footer {
     .raci-table {
         min-width: 760px;
     }
-}
-
-
-/* V21 — Export Excel */
-.excel-btn {
-    border-color: rgba(0, 230, 118, 0.34);
-    background: rgba(0, 230, 118, 0.12);
-    color: #bbf7d0;
-}
-
-
-/* V22 — Bouton export XLSX propre */
-.excel-btn {
-    font-weight: 900;
-    box-shadow: 0 0 14px rgba(0, 230, 118, 0.10);
 }
 
 
@@ -6724,12 +6710,6 @@ body[data-theme="orange"] .btn-danger {
     background: linear-gradient(135deg, #ef4444, #b91c1c);
 }
 
-body[data-theme="orange"] .excel-btn {
-    color: #1b130b;
-    background: linear-gradient(135deg, #facc15, #fb923c);
-    border-color: rgba(250, 204, 21, 0.42);
-}
-
 body[data-theme="orange"] .table-actions,
 body[data-theme="orange"] .gantt-toolbar,
 body[data-theme="orange"] .gantt-phase-tabs,
@@ -7214,17 +7194,18 @@ body {
 .topbar {
     width: min(1800px, calc(100% - 18px)) !important;
     margin: 10px auto 0 !important;
-    padding: 10px !important;
+    padding: 8px 16px !important;
     display: grid !important;
-    grid-template-columns: auto minmax(220px, 1fr) auto auto auto !important;
-    align-items: center !important;
-    gap: 10px !important;
+    grid-template-columns: auto minmax(160px, 260px) auto auto auto !important;
+    justify-content: flex-start !important;
+    align-items: end !important;
+    gap: 14px !important;
 }
 
 .project-info {
     min-width: 0 !important;
     display: grid !important;
-    grid-template-columns: minmax(220px, 1fr) !important;
+    grid-template-columns: minmax(160px, 260px) !important;
     gap: 8px !important;
 }
 
@@ -8675,11 +8656,6 @@ body[data-theme="executive"] .btn-danger {
     color: #ffffff;
     background: linear-gradient(135deg, #991b1b, #dc2626);
     border-color: rgba(153, 27, 27, 0.35);
-}
-
-body[data-theme="executive"] .excel-btn {
-    background: linear-gradient(135deg, #166534, #15803d);
-    border-color: rgba(22, 101, 52, 0.30);
 }
 
 body[data-theme="executive"] .icon-add-btn {
