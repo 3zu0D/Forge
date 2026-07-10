@@ -3270,7 +3270,7 @@ footer {
 
 .kpi-types-card {
     position: sticky;
-    top: 148px;
+    top: 114px;
 }
 
 .kpi-types-table {
@@ -3789,7 +3789,7 @@ body[data-theme="light"] select option:checked {
 
 .risk-types-card {
     position: sticky;
-    top: 148px;
+    top: 114px;
 }
 
 .risk-types-table {
@@ -5305,7 +5305,7 @@ body[data-theme="light"] .kpi-smart-select {
 
 .competence-categories-card {
     position: sticky;
-    top: 148px;
+    top: 114px;
 }
 
 .competence-categories-table {
@@ -10027,7 +10027,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
 .vmsizing-servers-card {
     position: sticky;
-    top: 148px;
+    top: 114px;
 }
 
 .vmsizing-servers-table {
@@ -10397,7 +10397,7 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 
 .decision-criteria-card {
     position: sticky;
-    top: 148px;
+    top: 114px;
 }
 
 .decision-criteria-table {
