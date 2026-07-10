@@ -115,7 +115,6 @@ let decoupagePhases = [];
 let decoupageSteps = [];
 let decisionCriteria = [];
 let decisionOptions = [];
-let selectedDecisionOptions = new Set();
 let selectedSwotItems = { strengths: new Set(), weaknesses: new Set(), opportunities: new Set(), threats: new Set() };
 
 const currentPage = document.body.dataset.page;
@@ -8714,9 +8713,36 @@ function refreshGanttView() {
     );
 }
 
+function loadGanttPeriodsCollapsed() {
+    return localStorage.getItem(getProjectKey("gantt_periods_collapsed")) === "1";
+}
+
+function saveGanttPeriodsCollapsed(collapsed) {
+    localStorage.setItem(getProjectKey("gantt_periods_collapsed"), collapsed ? "1" : "0");
+}
+
+function applyGanttPeriodsCollapsedState(collapsed) {
+    const card = document.querySelector(".gantt-periods-card");
+    const toggleBtn = document.getElementById("gantt-periods-toggle-btn");
+
+    if (card) card.classList.toggle("gantt-periods-collapsed", collapsed);
+
+    if (toggleBtn) {
+        toggleBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        toggleBtn.title = collapsed ? "Afficher les périodes spéciales" : "Masquer les périodes spéciales";
+    }
+}
+
 function renderGanttPeriodsTable() {
     const body = document.getElementById("gantt-periods-table-body");
     if (!body) return;
+
+    const countEl = document.getElementById("gantt-periods-count");
+    if (countEl) {
+        countEl.textContent = ganttPeriods.length === 0
+            ? "Aucune période"
+            : `${ganttPeriods.length} période${ganttPeriods.length > 1 ? "s" : ""}`;
+    }
 
     if (ganttPeriods.length === 0) {
         body.innerHTML = `<tr><td colspan="5" class="empty-state">Aucune période particulière définie.</td></tr>`;
@@ -8812,7 +8838,16 @@ function initGanttPage() {
     ganttPeriods = loadGanttPeriods();
 
     renderGanttPeriodsTable();
+    applyGanttPeriodsCollapsedState(loadGanttPeriodsCollapsed());
     renderGantt(ganttHead, ganttBody, ganttSummary);
+
+    document.getElementById("gantt-periods-toggle-btn")?.addEventListener("click", () => {
+        const isCollapsed = document.querySelector(".gantt-periods-card")?.classList.contains("gantt-periods-collapsed");
+        const nextCollapsed = !isCollapsed;
+
+        applyGanttPeriodsCollapsedState(nextCollapsed);
+        saveGanttPeriodsCollapsed(nextCollapsed);
+    });
 
     document.getElementById("add-gantt-period-btn")?.addEventListener("click", () => {
         ganttPeriods.push({ id: createId(), type: "vacances", label: "", startDate: "", endDate: "" });
@@ -9889,6 +9924,13 @@ if (typeof helpTexts !== "undefined") {
     `;
 }
 
+if (typeof helpTexts !== "undefined") {
+    helpTexts.gantt = `
+        ${helpTexts.gantt || ""}
+        <p><strong>V84 :</strong> la carte "Périodes spéciales" est repliable — clique sur la flèche en haut à droite de la carte pour la réduire ou l'agrandir. L'état (repliée ou non) est mémorisé.</p>
+    `;
+}
+
 /* V83 — Matrice de décision pondérée */
 
 function loadDecisionCriteria() {
@@ -10040,81 +10082,64 @@ function bindDecisionCriteriaEvents() {
     });
 }
 
+// Critères en lignes, options en colonnes : ça laisse la place à beaucoup
+// plus de critères sans que le tableau explose en largeur. Le score pondéré
+// de chaque option devient une ligne de synthèse en bas plutôt qu'une
+// colonne à droite.
 function buildDecisionOptionsTable() {
     if (decisionCriteria.length === 0) {
         return `<div class="empty-state">Ajoute au moins un critère à gauche pour commencer à noter des options.</div>`;
     }
 
-    const criteriaHeaderCells = decisionCriteria.map((criterion) => `
-        <th class="decision-criterion-header">${escapeHtml(criterion.name || "Critère sans nom")}<br><span class="decision-criterion-weight">${escapeHtml(String(criterion.weight || 0))}%</span></th>
-    `).join("");
-
     if (decisionOptions.length === 0) {
-        return `
-            <table class="decision-options-table">
-                <thead>
-                    <tr>
-                        <th class="select-col"></th>
-                        <th>N°</th>
-                        <th>Option</th>
-                        ${criteriaHeaderCells}
-                        <th class="decision-score-header">Score<br>pondéré /10</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td colspan="${4 + decisionCriteria.length}" class="empty-state">Aucune option pour le moment.</td></tr>
-                </tbody>
-            </table>
-        `;
+        return `<div class="empty-state">Ajoute au moins une option pour commencer à noter.</div>`;
     }
 
     const totalWeight = decisionCriteria.reduce((sum, criterion) => sum + (Number(criterion.weight) || 0), 0);
-    const scored = decisionOptions.map((option) => ({
-        option,
-        weightedScore: calculateDecisionWeightedScore(option, decisionCriteria, totalWeight)
-    }));
-    const bestScore = Math.max(...scored.map((item) => item.weightedScore));
+    const weightedScores = decisionOptions.map((option) => calculateDecisionWeightedScore(option, decisionCriteria, totalWeight));
+    const bestScore = Math.max(...weightedScores);
+    const isBestOption = (index) => decisionOptions.length > 1 && weightedScores[index] > 0 && weightedScores[index] === bestScore;
+
+    const optionHeaderCells = decisionOptions.map((option, index) => `
+        <th class="decision-option-header${isBestOption(index) ? " decision-best-cell" : ""}" title="${isBestOption(index) ? "Meilleure option" : ""}">
+            <span class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(option.name)}</span>
+            <button class="row-delete-btn decision-option-delete-btn" type="button" data-remove-decision-option="${index}" title="Supprimer l'option" aria-label="Supprimer l'option">&times;</button>
+        </th>
+    `).join("");
+
+    const criteriaRows = decisionCriteria.map((criterion) => `
+        <tr>
+            <td class="decision-criterion-row-header">${escapeHtml(criterion.name || "Critère sans nom")}<br><span class="decision-criterion-weight">${escapeHtml(String(criterion.weight || 0))}%</span></td>
+            ${decisionOptions.map((option, index) => `
+                <td class="decision-score-cell${isBestOption(index) ? " decision-best-cell" : ""}">
+                    <input class="decision-score-input" type="number" min="1" max="10" step="1" data-option-index="${index}" data-criterion-id="${escapeHtml(criterion.id)}" value="${escapeHtml(String(option.scores?.[criterion.id] || ""))}" aria-label="Note de ${escapeHtml(option.name || "cette option")} pour ${escapeHtml(criterion.name || "ce critère")}" />
+                </td>
+            `).join("")}
+        </tr>
+    `).join("");
+
+    const scoreRow = `
+        <tr class="decision-score-row">
+            <td class="decision-score-row-label">Score pondéré /10</td>
+            ${decisionOptions.map((option, index) => `
+                <td class="decision-weighted-cell${isBestOption(index) ? " decision-best-cell" : ""}" title="${isBestOption(index) ? "Meilleure option" : ""}">${weightedScores[index] ? weightedScores[index].toFixed(1) : "—"}</td>
+            `).join("")}
+        </tr>
+    `;
 
     return `
         <table class="decision-options-table">
             <thead>
                 <tr>
-                    <th class="select-col">
-                        <input id="select-all-decision-options" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
-                    </th>
-                    <th>N°</th>
-                    <th>Option</th>
-                    ${criteriaHeaderCells}
-                    <th class="decision-score-header">Score<br>pondéré /10</th>
+                    <th class="decision-row-header-col">Critère</th>
+                    ${optionHeaderCells}
                 </tr>
             </thead>
             <tbody>
-                ${scored.map(({ option, weightedScore }, index) => buildDecisionOptionRow(option, index, weightedScore, bestScore)).join("")}
+                ${criteriaRows}
+                ${scoreRow}
             </tbody>
         </table>
-    `;
-}
-
-function buildDecisionOptionRow(option, index, weightedScore, bestScore) {
-    const isSelected = selectedDecisionOptions.has(index);
-    const isBest = decisionOptions.length > 1 && weightedScore > 0 && weightedScore === bestScore;
-
-    const scoreCells = decisionCriteria.map((criterion) => `
-        <td class="decision-score-cell">
-            <input class="decision-score-input" type="number" min="1" max="10" step="1" data-index="${index}" data-criterion-id="${escapeHtml(criterion.id)}" value="${escapeHtml(String(option.scores?.[criterion.id] || ""))}" aria-label="Note pour ${escapeHtml(criterion.name || "ce critère")}" />
-        </td>
-    `).join("");
-
-    return `
-        <tr class="${isSelected ? "selected-row" : ""}${isBest ? " decision-best-row" : ""}" title="${isBest ? "Meilleure option" : ""}">
-            <td class="select-col">
-                <input class="row-checkbox decision-option-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner l'option ${index + 1}" ${isSelected ? "checked" : ""} />
-            </td>
-            <td>${index + 1}</td>
-            <td class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(option.name)}</td>
-            ${scoreCells}
-            <td class="decision-weighted-cell">${weightedScore ? weightedScore.toFixed(1) : "—"}</td>
-        </tr>
     `;
 }
 
@@ -10124,7 +10149,6 @@ function renderDecisionOptionsTable() {
 
     wrapper.innerHTML = buildDecisionOptionsTable();
     bindDecisionOptionsEvents();
-    updateDecisionOptionsSelectionControls();
 }
 
 function bindDecisionOptionsEvents() {
@@ -10143,7 +10167,7 @@ function bindDecisionOptionsEvents() {
 
     wrapper.querySelectorAll(".decision-score-input").forEach((input) => {
         input.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
+            const index = Number(event.target.dataset.optionIndex);
             const criterionId = event.target.dataset.criterionId;
             if (!decisionOptions[index] || !criterionId) return;
 
@@ -10162,34 +10186,15 @@ function bindDecisionOptionsEvents() {
         });
     });
 
-    wrapper.querySelectorAll(".decision-option-checkbox").forEach((checkbox) => {
-        checkbox.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
+    wrapper.querySelectorAll("[data-remove-decision-option]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const index = Number(event.currentTarget.dataset.removeDecisionOption);
+            decisionOptions = decisionOptions.filter((_, itemIndex) => itemIndex !== index);
 
-            if (event.target.checked) {
-                selectedDecisionOptions.add(index);
-            } else {
-                selectedDecisionOptions.delete(index);
-            }
-
-            updateDecisionOptionsSelectionControls();
+            saveDecisionOptions();
+            renderDecisionOptionsTable();
         });
     });
-
-    document.getElementById("select-all-decision-options")?.addEventListener("change", (event) => {
-        selectedDecisionOptions.clear();
-
-        if (event.target.checked) {
-            decisionOptions.forEach((_, index) => selectedDecisionOptions.add(index));
-        }
-
-        renderDecisionOptionsTable();
-    });
-}
-
-function updateDecisionOptionsSelectionControls() {
-    const deleteButton = document.getElementById("delete-selected-decision-options-btn");
-    if (deleteButton) deleteButton.disabled = selectedDecisionOptions.size === 0;
 }
 
 function addDecisionCriterion() {
@@ -10214,7 +10219,6 @@ function initDecisionPage() {
 
     decisionCriteria = loadDecisionCriteria();
     decisionOptions = loadDecisionOptions();
-    selectedDecisionOptions = new Set();
 
     renderDecisionCriteriaTable();
 
@@ -10228,25 +10232,12 @@ function initDecisionPage() {
 
         decisionCriteria = [];
         decisionOptions = [];
-        selectedDecisionOptions.clear();
         saveDecisionCriteria();
         saveDecisionOptions();
         renderDecisionCriteriaTable();
     });
 
     document.getElementById("add-decision-option-btn")?.addEventListener("click", addDecisionOption);
-
-    document.getElementById("delete-selected-decision-options-btn")?.addEventListener("click", () => {
-        if (selectedDecisionOptions.size === 0) return;
-
-        const confirmation = confirm("Tu veux vraiment supprimer les options cochées ?");
-        if (!confirmation) return;
-
-        decisionOptions = decisionOptions.filter((_, index) => !selectedDecisionOptions.has(index));
-        selectedDecisionOptions.clear();
-        saveDecisionOptions();
-        renderDecisionOptionsTable();
-    });
 }
 
 if (typeof helpTexts !== "undefined") {
@@ -10254,8 +10245,8 @@ if (typeof helpTexts !== "undefined") {
         <p>Cette page sert à comparer plusieurs options de façon objective, à partir de critères pondérés.</p>
         <ul>
             <li>Le tableau de gauche définit les critères de décision et leur poids (en %). Le poids reflète l’importance relative de chaque critère.</li>
-            <li>Le tableau de droite liste les options à comparer. Note chaque option de 1 (faible) à 10 (excellent) pour chaque critère.</li>
-            <li>Le score pondéré (sur 10) se calcule automatiquement à partir des notes et des poids. L’option avec le meilleur score est surlignée.</li>
+            <li>Le tableau principal liste les critères en lignes et les options en colonnes : note chaque option de 1 (faible) à 10 (excellent) pour chaque critère.</li>
+            <li>Le score pondéré (sur 10) se calcule automatiquement en bas du tableau, une colonne par option. L’option avec le meilleur score est surlignée.</li>
             <li>Supprimer un critère retire automatiquement les notes associées dans toutes les options.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
         </ul>

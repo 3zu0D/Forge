@@ -10473,17 +10473,12 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     font-size: 0.62rem;
 }
 
-.decision-options-table .select-col {
-    width: 34px;
-}
-
-.decision-option-cell {
-    min-width: 180px;
+.decision-row-header-col,
+.decision-criterion-row-header,
+.decision-score-row-label {
+    min-width: 170px;
     text-align: left !important;
-}
-
-.decision-criterion-header {
-    min-width: 100px;
+    font-weight: 800;
 }
 
 .decision-criterion-weight {
@@ -10497,27 +10492,41 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     font-weight: 900;
 }
 
+.decision-option-header {
+    min-width: 100px;
+    vertical-align: middle;
+}
+
+.decision-option-header .decision-option-cell {
+    display: inline-block;
+    min-width: 60px;
+    text-align: center;
+}
+
+.decision-option-delete-btn {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 .decision-score-cell {
     width: 84px;
 }
 
-.decision-score-header {
-    min-width: 84px;
+.decision-score-row td {
+    border-top: 2px solid rgba(56, 189, 248, 0.18);
 }
 
 .decision-weighted-cell {
-    min-width: 90px;
     font-size: 0.86rem;
     font-weight: 950;
     color: #67e8f9;
 }
 
-.decision-best-row {
-    background: rgba(250, 204, 21, 0.10);
-    box-shadow: inset 3px 0 0 #facc15;
+.decision-best-cell {
+    background: rgba(250, 204, 21, 0.12);
 }
 
-.decision-best-row .decision-weighted-cell {
+.decision-weighted-cell.decision-best-cell {
     color: #facc15;
 }
 
@@ -10536,11 +10545,11 @@ body[data-theme="light"] .decision-weighted-cell {
     color: #0369a1;
 }
 
-body[data-theme="light"] .decision-best-row {
-    background: rgba(217, 119, 6, 0.10);
+body[data-theme="light"] .decision-best-cell {
+    background: rgba(217, 119, 6, 0.12);
 }
 
-body[data-theme="light"] .decision-best-row .decision-weighted-cell {
+body[data-theme="light"] .decision-weighted-cell.decision-best-cell {
     color: #b45309;
 }
 
@@ -10566,11 +10575,11 @@ body[data-theme="executive"] .decision-weighted-cell {
     color: #1e3a5f;
 }
 
-body[data-theme="executive"] .decision-best-row {
-    background: rgba(217, 119, 6, 0.12);
+body[data-theme="executive"] .decision-best-cell {
+    background: rgba(217, 119, 6, 0.14);
 }
 
-body[data-theme="executive"] .decision-best-row .decision-weighted-cell {
+body[data-theme="executive"] .decision-weighted-cell.decision-best-cell {
     color: #b45309;
 }
 
@@ -10583,4 +10592,71 @@ body[data-theme="executive"] .decision-best-row .decision-weighted-cell {
         position: static;
         max-width: none;
     }
+}
+
+/* V84 — Carte "Périodes spéciales" repliable */
+.gantt-periods-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.gantt-periods-count {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.gantt-periods-toggle-btn {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(103, 232, 249, 0.22);
+    border-radius: 8px;
+    background: rgba(8, 18, 34, 0.72);
+    color: #e0f2fe;
+    font-size: 0.8rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.gantt-periods-toggle-btn:hover {
+    filter: brightness(1.18);
+}
+
+.gantt-periods-toggle-btn[aria-expanded="false"] {
+    transform: rotate(-90deg);
+}
+
+.gantt-periods-card.gantt-periods-collapsed .gantt-periods-body {
+    display: none;
+}
+
+body[data-theme="light"] .gantt-periods-toggle-btn {
+    background: rgba(255, 255, 255, 0.86);
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.14);
+}
+
+body[data-theme="light"] .gantt-periods-count {
+    color: #475569;
+}
+
+body[data-theme="orange"] .gantt-periods-toggle-btn {
+    background: rgba(55, 33, 16, 0.86);
+    color: #fff7ed;
+    border-color: rgba(251, 146, 60, 0.28);
+}
+
+body[data-theme="executive"] .gantt-periods-toggle-btn {
+    background: #ffffff;
+    color: #1e3a5f;
+    border-color: rgba(30, 58, 95, 0.20);
+}
+
+body[data-theme="executive"] .gantt-periods-count {
+    color: #475569;
 }

@@ -96,28 +96,34 @@
         <section class="card gantt-periods-card">
             <div class="card-header">
                 <h2>Périodes spéciales</h2>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="gantt-periods-table">
-                    <thead>
-                        <tr>
-                            <th class="gantt-periods-col-type">Type</th>
-                            <th>Libellé</th>
-                            <th class="gantt-periods-col-date">Début</th>
-                            <th class="gantt-periods-col-date">Fin</th>
-                            <th class="select-col"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="gantt-periods-table-body"></tbody>
-                </table>
-            </div>
-
-            <div class="table-actions">
-                <div class="left-actions">
-                    <button class="btn icon-action-btn icon-add-btn" id="add-gantt-period-btn" type="button" title="Ajouter une période" aria-label="Ajouter une période">+</button>
+                <div class="gantt-periods-header-actions no-capture">
+                    <span class="gantt-periods-count" id="gantt-periods-count"></span>
+                    <button class="gantt-periods-toggle-btn" id="gantt-periods-toggle-btn" type="button" aria-expanded="true" title="Masquer les périodes spéciales" aria-label="Afficher ou masquer les périodes spéciales">▾</button>
                 </div>
-                <button class="btn btn-danger btn-reset" id="reset-gantt-periods-btn" type="button">Réinitialiser</button>
+            </div>
+
+            <div class="gantt-periods-body" id="gantt-periods-body">
+                <div class="table-wrapper">
+                    <table class="gantt-periods-table">
+                        <thead>
+                            <tr>
+                                <th class="gantt-periods-col-type">Type</th>
+                                <th>Libellé</th>
+                                <th class="gantt-periods-col-date">Début</th>
+                                <th class="gantt-periods-col-date">Fin</th>
+                                <th class="select-col"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="gantt-periods-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-actions">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-gantt-period-btn" type="button" title="Ajouter une période" aria-label="Ajouter une période">+</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="reset-gantt-periods-btn" type="button">Réinitialiser</button>
+                </div>
             </div>
         </section>
 
