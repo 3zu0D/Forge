@@ -10340,7 +10340,7 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 
 .structured-page-nav .nav-group-links {
     position: absolute;
-    top: calc(100% + 6px);
+    top: 100%;
     left: 0;
     z-index: 80;
     display: flex !important;
@@ -10354,16 +10354,14 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-4px);
     pointer-events: none;
-    transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+    transition: opacity 0.14s ease, visibility 0.14s;
 }
 
 .structured-page-nav .nav-group:hover .nav-group-links,
 .structured-page-nav .nav-group:focus-within .nav-group-links {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
     pointer-events: auto;
 }
 
