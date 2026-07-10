@@ -1,0 +1,18 @@
+{
+  "name": "forge",
+  "version": "0.1.3",
+  "private": true,
+  "description": "Forge 0.1.3 - ajout de la page Dimensionnement VM (groupe Infrastructure).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node scripts/check-server-modules.js && node --check public/script.js && node --check public/vm-sizing.js && node scripts/validate-forge.js && node scripts/code-review.js",
+    "healthcheck": "node scripts/healthcheck.js",
+    "review": "node scripts/code-review.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "11.9.1",
+    "compression": "1.7.4",
+    "express": "4.21.2"
+  }
+}

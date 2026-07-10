@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge - Dimensionnement VM</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="vmsizing">
+    <header class="topbar">
+        <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
+
+        <div class="project-info" aria-label="Informations générales du projet">
+            <label class="project-field">
+                <span>Nom</span>
+                <input id="project-name" type="text" placeholder="Nom du projet" data-project-field="name" />
+            </label>
+        </div>
+
+        <div class="project-switcher" aria-label="Sélection du projet">
+            <label class="project-switcher-field">
+                <span>Projet actif</span>
+                <select id="project-selector"></select>
+            </label>
+            <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
+        </div>
+
+        <div class="theme-switcher" aria-label="Sélection du thème">
+            <label class="theme-switcher-field">
+                <span>Thème</span>
+                <select id="theme-selector">
+                    <option value="cyber">Cyber dark</option>
+                    <option value="light">Clair</option>
+                    <option value="orange">Orange dusk</option>
+                    <option value="executive">Executive report</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="portable-controls" aria-label="Sauvegarde portable">
+            <button class="portable-btn" id="export-data-btn" type="button">Exporter</button>
+            <button class="portable-btn" id="import-data-btn" type="button">Importer</button>
+            <button class="portable-btn excel-btn" id="export-excel-btn" type="button">Excel XLSX</button>
+            <input id="import-data-input" type="file" accept="application/json,.json" hidden />
+        </div>
+    </header>
+
+    <nav class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale">
+        <div class="nav-group">
+            <span class="nav-group-label">Vue globale</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="dashboard.html">Tableau de bord</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Rédactionnel</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="contexte.html">Contexte</a>
+                <a class="nav-link" href="objectifs.html">Objectifs</a>
+                <a class="nav-link" href="enjeux.html">Enjeux</a>
+                <a class="nav-link" href="perimetre.html">Périmètre</a>
+                <a class="nav-link" href="contraintes.html">Contraintes</a>
+                <a class="nav-link" href="hypotheses.html">Hypothèses</a>
+                <a class="nav-link" href="succes.html">Critères succès</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Matrices</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="competences.html">Compétences</a>
+                <a class="nav-link" href="swot.html">SWOT</a>
+                <a class="nav-link" href="risques.html">Analyse des risques</a>
+                <a class="nav-link" href="raci.html">RACI</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Pilotage</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="index.html">Parties Prenantes</a>
+                <a class="nav-link" href="decoupage.html">Découpage</a>
+                <a class="nav-link" href="wbs.html">WBS</a>
+                <a class="nav-link" href="gantt.html">GANTT</a>
+                <a class="nav-link" href="smart.html">SMART</a>
+                <a class="nav-link" href="kpis.html">KPIs</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Infrastructure</span>
+            <div class="nav-group-links">
+                <a class="nav-link active" href="vm-sizing.html">Dimensionnement VM</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container vmsizing-container">
+        <section class="vmsizing-layout">
+            <aside class="card vmsizing-servers-card">
+                <div class="card-header">
+                    <h2>Serveurs</h2>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="vmsizing-servers-table">
+                        <thead>
+                            <tr>
+                                <th class="vmsizing-server-col-select">
+                                    <input id="vmsizing-select-all-servers" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
+                                </th>
+                                <th class="vmsizing-server-col-number">N°</th>
+                                <th class="vmsizing-server-col-name">Serveur</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vmsizing-server-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-actions">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="vmsizing-new-server-btn" type="button" title="Ajouter un serveur" aria-label="Ajouter un serveur">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="vmsizing-delete-selected-servers-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="vmsizing-reset-servers-btn" type="button">Réinitialiser</button>
+                </div>
+            </aside>
+
+            <div class="vmsizing-main-zone">
+                <div class="vmsizing-top-row">
+                    <section class="card">
+                        <div class="card-header">
+                            <h2>Caractéristiques du serveur</h2>
+                        </div>
+                        <div class="vmsizing-field-grid vmsizing-field-grid-compact" id="vmsizing-server-form">
+                            <label class="vmsizing-field vmsizing-field-wide">
+                                <span>Nom du serveur</span>
+                                <input type="text" data-field="name" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Sockets CPU</span>
+                                <input type="number" min="1" data-field="cpuSockets" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Cœurs / socket</span>
+                                <input type="number" min="1" data-field="cpuCoresPerSocket" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Threads / cœur</span>
+                                <input type="number" min="1" data-field="cpuThreadsPerCore" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>RAM totale (Go)</span>
+                                <input type="number" min="1" data-field="ramGB" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Stockage total (Go)</span>
+                                <input type="number" min="1" data-field="storageGB" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Overcommit CPU</span>
+                                <input type="number" min="0.1" step="0.1" data-field="cpuOvercommitRatio" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Overcommit RAM</span>
+                                <input type="number" min="0.1" step="0.1" data-field="ramOvercommitRatio" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Réserve CPU (%)</span>
+                                <input type="number" min="0" max="90" data-field="reservedCpuPercent" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Réserve RAM (%)</span>
+                                <input type="number" min="0" max="90" data-field="reservedRamPercent" />
+                            </label>
+                            <label class="vmsizing-field">
+                                <span>Réserve stockage (%)</span>
+                                <input type="number" min="0" max="90" data-field="reservedStoragePercent" />
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h2>Utilisation actuelle</h2>
+                            <span class="vmsizing-status-pill vmsizing-status-ok" id="vmsizing-overall-status-pill">OK</span>
+                        </div>
+                        <div class="vmsizing-gauge-grid">
+                            <div class="vmsizing-gauge">
+                                <div class="vmsizing-gauge-top">
+                                    <span class="vmsizing-gauge-label">CPU</span>
+                                    <span class="vmsizing-gauge-value" id="vmsizing-cpu-value">0%</span>
+                                </div>
+                                <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-cpu-fill" style="width: 0%"></div></div>
+                                <div class="vmsizing-gauge-bottom"><span id="vmsizing-cpu-detail">0 / 0 vCPU</span></div>
+                            </div>
+                            <div class="vmsizing-gauge">
+                                <div class="vmsizing-gauge-top">
+                                    <span class="vmsizing-gauge-label">RAM</span>
+                                    <span class="vmsizing-gauge-value" id="vmsizing-ram-value">0%</span>
+                                </div>
+                                <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-ram-fill" style="width: 0%"></div></div>
+                                <div class="vmsizing-gauge-bottom"><span id="vmsizing-ram-detail">0 / 0 Go</span></div>
+                            </div>
+                            <div class="vmsizing-gauge">
+                                <div class="vmsizing-gauge-top">
+                                    <span class="vmsizing-gauge-label">Stockage</span>
+                                    <span class="vmsizing-gauge-value" id="vmsizing-storage-value">0%</span>
+                                </div>
+                                <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-storage-fill" style="width: 0%"></div></div>
+                                <div class="vmsizing-gauge-bottom"><span id="vmsizing-storage-detail">0 / 0 Go</span></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <section class="card">
+                    <div class="card-header">
+                        <h2>Machines virtuelles</h2>
+                        <span id="vmsizing-vm-count">0 VM</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="vmsizing-vm-table">
+                            <thead>
+                                <tr>
+                                    <th class="vmsizing-col-name">Nom</th>
+                                    <th class="vmsizing-col-role">Rôle</th>
+                                    <th class="vmsizing-col-num">vCPU</th>
+                                    <th class="vmsizing-col-num">RAM (Go)</th>
+                                    <th class="vmsizing-col-num">Disque 1 (Go)</th>
+                                    <th class="vmsizing-col-num">Disque 2 (Go)</th>
+                                    <th class="vmsizing-col-num">Disque 3 (Go)</th>
+                                    <th class="select-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="vmsizing-vm-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-actions">
+                        <button class="btn" id="vmsizing-add-vm-btn" type="button">+ Ajouter une VM</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+
+    <footer>
+        <div class="forge-footer-brand" aria-label="Forge">
+            <span class="forge-logo" aria-hidden="true">
+                <span class="forge-logo-bar"></span>
+                <span class="forge-logo-head"></span>
+            </span>
+            <span class="forge-name">Forge</span>
+        </div>
+    </footer>
+
+    <div class="color-menu hidden" id="color-menu" aria-label="Choix de couleur"></div>
+
+    <div class="modal-overlay hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="help-title">Aide</h2>
+                <button class="modal-close" id="help-close-btn" type="button" aria-label="Fermer l’aide">×</button>
+            </div>
+            <div class="modal-body" id="help-content"></div>
+        </div>
+    </div>
+
+    <script src="vm-sizing.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

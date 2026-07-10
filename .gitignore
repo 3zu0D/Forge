@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Real project data (SQLite DB + backups) — never commit user data
+data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini

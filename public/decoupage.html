@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge - Découpage</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="decoupage">
+    <header class="topbar">
+        <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
+
+        <div class="project-info" aria-label="Informations générales du projet">
+            <label class="project-field">
+                <span>Nom</span>
+                <input id="project-name" type="text" placeholder="Nom du projet" data-project-field="name" />
+            </label>
+        </div>
+
+        <div class="project-switcher" aria-label="Sélection du projet">
+            <label class="project-switcher-field">
+                <span>Projet actif</span>
+                <select id="project-selector"></select>
+            </label>
+            <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
+        </div>
+
+        <div class="theme-switcher" aria-label="Sélection du thème">
+            <label class="theme-switcher-field">
+                <span>Thème</span>
+                <select id="theme-selector">
+                    <option value="cyber">Cyber dark</option>
+                    <option value="light">Clair</option>
+                    <option value="orange">Orange dusk</option>
+                    <option value="executive">Executive report</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="portable-controls" aria-label="Sauvegarde portable">
+            <button class="portable-btn" id="export-data-btn" type="button">Exporter</button>
+            <button class="portable-btn" id="import-data-btn" type="button">Importer</button>
+            <button class="portable-btn excel-btn" id="export-excel-btn" type="button">Excel XLSX</button>
+            <input id="import-data-input" type="file" accept="application/json,.json" hidden />
+        </div>
+    </header>
+
+    <nav class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale">
+        <div class="nav-group">
+            <span class="nav-group-label">Vue globale</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="dashboard.html">Tableau de bord</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Rédactionnel</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="contexte.html">Contexte</a>
+                <a class="nav-link" href="objectifs.html">Objectifs</a>
+                <a class="nav-link" href="enjeux.html">Enjeux</a>
+                <a class="nav-link" href="perimetre.html">Périmètre</a>
+                <a class="nav-link" href="contraintes.html">Contraintes</a>
+                <a class="nav-link" href="hypotheses.html">Hypothèses</a>
+                <a class="nav-link" href="succes.html">Critères succès</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Matrices</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="competences.html">Compétences</a>
+                <a class="nav-link" href="swot.html">SWOT</a>
+                <a class="nav-link" href="risques.html">Analyse des risques</a>
+                <a class="nav-link" href="raci.html">RACI</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Pilotage</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="index.html">Parties Prenantes</a>
+                <a class="nav-link active" href="decoupage.html">Découpage</a>
+                <a class="nav-link" href="wbs.html">WBS</a>
+                <a class="nav-link" href="gantt.html">GANTT</a>
+                <a class="nav-link" href="smart.html">SMART</a>
+                <a class="nav-link" href="kpis.html">KPIs</a>
+            </div>
+        </div>
+        <div class="nav-group">
+            <span class="nav-group-label">Infrastructure</span>
+            <div class="nav-group-links">
+                <a class="nav-link" href="vm-sizing.html">Dimensionnement VM</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container wbs-container">
+        <div class="wbs-layout">
+            <aside class="wbs-sidebar">
+                <section class="card phases-card">
+                    <div class="card-header">
+                        <h2>Phases</h2>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="phases-table">
+                            <colgroup>
+                                <col class="phase-col-number" />
+                                <col class="phase-col-name" />
+                                <col class="select-col" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>N°</th>
+                                    <th>Phase</th>
+                                    <th class="select-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="decoupage-phases-table"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-decoupage-phase-btn" type="button" title="Ajouter une phase" aria-label="Ajouter une phase">+</button>
+                        </div>
+                        <button class="btn btn-danger btn-reset" id="reset-decoupage-btn" type="button">Réinitialiser</button>
+                    </div>
+                </section>
+            </aside>
+
+            <section class="card wbs-card">
+                <div class="card-header">
+                    <h2>Découpage</h2>
+                </div>
+
+                <div class="wbs-planning-toolbar">
+                    <p>Les phases et étapes définies ici sont automatiquement envoyées dans le WBS, à compléter ensuite avec responsables, dates et avancement.</p>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="wbs-table decoupage-table">
+                        <colgroup>
+                            <col class="wbs-col-number" />
+                            <col class="wbs-col-move" />
+                            <col class="decoupage-col-label" />
+                            <col class="select-col" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>N°</th>
+                                <th class="wbs-move-header"></th>
+                                <th>Étape</th>
+                                <th class="select-col"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="decoupage-steps-table"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="forge-footer-brand" aria-label="Forge">
+            <span class="forge-logo" aria-hidden="true">
+                <span class="forge-logo-bar"></span>
+                <span class="forge-logo-head"></span>
+            </span>
+            <span class="forge-name">Forge</span>
+        </div>
+    </footer>
+
+    <div class="modal-overlay hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="help-title">Aide</h2>
+                <button class="modal-close" id="help-close-btn" type="button" aria-label="Fermer l’aide">×</button>
+            </div>
+            <div class="modal-body" id="help-content"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+services:
+  forge:
+    image: node:20-bookworm
+    container_name: forge-app
+    working_dir: /app
+    ports:
+      - "8080:3000"
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - forge_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: production
+      FORGE_DATA_DIR: /app/data
+      PORT: 3000
+      FORGE_JSON_LIMIT: 25mb
+      FORGE_API_RATE_LIMIT_PER_MINUTE: 1200
+      # Optionnel : décommente/remplis ces deux variables pour ajouter une authentification HTTP Basic.
+      # FORGE_AUTH_USER: forge
+      # FORGE_AUTH_PASSWORD: change-moi
+    command: >
+      bash -lc "npm install --omit=dev --no-audit --no-fund && npm start"
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "/app/scripts/healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    stop_grace_period: 15s
+    restart: unless-stopped
+
+volumes:
+  forge_node_modules:
