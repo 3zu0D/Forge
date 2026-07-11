@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge - Budget - TCO</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="budget-tco">
+    <header class="topbar">
+        <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
+
+        <div class="project-info" aria-label="Informations générales du projet">
+            <label class="project-field">
+                <span>Nom</span>
+                <input id="project-name" type="text" placeholder="Nom du projet" data-project-field="name" />
+            </label>
+        </div>
+
+        <div class="project-switcher" aria-label="Sélection du projet">
+            <label class="project-switcher-field">
+                <span>Projet actif</span>
+                <select id="project-selector"></select>
+            </label>
+            <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
+        </div>
+
+        <div class="theme-switcher" aria-label="Sélection du thème">
+            <label class="theme-switcher-field">
+                <span>Thème</span>
+                <select id="theme-selector">
+                    <option value="cyber">Cyber dark</option>
+                    <option value="light">Clair</option>
+                    <option value="orange">Orange dusk</option>
+                    <option value="executive">Executive report</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="portable-controls" aria-label="Sauvegarde portable">
+            <button class="portable-btn" id="export-data-btn" type="button" title="Télécharger une sauvegarde complète (JSON)">Exporter</button>
+            <button class="portable-btn" id="import-data-btn" type="button" title="Restaurer une sauvegarde complète (JSON)">Importer</button>
+            <input id="import-data-input" type="file" accept="application/json,.json" hidden />
+        </div>
+    </header>
+
+    <nav id="page-nav" class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale"></nav>
+
+    <main class="container budget-tco-container">
+        <section class="budget-tco-layout">
+            <aside class="card budget-tco-profiles-card">
+                <div class="card-header">
+                    <h2>TCO</h2>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="budget-tco-profiles-table">
+                        <thead>
+                            <tr>
+                                <th class="select-col">
+                                    <input id="select-all-budget-tco-profiles" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
+                                </th>
+                                <th>N°</th>
+                                <th>Nom</th>
+                            </tr>
+                        </thead>
+                        <tbody id="budget-tco-profiles-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="table-actions">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-budget-tco-btn" type="button" title="Créer un TCO" aria-label="Créer un TCO">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-tco-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="budget-tco-main-zone">
+                <section class="card budget-tco-summary-card">
+                    <div class="card-header">
+                        <h2 id="budget-tco-active-name">TCO</h2>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="budget-tco-summary-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>1 an</th>
+                                    <th>5 ans</th>
+                                    <th>10 ans</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>CAPEX</td>
+                                    <td id="budget-tco-summary-capex-1">0 €</td>
+                                    <td id="budget-tco-summary-capex-5">0 €</td>
+                                    <td id="budget-tco-summary-capex-10">0 €</td>
+                                </tr>
+                                <tr>
+                                    <td>OPEX</td>
+                                    <td id="budget-tco-summary-opex-1">0 €</td>
+                                    <td id="budget-tco-summary-opex-5">0 €</td>
+                                    <td id="budget-tco-summary-opex-10">0 €</td>
+                                </tr>
+                                <tr class="budget-tco-summary-total-row">
+                                    <td>Total TCO</td>
+                                    <td id="budget-tco-summary-total-1">0 €</td>
+                                    <td id="budget-tco-summary-total-5">0 €</td>
+                                    <td id="budget-tco-summary-total-10">0 €</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="card budget-tco-lines-card">
+                    <div class="card-header">
+                        <h2>Éléments</h2>
+                        <div class="budget-horizon-toggle" id="budget-tco-horizon-toggle" role="group" aria-label="Horizon affiché pour le coût et le poids">
+                            <button type="button" data-horizon="1">1 an</button>
+                            <button type="button" data-horizon="5" class="active">5 ans</button>
+                            <button type="button" data-horizon="10">10 ans</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="budget-tco-table">
+                            <colgroup>
+                                <col class="budget-col-name" />
+                                <col class="budget-col-nature" />
+                                <col class="budget-col-cycle" />
+                                <col class="budget-col-price" />
+                                <col class="budget-col-price" />
+                                <col class="budget-col-price" />
+                                <col class="budget-col-price" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Élément</th>
+                                    <th>Nature</th>
+                                    <th>Cycle</th>
+                                    <th>Prix unitaire (€)</th>
+                                    <th>Quantité</th>
+                                    <th>Coût total</th>
+                                    <th>Poids</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budget-tco-lines-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="forge-footer-brand" aria-label="Forge">
+            <span class="forge-logo" aria-hidden="true">
+                <span class="forge-logo-bar"></span>
+                <span class="forge-logo-head"></span>
+            </span>
+            <span class="forge-name">Forge</span>
+        </div>
+    </footer>
+
+    <div class="modal-overlay hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="help-title">Aide</h2>
+                <button class="modal-close" id="help-close-btn" type="button" aria-label="Fermer l’aide">×</button>
+            </div>
+            <div class="modal-body" id="help-content"></div>
+        </div>
+    </div>
+
+    <script src="budget.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

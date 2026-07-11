@@ -21,11 +21,15 @@ const defaultProjectInfo = {
     endDate: ""
 };
 
+// Palette volontairement très saturée ("vive, percutante") — chaque case garde
+// la même famille de teinte qu'avant (même ordre), pour qu'une couleur déjà
+// choisie sur un projet existant retombe sur un ton proche via normalizeColor(),
+// au lieu de sauter vers une teinte sans rapport si son ancien hex n'existe plus.
 const predefinedColors = [
-    "#ff1744", "#ff6b4a", "#ff9100", "#ffc400", "#ffea00",
-    "#b6ff00", "#00e676", "#00ffb3", "#00c2a8", "#00e5ff",
-    "#38bdf8", "#2979ff", "#304ffe", "#651fff", "#8b5cf6",
-    "#d500f9", "#ff00aa", "#ff4081", "#c08457", "#94a3b8"
+    "#ff1744", "#ff3d00", "#ff9100", "#ffc400", "#ffd600",
+    "#c6ff00", "#64dd17", "#00e676", "#1de9b6", "#00e5ff",
+    "#00b0ff", "#2979ff", "#304ffe", "#651fff", "#aa00ff",
+    "#d500f9", "#f50057", "#ff4081", "#c08457", "#94a3b8"
 ];
 
 const defaultStakeholders = [];
@@ -115,9 +119,156 @@ let decoupagePhases = [];
 let decoupageSteps = [];
 let decisionCriteria = [];
 let decisionOptions = [];
+let atoutsLimitesMatrices = [];
 let selectedSwotItems = { strengths: new Set(), weaknesses: new Set(), opportunities: new Set(), threats: new Set() };
 
 const currentPage = document.body.dataset.page;
+
+// Petites icônes de nav (traits fins, 22x22, currentColor) : un set cohérent et
+// sobre plutôt que des emojis, pour garder un rendu pro sur les 4 thèmes.
+const FORGE_NAV_ICON_SHAPES = {
+    overview: '<circle cx="11" cy="11" r="8"/><polygon points="13.4,8.6 12,12 8.6,13.4 10,10" fill="currentColor" stroke-linejoin="round"/>',
+    redactionnel: '<path d="M14.5 3.5l4 4L8 18H4v-4z"/><path d="M12.5 5.5l4 4"/>',
+    matrices: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="12" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="12" width="7" height="7" rx="1.5"/><rect x="12" y="12" width="7" height="7" rx="1.5"/>',
+    pilotage: '<line x1="6" y1="4" x2="6" y2="18"/><circle cx="6" cy="8" r="2" fill="currentColor"/><line x1="11" y1="4" x2="11" y2="18"/><circle cx="11" cy="14" r="2" fill="currentColor"/><line x1="16" y1="4" x2="16" y2="18"/><circle cx="16" cy="10" r="2" fill="currentColor"/>',
+    infrastructure: '<rect x="3" y="4" width="16" height="6" rx="1.5"/><rect x="3" y="12" width="16" height="6" rx="1.5"/><circle cx="6.5" cy="7" r="0.9" fill="currentColor" stroke="none"/><circle cx="6.5" cy="15" r="0.9" fill="currentColor" stroke="none"/>',
+    budget: '<rect x="2.5" y="6" width="17" height="12" rx="2"/><path d="M2.5 9.5h17"/><circle cx="15.5" cy="13.5" r="1.4" fill="currentColor" stroke="none"/>',
+
+    dashboard: '<polyline points="2.5,13 6.5,13 8.5,7 12,16 14.5,9.5 16.5,12.5 19.5,12.5"/>',
+    context: '<rect x="5" y="2" width="12" height="18" rx="1.5"/><line x1="7.5" y1="7" x2="14.5" y2="7"/><line x1="7.5" y1="10.5" x2="14.5" y2="10.5"/><line x1="7.5" y1="14" x2="12" y2="14"/>',
+    objectives: '<circle cx="11" cy="11" r="8"/><circle cx="11" cy="11" r="4.6"/><circle cx="11" cy="11" r="1.3" fill="currentColor" stroke="none"/>',
+    stakes: '<line x1="5" y1="3" x2="5" y2="19"/><path d="M5 3h11l-4 4 4 4H5"/>',
+    scope: '<path d="M3 8V4h4"/><path d="M15 4h4v4"/><path d="M19 14v4h-4"/><path d="M7 18H3v-4"/>',
+    constraints: '<rect x="5.5" y="10" width="11" height="8" rx="1.5"/><path d="M7.8 10V7a3.2 3.2 0 0 1 6.4 0v3"/>',
+    assumptions: '<circle cx="11" cy="8.5" r="5.2"/><line x1="9" y1="17" x2="13" y2="17"/><line x1="9.5" y1="19" x2="12.5" y2="19"/><line x1="11" y1="13.5" x2="11" y2="15.5"/>',
+    success: '<circle cx="11" cy="11" r="8"/><polyline points="7,11.2 9.8,14 15,8.2"/>',
+    competences: '<circle cx="11" cy="8" r="5"/><path d="M8 12.3L6 19l5-2.2L16 19l-2-6.7"/>',
+    swot: '<rect x="3" y="3" width="16" height="16" rx="1.5"/><line x1="11" y1="3" x2="11" y2="19"/><line x1="3" y1="11" x2="19" y2="11"/>',
+    decision: '<line x1="6" y1="4" x2="6" y2="18"/><circle cx="6" cy="14" r="2" fill="currentColor"/><line x1="11" y1="4" x2="11" y2="18"/><circle cx="11" cy="7" r="2" fill="currentColor"/><line x1="16" y1="4" x2="16" y2="18"/><circle cx="16" cy="11" r="2" fill="currentColor"/>',
+    "atouts-limites": '<rect x="3.5" y="4" width="6.5" height="14" rx="1.3"/><rect x="12" y="4" width="6.5" height="14" rx="1.3"/>',
+    stakeholders: '<circle cx="8" cy="8" r="3"/><path d="M2.8 18c.6-3.2 2.8-5 5.2-5s4.6 1.8 5.2 5"/><circle cx="16" cy="9" r="2.3"/><path d="M14.6 12.4c2 .1 3.7 1.7 4.2 4.4"/>',
+    decoupage: '<polygon points="11,2.5 19,7.5 11,12.5 3,7.5"/><polyline points="3,12.5 11,17.5 19,12.5"/>',
+    wbs: '<rect x="8" y="2.5" width="6" height="4.5" rx="1"/><rect x="2" y="15" width="6" height="4.5" rx="1"/><rect x="14" y="15" width="6" height="4.5" rx="1"/><path d="M11 7v4M5 15v-4h12v4"/>',
+    gantt: '<line x1="3" y1="6" x2="12" y2="6" stroke-width="3"/><line x1="7" y1="11" x2="19" y2="11" stroke-width="3"/><line x1="3" y1="16" x2="14.5" y2="16" stroke-width="3"/>',
+    raci: '<rect x="2.5" y="3.5" width="17" height="15" rx="1.5"/><line x1="2.5" y1="9" x2="19.5" y2="9"/><line x1="2.5" y1="14" x2="19.5" y2="14"/><line x1="9" y1="3.5" x2="9" y2="18.5"/><line x1="14.5" y1="3.5" x2="14.5" y2="18.5"/>',
+    risks: '<polygon points="11,3 20,19 2,19"/><line x1="11" y1="9" x2="11" y2="13.5"/><circle cx="11" cy="16" r="0.9" fill="currentColor" stroke="none"/>',
+    smart: '<rect x="3" y="3.5" width="3.4" height="3.4" rx="0.8"/><line x1="9" y1="5.2" x2="19" y2="5.2"/><rect x="3" y="9.3" width="3.4" height="3.4" rx="0.8"/><line x1="9" y1="11" x2="19" y2="11"/><rect x="3" y="15.1" width="3.4" height="3.4" rx="0.8"/><polyline points="3.6,16.8 4.4,17.6 6,15.6"/><line x1="9" y1="16.8" x2="19" y2="16.8"/>',
+    kpis: '<polyline points="3,17.5 8.5,10.5 12.3,14 19,4.5"/><polyline points="14.3,4.5 19,4.5 19,9.2"/>',
+    vmsizing: '<rect x="6.5" y="6.5" width="9" height="9" rx="1.2"/><line x1="9" y1="2.5" x2="9" y2="6.5"/><line x1="13" y1="2.5" x2="13" y2="6.5"/><line x1="9" y1="15.5" x2="9" y2="19.5"/><line x1="13" y1="15.5" x2="13" y2="19.5"/><line x1="2.5" y1="9" x2="6.5" y2="9"/><line x1="2.5" y1="13" x2="6.5" y2="13"/><line x1="15.5" y1="9" x2="19.5" y2="9"/><line x1="15.5" y1="13" x2="19.5" y2="13"/>',
+    "budget-couts": '<ellipse cx="11" cy="15.5" rx="6.5" ry="3"/><path d="M4.5 15.5V11M17.5 15.5V11"/><ellipse cx="11" cy="11" rx="6.5" ry="3"/>',
+    "budget-tco": '<circle cx="11" cy="11" r="8"/><path d="M11 3v8l6.2-4.3"/>',
+    "budget-carbone": '<path d="M4.5 18.5C3.8 9.8 11 4 18.5 4.5c.7 8.7-6.5 14.5-14 14Z"/><path d="M5.5 17.5c3-3.5 6.5-6.5 11-11"/>',
+    "budget-comparatifs": '<line x1="6" y1="18.5" x2="6" y2="10" stroke-width="3"/><line x1="11" y1="18.5" x2="11" y2="4" stroke-width="3"/><line x1="16" y1="18.5" x2="16" y2="12.5" stroke-width="3"/>'
+};
+
+function navIcon(name) {
+    const shape = FORGE_NAV_ICON_SHAPES[name];
+    if (!shape) return "";
+
+    return `<svg class="nav-icon" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
+}
+
+// Source unique de la nav (autrefois dupliquée en dur dans les <nav> de chaque page
+// HTML — un changement demandait d'éditer les ~24 fichiers). Rendue par renderPageNav().
+const FORGE_NAV_GROUPS = [
+    {
+        label: "Vue globale",
+        icon: "overview",
+        links: [{ page: "dashboard", href: "dashboard.html", label: "Tableau de bord", icon: "dashboard" }]
+    },
+    {
+        label: "Rédactionnel",
+        icon: "redactionnel",
+        links: [
+            { page: "context", href: "contexte.html", label: "Contexte", icon: "context" },
+            { page: "objectives", href: "objectifs.html", label: "Objectifs", icon: "objectives" },
+            { page: "stakes", href: "enjeux.html", label: "Enjeux", icon: "stakes" },
+            { page: "scope", href: "perimetre.html", label: "Périmètre", icon: "scope" },
+            { page: "constraints", href: "contraintes.html", label: "Contraintes", icon: "constraints" },
+            { page: "assumptions", href: "hypotheses.html", label: "Hypothèses", icon: "assumptions" },
+            { page: "success", href: "succes.html", label: "Critères succès", icon: "success" }
+        ]
+    },
+    {
+        label: "Matrices",
+        icon: "matrices",
+        links: [
+            { page: "competences", href: "competences.html", label: "Compétences", icon: "competences" },
+            { page: "swot", href: "swot.html", label: "SWOT", icon: "swot" },
+            { page: "decision", href: "decision.html", label: "Décision pondérée", icon: "decision" },
+            { page: "atouts-limites", href: "atouts-limites.html", label: "Atouts / Limites", icon: "atouts-limites" }
+        ]
+    },
+    {
+        label: "Pilotage",
+        icon: "pilotage",
+        links: [
+            { page: "stakeholders", href: "index.html", label: "Parties Prenantes", icon: "stakeholders" },
+            { page: "decoupage", href: "decoupage.html", label: "Découpage", icon: "decoupage" },
+            { page: "wbs", href: "wbs.html", label: "WBS", icon: "wbs" },
+            { page: "gantt", href: "gantt.html", label: "GANTT", icon: "gantt" },
+            { page: "raci", href: "raci.html", label: "RACI", icon: "raci" },
+            { page: "risks", href: "risques.html", label: "Analyse des risques", icon: "risks" },
+            { page: "smart", href: "smart.html", label: "SMART", icon: "smart" },
+            { page: "kpis", href: "kpis.html", label: "KPIs", icon: "kpis" }
+        ]
+    },
+    {
+        label: "Infrastructure",
+        icon: "infrastructure",
+        links: [{ page: "vmsizing", href: "vm-sizing.html", label: "Dimensionnement VM", icon: "vmsizing" }]
+    },
+    {
+        label: "Budget",
+        icon: "budget",
+        links: [
+            { page: "budget-couts", href: "budget-couts.html", label: "Base de coûts", icon: "budget-couts" },
+            { page: "budget-tco", href: "budget-tco.html", label: "TCO", icon: "budget-tco" },
+            { page: "budget-carbone", href: "budget-carbone.html", label: "Bilan carbone", icon: "budget-carbone" },
+            { page: "budget-comparatifs", href: "budget-comparatifs.html", label: "Comparatifs", icon: "budget-comparatifs" }
+        ]
+    }
+];
+
+// La marque Forge n'existait qu'en pied de page — aucune identité visuelle en
+// haut de l'écran. Injectée en JS (comme la nav) pour ne pas avoir à éditer
+// les ~27 pages HTML une par une.
+function renderTopbarBrand() {
+    const topbar = document.querySelector(".topbar");
+    if (!topbar || topbar.querySelector(".topbar-brand")) return;
+
+    const brand = document.createElement("div");
+    brand.className = "topbar-brand";
+    brand.innerHTML = `
+        <span class="forge-logo" aria-hidden="true">
+            <span class="forge-logo-bar"></span>
+            <span class="forge-logo-head"></span>
+        </span>
+        <span class="forge-name">Forge</span>
+    `;
+    topbar.insertBefore(brand, topbar.firstChild);
+}
+
+function renderPageNav() {
+    const nav = document.getElementById("page-nav");
+    if (!nav) return;
+
+    nav.innerHTML = FORGE_NAV_GROUPS.map(
+        (group) => `
+        <div class="nav-group">
+            <span class="nav-group-label">${navIcon(group.icon)}<span class="nav-group-label-text">${escapeHtml(group.label)}</span></span>
+            <div class="nav-group-links">
+                ${group.links
+                    .map(
+                        (link) =>
+                            `<a class="nav-link${link.page === currentPage ? " active" : ""}" href="${escapeHtml(link.href)}">${navIcon(link.icon)}<span class="nav-link-text">${escapeHtml(link.label)}</span></a>`
+                    )
+                    .join("")}
+            </div>
+        </div>
+    `
+    ).join("");
+}
 
 const tableBody = document.getElementById("stakeholders-table");
 const addPersonButton = document.getElementById("add-person-btn");
@@ -998,6 +1149,14 @@ async function captureRaciPhase(button, phaseId) {
     const card = button.closest(".card");
     if (!card || !raciTableBody) return;
 
+    // Masquer les lignes des autres phases rétrécit la page (parfois de beaucoup
+    // sur un gros RACI), et le navigateur recadre alors tout seul le scroll pour
+    // qu'il reste dans les bornes valides — AVANT même que captureCardToClipboard
+    // ne démarre. Il faut donc sauvegarder la position ici, avant de masquer quoi
+    // que ce soit, sinon on "restaure" une position déjà perdue.
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
     const group = groupWbsRowsByPhase().find((item) => item.phaseId === phaseId);
     const phaseLabel = group ? (group.phase?.name || group.label || "Sans phase") : "Sans phase";
 
@@ -1021,6 +1180,7 @@ async function captureRaciPhase(button, phaseId) {
         });
 
         if (titleEl && previousTitle !== null) titleEl.textContent = previousTitle;
+        window.scrollTo(scrollX, scrollY);
     }
 }
 
@@ -1095,13 +1255,29 @@ function normalizeColor(color, index) {
     return predefinedColors[index % predefinedColors.length];
 }
 
-function hexToRgba(hex, alpha) {
+function hexToRgbaRaw(hex, alpha) {
     const cleanHex = hex.replace("#", "");
     const r = parseInt(cleanHex.substring(0, 2), 16);
     const g = parseInt(cleanHex.substring(2, 4), 16);
     const b = parseInt(cleanHex.substring(4, 6), 16);
 
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Un même hexToRgba(couleur, 0.20) donne un aplat riche sur fond sombre (cyber/orange)
+// mais un pastel délavé sur fond clair (clair/executive) — un mélange alpha "pâlit"
+// beaucoup plus vite sur blanc que sur noir, à opacité égale. Pour un rendu de couleur
+// de phase/type perçu comme équivalent sur les 4 thèmes, on renforce l'opacité sur les
+// thèmes à fond clair, sans jamais aller jusqu'à l'aplat dur (garde l'effet glow/wash).
+function themedAlpha(alpha) {
+    const theme = document.body.dataset.theme || "cyber";
+    if (theme !== "light" && theme !== "executive") return alpha;
+
+    return Math.min(0.95, alpha * 2.3);
+}
+
+function hexToRgba(hex, alpha) {
+    return hexToRgbaRaw(hex, themedAlpha(alpha));
 }
 
 function escapeHtml(value) {
@@ -2293,22 +2469,6 @@ function createRiskScoreOptions(selectedScore) {
     `).join("");
 }
 
-function createRiskResponseOptions(selectedResponse) {
-    const options = [
-        ["", "À définir"],
-        ["Éviter", "Éviter"],
-        ["Réduire", "Réduire"],
-        ["Transférer", "Transférer"],
-        ["Accepter", "Accepter"]
-    ];
-
-    return options.map(([value, label]) => `
-        <option value="${escapeHtml(value)}" ${value === selectedResponse ? "selected" : ""}>
-            ${escapeHtml(label)}
-        </option>
-    `).join("");
-}
-
 function createRiskStatusOptions(selectedStatus) {
     const options = [
         ["", "À définir"],
@@ -2323,57 +2483,6 @@ function createRiskStatusOptions(selectedStatus) {
             ${escapeHtml(label)}
         </option>
     `).join("");
-}
-
-function createRiskResponsableOptions(row) {
-    const selectedId = row.responsableId || "";
-    const currentText = row.responsable || "";
-    const options = ['<option value="">Aucun</option>'];
-
-    stakeholders.forEach((person) => {
-        const stakeholderId = getStakeholderId(person);
-        const label = getStakeholderLabel(person);
-        options.push(`
-            <option value="${escapeHtml(stakeholderId)}" ${stakeholderId === selectedId ? "selected" : ""}>
-                ${escapeHtml(label)}
-            </option>
-        `);
-    });
-
-    if (currentText && selectedId && !stakeholders.some((person) => getStakeholderId(person) === selectedId)) {
-        options.push(`
-            <option value="${escapeHtml(selectedId)}" selected>
-                ${escapeHtml(currentText)}
-            </option>
-        `);
-    }
-
-    return options.join("");
-}
-
-function syncRiskResponsablesWithStakeholders() {
-    let changed = false;
-
-    riskRows = riskRows.map((row) => {
-        if (!row.responsableId) return row;
-
-        const stakeholder = stakeholders.find((person) => getStakeholderId(person) === row.responsableId);
-
-        if (!stakeholder) return row;
-
-        const label = getStakeholderLabel(stakeholder);
-
-        if (row.responsable !== label) {
-            changed = true;
-            return { ...row, responsable: label };
-        }
-
-        return row;
-    });
-
-    if (changed) {
-        saveRisks();
-    }
 }
 
 function calculateRiskCriticality(risk) {
@@ -2410,9 +2519,8 @@ if (typeof helpTexts !== "undefined") {
         <p>Cette page sert à suivre les risques du projet.</p>
         <ul>
             <li>Le petit tableau à gauche permet de créer des types de risques : technique, financier, planning, humain, sécurité...</li>
-            <li>Chaque risque possède une probabilité et une gravité de 1 à 5.</li>
+            <li>Chaque risque possède une conséquence, une probabilité et une gravité de 1 à 5.</li>
             <li>La criticité est calculée automatiquement : probabilité × gravité.</li>
-            <li>Tu peux choisir une stratégie de réponse : éviter, réduire, transférer ou accepter.</li>
             <li>Les risques sont inclus dans l’export/import portable et dans l’export Excel.</li>
         </ul>
     `;
@@ -2571,12 +2679,9 @@ function createEmptyRiskRow() {
         id: createId(),
         typeId: riskTypes[0]?.id || "",
         risk: "",
-        source: "",
+        consequence: "",
         probability: "1",
         severity: "1",
-        response: "",
-        responsable: "",
-        responsableId: "",
         mitigation: ""
     };
 }
@@ -2600,12 +2705,9 @@ function loadRisks() {
             id: row.id || createId(),
             typeId: row.typeId || "",
             risk: row.risk || "",
-            source: row.source || row.cause || "",
+            consequence: row.consequence || "",
             probability: row.probability || "1",
             severity: row.severity || "1",
-            response: row.response || "",
-            responsable: row.responsable || "",
-            responsableId: row.responsableId || "",
             mitigation: row.mitigation || row.comment || ""
         }));
 
@@ -2624,11 +2726,10 @@ function renderRisksTable() {
 
     if (!body) return;
 
-    syncRiskResponsablesWithStakeholders();
     body.innerHTML = "";
 
     if (riskRows.length === 0) {
-        body.innerHTML = `<tr><td colspan="11" class="empty-state">Aucun risque pour le moment. Clique sur “Ajouter un risque” pour commencer.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="9" class="empty-state">Aucun risque pour le moment. Clique sur “Ajouter un risque” pour commencer.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -2665,7 +2766,7 @@ function renderRisksTable() {
                 </select>
             </td>
             ${createRiskEditableCell(risk.risk, index, "risk", "risk-name-cell")}
-            ${createRiskEditableCell(risk.source, index, "source", "risk-source-cell")}
+            ${createRiskEditableCell(risk.consequence, index, "consequence", "risk-consequence-cell")}
             <td>
                 <select class="risk-probability-select" data-index="${index}" data-field="probability">
                     ${createRiskScoreOptions(risk.probability)}
@@ -2677,16 +2778,6 @@ function renderRisksTable() {
                 </select>
             </td>
             <td class="risk-criticality-cell ${criticalityClass}">${escapeHtml(criticality || "")}</td>
-            <td>
-                <select class="risk-response-select" data-index="${index}" data-field="response">
-                    ${createRiskResponseOptions(risk.response)}
-                </select>
-            </td>
-            <td>
-                <select class="risk-responsable-select" data-index="${index}" data-field="responsableId">
-                    ${createRiskResponsableOptions(risk)}
-                </select>
-            </td>
             ${createRiskEditableCell(risk.mitigation, index, "mitigation", "risk-mitigation-cell")}
         `;
 
@@ -2716,25 +2807,13 @@ function bindRisksTableEvents() {
         });
     });
 
-    body.querySelectorAll(".risk-type-select, .risk-probability-select, .risk-severity-select, .risk-response-select").forEach((select) => {
+    body.querySelectorAll(".risk-type-select, .risk-probability-select, .risk-severity-select").forEach((select) => {
         select.addEventListener("change", (event) => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
             riskRows[index][field] = event.target.value;
             saveRisks();
             renderRisksTable();
-        });
-    });
-
-    body.querySelectorAll(".risk-responsable-select").forEach((select) => {
-        select.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
-            const stakeholderId = event.target.value;
-            const stakeholder = stakeholders.find((person) => getStakeholderId(person) === stakeholderId);
-
-            riskRows[index].responsableId = stakeholderId;
-            riskRows[index].responsable = stakeholder ? getStakeholderLabel(stakeholder) : "";
-            saveRisks();
         });
     });
 
@@ -2758,9 +2837,9 @@ if (typeof helpTexts !== "undefined") {
     helpTexts.risks = `
         <p>Cette page sert à suivre les risques du projet.</p>
         <ul>
-            <li>Le petit tableau à gauche permet de créer des types de risques.</li>
-            <li>La matrice du risque indique la criticité selon la probabilité et la gravité.</li>
-            <li>Chaque risque possède une source, une probabilité, une gravité et une mitigation.</li>
+            <li>Le petit tableau à gauche permet de créer des types de risques, avec son propre bouton de capture 📸.</li>
+            <li>La matrice du risque, juste en dessous, indique la criticité selon la probabilité et la gravité — elle a aussi son propre bouton de capture.</li>
+            <li>Chaque risque possède une conséquence, une probabilité, une gravité et une mitigation.</li>
             <li>La criticité est calculée automatiquement : probabilité × gravité.</li>
             <li>Les risques sont inclus dans l’export/import portable et dans l’export Excel.</li>
         </ul>
@@ -3884,6 +3963,15 @@ function renderColorMenu() {
                 vmSizingSaveProfiles();
                 hideColorMenu();
                 vmSizingRenderServerTable();
+                return;
+            }
+
+            if (activeColorTarget.type === "budgetElementType" && typeof budgetElementTypes !== "undefined") {
+                budgetElementTypes[activeColorTarget.index].color = color;
+                saveBudgetElementTypes();
+                hideColorMenu();
+                renderBudgetTypesTable();
+                renderBudgetElementsTable();
             }
         });
 
@@ -3921,12 +4009,16 @@ function showColorMenu(anchor) {
             activeColor = riskTypes[activeColorTarget.index]?.color;
         }
 
+        if (activeColorTarget?.type === "budgetElementType" && typeof budgetElementTypes !== "undefined") {
+            activeColor = budgetElementTypes[activeColorTarget.index]?.color;
+        }
+
         choice.classList.toggle("active", choice.dataset.color === activeColor);
     });
 }
 
 function closeColorMenuOnOutsideClick(event) {
-    const clickedNumber = event.target.closest(".row-number-btn, .competence-category-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn");
+    const clickedNumber = event.target.closest(".row-number-btn, .competence-category-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .budget-type-number-btn");
     const clickedMenu = event.target.closest("#color-menu");
 
     if (!clickedNumber && !clickedMenu) {
@@ -5494,30 +5586,11 @@ function addRiskChecks(checks, data) {
         return getDashboardRiskScore(risk) > 15 && !String(risk.mitigation || "").trim();
     }).length;
 
-    const risksWithoutResponsible = data.risks.filter((risk) => !String(risk.responsable || "").trim()).length;
-    const risksWithoutResponse = data.risks.filter((risk) => !String(risk.response || "").trim() || risk.response === "À définir").length;
-
     if (criticalWithoutMitigation > 0) {
         checks.push({
             severity: "error",
             title: "Risques critiques sans mitigation",
             text: `${criticalWithoutMitigation} risque(s) critique(s) n’ont pas de plan de mitigation.`
-        });
-    }
-
-    if (risksWithoutResponsible > 0) {
-        checks.push({
-            severity: "warning",
-            title: "Risques sans responsable",
-            text: `${risksWithoutResponsible} risque(s) n’ont pas de responsable.`
-        });
-    }
-
-    if (risksWithoutResponse > 0) {
-        checks.push({
-            severity: "warning",
-            title: "Réponses aux risques à définir",
-            text: `${risksWithoutResponse} risque(s) ont encore une réponse non définie.`
         });
     }
 }
@@ -6010,6 +6083,11 @@ function syncCaptureFormValues(sourceElement, cloneElement) {
 }
 
 function cleanCaptureClone(clone) {
+    // Convertit d'abord les badges numérotés colorés en <span> (voir
+    // replaceCaptureNumberBadgeButtons) pour qu'ils survivent au retrait
+    // générique des <button> juste en dessous.
+    replaceCaptureNumberBadgeButtons(clone);
+
     clone.querySelectorAll(".no-capture, .capture-card-btn, button, .table-actions, .swot-actions, .color-menu, .modal-overlay").forEach((element) => {
         element.remove();
     });
@@ -6702,6 +6780,23 @@ async function captureCardToClipboard(card, triggerButton) {
     triggerButton.disabled = true;
     triggerButton.classList.add("capture-loading");
 
+    // html2canvas remet le scroll de la page à (0,0) pendant son rendu (pour
+    // aligner ses calculs de coordonnées) et ne le restaure pas toujours après —
+    // sur un grand tableau (RACI, WBS...), l'utilisateur qui avait scrollé pour
+    // voir/capturer une partie précise se retrouve donc systématiquement
+    // renvoyé en haut de page après chaque capture. On sauvegarde et on restaure
+    // nous-mêmes la position, pour toute la chaîne de secours.
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
+    // Le reset des conteneurs à scroll (overflow/max-height) se fait UNE FOIS ici,
+    // pour toute la chaîne de secours (html2canvas -> SVG/foreignObject -> canvas
+    // manuel). Avant, seul le 1er palier le faisait puis annulait aussitôt son
+    // propre changement dans son `finally`, donc si html2canvas échouait, le
+    // palier de secours clonait la carte avec le scroll encore actif (un Gantt
+    // avec beaucoup de tâches, par ex., se retrouvait tronqué à la zone visible).
+    const restore = prepareCardForExactCapture(card);
+
     try {
         showCaptureToast("Préparation de la capture…");
 
@@ -6725,6 +6820,8 @@ async function captureCardToClipboard(card, triggerButton) {
         console.error("Capture impossible :", error);
         showCaptureToast("Capture impossible sur ce bloc.");
     } finally {
+        restore();
+        window.scrollTo(scrollX, scrollY);
         triggerButton.disabled = false;
         triggerButton.classList.remove("capture-loading");
     }
@@ -6783,7 +6880,32 @@ function prepareCardForExactCapture(card) {
     card.classList.add("capture-exact-mode");
     card.dataset.captureExact = "true";
 
-    const tableWrappers = Array.from(card.querySelectorAll(".table-wrapper, .gantt-wrapper, .redaction-table-wrapper, .scope-table-wrapper"));
+    // .card a overflow:hidden pour clipper proprement ses coins arrondis. Ça ne
+    // pose problème que pour le Gantt : sa frise de jours (.gantt-v76-timeline)
+    // peut être bien plus large que la carte elle-même (beaucoup de mois affichés)
+    // une fois son propre conteneur de scroll débridé juste au-dessus — sans lever
+    // aussi cette limite sur la carte, ce débordement horizontal reste coupé net à
+    // la largeur normale de la carte, même si .gantt-v76-timeline-scroll ne scroll
+    // plus. On ne touche à l'overflow de la carte que dans ce cas précis, pour ne
+    // pas perdre le clip des coins arrondis sur les autres captures (tableaux
+    // classiques, qui ne débordent jamais de leur carte).
+    const hasGanttTimeline = card.querySelector(".gantt-v76-timeline-scroll") !== null;
+    const previousCardOverflow = card.style.overflow;
+    const previousCardWidth = card.style.width;
+
+    if (hasGanttTimeline) {
+        card.style.overflow = "visible";
+    }
+
+    // .gantt-v76-board/.gantt-v77-board portent le scroll vertical de la grille
+    // GANTT (max-height + overflow-y:auto dès qu'une phase a beaucoup de tâches),
+    // .gantt-v76-timeline-scroll porte le scroll horizontal de la frise des jours —
+    // sans ce reset, la capture s'arrête à la zone actuellement visible à l'écran.
+    const tableWrappers = Array.from(
+        card.querySelectorAll(
+            ".table-wrapper, .gantt-wrapper, .redaction-table-wrapper, .scope-table-wrapper, .gantt-v76-board, .gantt-v77-board, .gantt-v76-timeline-scroll, .coherence-list"
+        )
+    );
     const previousWrapperStyles = tableWrappers.map((element) => ({
         element,
         overflow: element.style.overflow,
@@ -6798,6 +6920,20 @@ function prepareCardForExactCapture(card) {
         element.style.overflowY = "visible";
         element.style.maxHeight = "none";
     });
+
+    // La règle CSS .capture-exact-mode .gantt-v77-board élargit déjà la grille
+    // elle-même (grid-template-columns → max-content) une fois son scroll
+    // horizontal débridé ci-dessus, mais ça ne fait grandir QUE la grille : ses
+    // ancêtres (.gantt-wrapper, la carte) gardent leur largeur normale (ils ne
+    // s'agrandissent pas juste parce qu'un enfant déborde). Comme html2canvas
+    // dimensionne le canvas de sortie sur la boîte de l'élément capturé (la
+    // carte), pas sur son contenu qui déborde, il faut élargir la carte
+    // elle-même — .scrollWidth la mesure correctement à ce stade (la grille est
+    // déjà large), et élargir la carte suffit à ce que .gantt-wrapper (qui
+    // remplit sa largeur) suive.
+    if (hasGanttTimeline) {
+        card.style.width = `${Math.ceil(card.scrollWidth)}px`;
+    }
 
     const selectedRows = Array.from(card.querySelectorAll(".selected-row"));
     selectedRows.forEach((row) => row.classList.add("capture-row-was-selected"));
@@ -6824,11 +6960,47 @@ function prepareCardForExactCapture(card) {
 
         selectedRows.forEach((row) => row.classList.add("selected-row"));
         selectedRows.forEach((row) => row.classList.remove("capture-row-was-selected"));
+
+        if (hasGanttTimeline) {
+            card.style.overflow = previousCardOverflow;
+            card.style.width = previousCardWidth;
+        }
     };
+}
+
+// Ces badges numérotés colorés sont techniquement des <button> (pour ouvrir le
+// sélecteur de couleur au clic), mais ils affichent une donnée réelle (le n° de
+// ligne) et doivent rester visibles dans la capture — contrairement aux vrais
+// boutons d'action (+/-/reset/etc.) exclus par ailleurs.
+const CAPTURE_NUMBER_BADGE_SELECTOR =
+    ".row-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .competence-category-number-btn, .budget-type-number-btn, .vmsizing-server-number-btn";
+
+// html2canvas (et le rendu SVG/foreignObject) ne dessine pas correctement le
+// contenu des <button> natifs, même quand on ne les exclut pas de la capture
+// (bug connu, indépendant du CSS). On remplace donc ces badges par un <span>
+// équivalent UNIQUEMENT dans le clone utilisé pour la capture, jamais dans la
+// page réelle — le bouton d'origine garde son comportement normal.
+function replaceCaptureNumberBadgeButtons(root) {
+    root.querySelectorAll(CAPTURE_NUMBER_BADGE_SELECTOR).forEach((button) => {
+        if (!button || button.tagName !== "BUTTON") return;
+
+        const doc = button.ownerDocument;
+        const replacement = doc.createElement("span");
+        replacement.className = button.className;
+        // <button> centre son contenu et respecte width/height nativement ;
+        // un <span> est inline par défaut, donc on le repose explicitement en
+        // inline-flex centré pour garder exactement le même rendu du badge.
+        const inlineStyle = `display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; ${button.getAttribute("style") || ""}`;
+        replacement.setAttribute("style", inlineStyle);
+        replacement.textContent = button.textContent;
+        button.replaceWith(replacement);
+    });
 }
 
 function shouldIgnoreExactCaptureElement(element) {
     if (!element) return false;
+
+    if (element.matches?.(CAPTURE_NUMBER_BADGE_SELECTOR)) return false;
 
     const selectors = [
         ".no-capture",
@@ -6976,6 +7148,8 @@ function getExactCaptureScale(rect) {
 }
 
 function improveCaptureCloneRendering(clonedDocument) {
+    replaceCaptureNumberBadgeButtons(clonedDocument);
+
     const style = clonedDocument.createElement("style");
     style.textContent = `
         * {
@@ -7070,43 +7244,40 @@ function ensureHtml2CanvasLoaded() {
 async function renderCardToExactVisualBlob(card) {
     await ensureHtml2CanvasLoaded();
 
-    const restore = prepareCardForExactCapture(card);
+    // Le reset overflow/max-height (prepareCardForExactCapture) est maintenant
+    // fait une seule fois par l'appelant (captureCardToClipboard), pour rester
+    // actif même si ce palier échoue et qu'on retombe sur un palier de secours.
+    showCaptureToast("Capture HD arrondie en préparation…");
+    await waitForCaptureLayout();
 
-    try {
-        showCaptureToast("Capture HD arrondie en préparation…");
-        await waitForCaptureLayout();
+    const rect = card.getBoundingClientRect();
+    const scale = getExactCaptureScale(rect);
 
-        const rect = card.getBoundingClientRect();
-        const scale = getExactCaptureScale(rect);
+    const canvas = await window.html2canvas(card, {
+        backgroundColor: null,
+        scale,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        removeContainer: true,
+        foreignObjectRendering: false,
+        imageTimeout: 0,
+        windowWidth: Math.max(document.documentElement.scrollWidth, window.innerWidth, Math.ceil(card.scrollWidth + 80)),
+        windowHeight: Math.max(document.documentElement.scrollHeight, window.innerHeight, Math.ceil(card.scrollHeight + 80)),
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+        ignoreElements: (element) => shouldIgnoreExactCaptureElement(element),
+        onclone: (clonedDocument) => {
+            improveCaptureCloneRendering(clonedDocument);
+        }
+    });
 
-        const canvas = await window.html2canvas(card, {
-            backgroundColor: null,
-            scale,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            removeContainer: true,
-            foreignObjectRendering: false,
-            imageTimeout: 0,
-            windowWidth: Math.max(document.documentElement.scrollWidth, window.innerWidth, Math.ceil(card.scrollWidth + 80)),
-            windowHeight: Math.max(document.documentElement.scrollHeight, window.innerHeight, Math.ceil(card.scrollHeight + 80)),
-            scrollX: window.scrollX,
-            scrollY: window.scrollY,
-            ignoreElements: (element) => shouldIgnoreExactCaptureElement(element),
-            onclone: (clonedDocument) => {
-                improveCaptureCloneRendering(clonedDocument);
-            }
-        });
+    sharpenCaptureCanvas(canvas);
 
-        sharpenCaptureCanvas(canvas);
+    const radius = getCaptureCardRadius(card, scale);
+    const roundedCanvas = applyRoundedCaptureMask(canvas, radius);
 
-        const radius = getCaptureCardRadius(card, scale);
-        const roundedCanvas = applyRoundedCaptureMask(canvas, radius);
-
-        return await canvasToPngBlob(roundedCanvas);
-    } finally {
-        restore();
-    }
+    return await canvasToPngBlob(roundedCanvas);
 }
 
 function getCaptureCardRadius(card, scale) {
@@ -7669,6 +7840,14 @@ async function captureWbsPhase(button, phaseId) {
     const card = button.closest(".card");
     if (!card || !wbsTableBody) return;
 
+    // Masquer les lignes des autres phases rétrécit la page, et le navigateur
+    // recadre alors tout seul le scroll pour rester dans les bornes valides —
+    // AVANT même que captureCardToClipboard ne démarre. Sauvegarder la position
+    // ici, avant de masquer quoi que ce soit, sinon on "restaure" une position
+    // déjà perdue.
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
     const titleEl = card.querySelector(":scope > .card-header h2");
     const previousTitle = titleEl ? titleEl.textContent : null;
     const phaseLabel = phaseId
@@ -7693,6 +7872,7 @@ async function captureWbsPhase(button, phaseId) {
         });
 
         if (titleEl && previousTitle !== null) titleEl.textContent = previousTitle;
+        window.scrollTo(scrollX, scrollY);
     }
 }
 
@@ -9093,6 +9273,8 @@ if (typeof helpTexts !== "undefined") {
 
 /* V77 — GANTT compact + week-ends + capture grille */
 function forgeBootstrap() {
+    renderTopbarBrand();
+    renderPageNav();
     bootstrapForgeAsync();
 }
 
@@ -9123,6 +9305,11 @@ async function bootstrapForgeAsync() {
     if (currentPage === "vmsizing" && typeof initVmSizingPage === "function") initVmSizingPage();
     if (currentPage === "decoupage") initDecoupagePage();
     if (currentPage === "decision") initDecisionPage();
+    if (currentPage === "atouts-limites") initAtoutsLimitesPage();
+    if (currentPage === "budget-couts" && typeof initBudgetCoutsPage === "function") initBudgetCoutsPage();
+    if (currentPage === "budget-tco" && typeof initBudgetTcoPage === "function") initBudgetTcoPage();
+    if (currentPage === "budget-carbone" && typeof initBudgetCarbonPage === "function") initBudgetCarbonPage();
+    if (currentPage === "budget-comparatifs" && typeof initBudgetComparatifsPage === "function") initBudgetComparatifsPage();
 
     initCaptureButtons();
     initForgeDbNavigationSync();
@@ -9748,6 +9935,7 @@ function renderDecoupageStepsTable() {
                     <span class="wbs-phase-count">${group.steps.length} étape${group.steps.length > 1 ? "s" : ""}</span>
                 </span>
                 <span class="wbs-phase-actions no-capture">
+                    <button class="wbs-phase-capture-btn" type="button" data-capture-decoupage-phase-id="${escapeHtml(group.phaseId)}" title="Capturer cette phase en image" aria-label="Capturer cette phase en image">📸</button>
                     ${group.isUnassigned
                         ? ""
                         : `<button class="wbs-phase-add-btn" type="button" data-add-decoupage-phase-id="${escapeHtml(group.phaseId)}" title="Ajouter une étape à cette phase" aria-label="Ajouter une étape à cette phase">+ Étape</button>`
@@ -9836,6 +10024,14 @@ function bindDecoupageStepsEvents() {
         });
     });
 
+    tbody.querySelectorAll("[data-capture-decoupage-phase-id]").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            await captureDecoupagePhase(event.currentTarget, event.currentTarget.dataset.captureDecoupagePhaseId || "");
+        });
+    });
+
     tbody.querySelectorAll("[data-remove-decoupage-step]").forEach((button) => {
         button.addEventListener("click", (event) => {
             const index = Number(event.currentTarget.dataset.removeDecoupageStep);
@@ -9846,6 +10042,47 @@ function bindDecoupageStepsEvents() {
             reconcileWbsDecoupage("decoupage");
         });
     });
+}
+
+async function captureDecoupagePhase(button, phaseId) {
+    const card = button.closest(".card");
+    const tbody = document.getElementById("decoupage-steps-table");
+    if (!card || !tbody) return;
+
+    // Masquer les lignes des autres phases rétrécit la page, et le navigateur
+    // recadre alors tout seul le scroll pour rester dans les bornes valides —
+    // AVANT même que captureCardToClipboard ne démarre. Sauvegarder la position
+    // ici, avant de masquer quoi que ce soit, sinon on "restaure" une position
+    // déjà perdue.
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
+    const titleEl = card.querySelector(":scope > .card-header h2");
+    const previousTitle = titleEl ? titleEl.textContent : null;
+    const phaseLabel = phaseId
+        ? (decoupagePhases.find((phase) => phase.id === phaseId)?.name || "Phase sans nom")
+        : "Sans phase";
+
+    if (titleEl) titleEl.textContent = `Découpage - ${phaseLabel}`;
+
+    const rowsToHide = Array.from(tbody.children).filter((row) => row.dataset.phaseId !== phaseId);
+
+    rowsToHide.forEach((row) => {
+        row.dataset.captureHiddenDisplay = row.style.display;
+        row.style.display = "none";
+    });
+
+    try {
+        await captureCardToClipboard(card, button);
+    } finally {
+        rowsToHide.forEach((row) => {
+            row.style.display = row.dataset.captureHiddenDisplay || "";
+            delete row.dataset.captureHiddenDisplay;
+        });
+
+        if (titleEl && previousTitle !== null) titleEl.textContent = previousTitle;
+        window.scrollTo(scrollX, scrollY);
+    }
 }
 
 function initDecoupagePage() {
@@ -9894,6 +10131,7 @@ if (typeof helpTexts !== "undefined") {
             <li>Le tableau de gauche gère les phases (juste un nom).</li>
             <li>Le tableau de droite gère les étapes, regroupées par phase.</li>
             <li>Utilise les flèches ▲▼ pour réordonner une étape, y compris en la faisant changer de phase.</li>
+            <li>Chaque phase a son propre bouton 📸 pour la copier en image, indépendamment des autres.</li>
             <li>La synchro avec le WBS est désormais bidirectionnelle : chaque phase/étape créée, renommée, déplacée ou supprimée ici se répercute dans le WBS (et inversement, tes phases et tâches WBS existantes apparaissent automatiquement ici).</li>
             <li>Renommer ou supprimer une phase/étape d'un côté met à jour ou retire l'élément correspondant de l'autre côté. Les champs propres au WBS (responsable, dates, avancement) ne sont jamais écrasés par cette synchro.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
@@ -10253,5 +10491,218 @@ if (typeof helpTexts !== "undefined") {
     `;
 }
 
-/* V78 — Démarrage unique */
+/* V79 — Matrices Atouts / Limites (multi-instances nommées) */
+
+function createEmptyAtoutsLimitesRow() {
+    return { id: createId(), atout: "", limite: "" };
+}
+
+function createAtoutsLimitesMatrix(name) {
+    return { id: createId(), name: name || "", rows: [] };
+}
+
+function loadAtoutsLimitesMatrices() {
+    let parsed = [];
+    try {
+        parsed = JSON.parse(localStorage.getItem(getProjectKey("atouts_limites_matrices"))) || [];
+    } catch (error) {
+        parsed = [];
+    }
+
+    return Array.isArray(parsed)
+        ? parsed.map((matrix) => ({
+              id: matrix.id || createId(),
+              name: matrix.name || "",
+              rows: Array.isArray(matrix.rows)
+                  ? matrix.rows.map((row) => ({
+                        id: row.id || createId(),
+                        atout: row.atout || "",
+                        limite: row.limite || ""
+                    }))
+                  : []
+          }))
+        : [];
+}
+
+function saveAtoutsLimitesMatrices() {
+    localStorage.setItem(getProjectKey("atouts_limites_matrices"), JSON.stringify(atoutsLimitesMatrices));
+}
+
+function renderAtoutsLimitesMatrices() {
+    const list = document.getElementById("atouts-limites-list");
+    if (!list) return;
+
+    if (atoutsLimitesMatrices.length === 0) {
+        list.innerHTML = `<p class="empty-state atouts-limites-empty-state">Aucune matrice pour le moment. Clique sur “+” pour en créer une.</p>`;
+        return;
+    }
+
+    list.innerHTML = atoutsLimitesMatrices
+        .map((matrix) => {
+            const rowsHtml = matrix.rows.length
+                ? matrix.rows
+                      .map(
+                          (row) => `
+                <tr data-row-id="${row.id}">
+                    <td class="editable atouts-limites-atout-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${escapeHtml(row.atout)}</td>
+                    <td class="editable atouts-limites-limite-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${escapeHtml(row.limite)}</td>
+                    <td class="select-col">
+                        <button class="row-delete-btn" type="button" data-matrix-id="${matrix.id}" data-row-id="${row.id}" title="Supprimer la ligne" aria-label="Supprimer la ligne">&times;</button>
+                    </td>
+                </tr>
+            `
+                      )
+                      .join("")
+                : `<tr><td colspan="3" class="empty-state">Aucune ligne pour le moment.</td></tr>`;
+
+            return `
+                <section class="card atouts-limites-card" data-matrix-id="${matrix.id}">
+                    <div class="card-header">
+                        <h2 class="editable atouts-limites-name-input" contenteditable="true" data-matrix-id="${matrix.id}" spellcheck="false">${escapeHtml(matrix.name) || "Matrice sans nom"}</h2>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn atouts-limites-delete-matrix-btn" type="button" data-matrix-id="${matrix.id}" title="Supprimer cette matrice" aria-label="Supprimer cette matrice">-</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="atouts-limites-table">
+                            <colgroup>
+                                <col class="atouts-limites-col" />
+                                <col class="atouts-limites-col" />
+                                <col class="select-col" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Atouts</th>
+                                    <th>Limites</th>
+                                    <th class="select-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn atouts-limites-add-row-btn" type="button" data-matrix-id="${matrix.id}" title="Ajouter une ligne" aria-label="Ajouter une ligne">+</button>
+                        </div>
+                    </div>
+                </section>
+            `;
+        })
+        .join("");
+
+    bindAtoutsLimitesEvents();
+}
+
+function bindAtoutsLimitesEvents() {
+    const list = document.getElementById("atouts-limites-list");
+    if (!list) return;
+
+    function getMatrix(matrixId) {
+        return atoutsLimitesMatrices.find((matrix) => matrix.id === matrixId);
+    }
+
+    list.querySelectorAll(".atouts-limites-name-input").forEach((titleEl) => {
+        titleEl.addEventListener("input", (event) => {
+            const matrix = getMatrix(event.target.dataset.matrixId);
+            if (!matrix) return;
+
+            matrix.name = event.target.textContent.trim();
+            saveAtoutsLimitesMatrices();
+        });
+    });
+
+    list.querySelectorAll(".atouts-limites-atout-cell, .atouts-limites-limite-cell").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const matrix = getMatrix(event.target.dataset.matrixId);
+            const row = matrix?.rows.find((item) => item.id === event.target.dataset.rowId);
+            if (!row) return;
+
+            if (event.target.classList.contains("atouts-limites-atout-cell")) {
+                row.atout = event.target.textContent.trim();
+            } else {
+                row.limite = event.target.textContent.trim();
+            }
+
+            saveAtoutsLimitesMatrices();
+        });
+    });
+
+    list.querySelectorAll(".atouts-limites-add-row-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const matrix = getMatrix(event.currentTarget.dataset.matrixId);
+            if (!matrix) return;
+
+            const newRow = createEmptyAtoutsLimitesRow();
+            matrix.rows.push(newRow);
+            saveAtoutsLimitesMatrices();
+            renderAtoutsLimitesMatrices();
+
+            document.querySelector(`.atouts-limites-atout-cell[data-row-id="${newRow.id}"]`)?.focus();
+        });
+    });
+
+    list.querySelectorAll(".row-delete-btn[data-matrix-id]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const matrix = getMatrix(event.currentTarget.dataset.matrixId);
+            if (!matrix) return;
+
+            matrix.rows = matrix.rows.filter((row) => row.id !== event.currentTarget.dataset.rowId);
+            saveAtoutsLimitesMatrices();
+            renderAtoutsLimitesMatrices();
+        });
+    });
+
+    list.querySelectorAll(".atouts-limites-delete-matrix-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const matrixId = event.currentTarget.dataset.matrixId;
+            const matrix = getMatrix(matrixId);
+            if (!matrix) return;
+
+            const confirmation = confirm(`Tu veux vraiment supprimer la matrice “${matrix.name || "Matrice sans nom"}” ?`);
+            if (!confirmation) return;
+
+            atoutsLimitesMatrices = atoutsLimitesMatrices.filter((item) => item.id !== matrixId);
+            saveAtoutsLimitesMatrices();
+            renderAtoutsLimitesMatrices();
+        });
+    });
+}
+
+function initAtoutsLimitesPage() {
+    const list = document.getElementById("atouts-limites-list");
+    if (!list) return;
+
+    atoutsLimitesMatrices = loadAtoutsLimitesMatrices();
+    renderAtoutsLimitesMatrices();
+
+    document.getElementById("add-atouts-limites-matrix-btn")?.addEventListener("click", () => {
+        const matrix = createAtoutsLimitesMatrix(`Matrice ${atoutsLimitesMatrices.length + 1}`);
+        atoutsLimitesMatrices.push(matrix);
+        saveAtoutsLimitesMatrices();
+        renderAtoutsLimitesMatrices();
+
+        const titleEl = document.querySelector(`.atouts-limites-name-input[data-matrix-id="${matrix.id}"]`);
+        if (titleEl) {
+            titleEl.focus();
+            document.execCommand("selectAll", false, null);
+        }
+    });
+}
+
+if (typeof helpTexts !== "undefined") {
+    helpTexts["atouts-limites"] = `
+        <p>Cette page sert à lister rapidement les atouts et les limites d’un sujet, dans un ou plusieurs tableaux à deux colonnes.</p>
+        <ul>
+            <li>Utilise le “+” en haut de page pour créer une nouvelle matrice.</li>
+            <li>Clique sur le titre d’une matrice pour la renommer.</li>
+            <li>Utilise le “+” d’une matrice pour ajouter une ligne, et le “×” d’une ligne pour la retirer.</li>
+            <li>Le “-” dans l’en-tête d’une matrice la supprime entièrement.</li>
+            <li>Chaque matrice a son propre bouton de capture (📸) pour la copier en image.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+            <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
+        </ul>
+    `;
+}
+
+/* V79 — Démarrage unique */
 forgeBootstrap();

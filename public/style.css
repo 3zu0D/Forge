@@ -1673,28 +1673,12 @@ footer {
     filter: brightness(1.16);
 }
 
-@media (max-width: 1100px) {
-    .topbar {
-        flex-wrap: wrap;
-        align-items: flex-start;
-    }
-
-    .project-info {
-        flex-basis: calc(100% - 56px);
-    }
-
-    .project-switcher {
-        flex-basis: 230px;
-        margin-left: 56px;
-    }
-}
-
-@media (max-width: 800px) {
-    .project-switcher {
-        flex-basis: 100%;
-        margin-left: 0;
-    }
-}
+/* Le bloc @media 1100px/800px qui vivait ici (flex-wrap + flex-basis + margin-left
+   sur .project-switcher) datait de l'ancien .topbar en flex, avant sa réécriture en
+   grid (plus bas, display:grid !important). display:grid rend flex-wrap/flex-basis
+   inertes, mais margin-left:56px restait actif (une marge normale s'applique quel
+   que soit le display) — ça poussait .project-switcher hors de sa piste de grille
+   entre 900 et 1200px de large, un des points où "ça partait dans tous les sens". */
 
 
 /* V18 — Sauvegarde portable */
@@ -1725,18 +1709,10 @@ footer {
     border-color: rgba(34, 211, 238, 0.40);
 }
 
-@media (max-width: 1200px) {
-    .portable-controls {
-        margin-left: 56px;
-    }
-}
-
+/* Même nettoyage que .project-switcher plus haut : margin-left:56px ici aussi
+   était un reste de l'ancien .topbar en flex, resté actif après son passage en
+   grid et poussait .portable-controls hors piste entre 900 et 1200px. */
 @media (max-width: 800px) {
-    .portable-controls {
-        width: 100%;
-        margin-left: 0;
-    }
-
     .portable-btn {
         flex: 1;
     }
@@ -3242,19 +3218,10 @@ footer {
     outline-color: rgba(34, 211, 238, 0.30);
 }
 
-@media (max-width: 1200px) {
-    .theme-switcher {
-        margin-left: 56px;
-    }
-}
-
-@media (max-width: 800px) {
-    .theme-switcher {
-        width: 100%;
-        margin-left: 0;
-        flex-basis: 100%;
-    }
-}
+/* Même nettoyage que .project-switcher/.portable-controls plus haut : ce
+   margin-left:56px poussait .theme-switcher hors piste entre 900 et 1200px de
+   large — au point de faire complètement sortir le <select> du thème de l'écran
+   à 900px (plus aucun moyen de changer de thème à cette largeur). */
 
 /* KPIs */
 .kpi-container {
@@ -3787,13 +3754,21 @@ body[data-theme="light"] select option:checked {
     align-items: start;
 }
 
-.risk-types-card {
+.risks-sidebar-stack {
+    display: grid;
+    gap: 12px;
     position: sticky;
     top: 114px;
 }
 
 .risk-types-table {
-    table-layout: fixed;
+    /* table-layout: auto (pas fixed) : avec une largeur de colonne fixée à
+       l'avance, html2canvas mesure le texte de la capture 📸 sur une largeur
+       différente de la largeur réellement rendue et casse les mots au milieu
+       ("Techniq" / "ue"). En layout auto, la largeur de colonne suit le
+       contenu réel des deux côtés (page live et capture), donc plus de
+       décalage de mesure. Table à 3 colonnes courtes : aucun souci de perf. */
+    table-layout: auto;
     width: 100%;
 }
 
@@ -3807,6 +3782,9 @@ body[data-theme="light"] select option:checked {
 
 .risk-type-col-name {
     width: auto;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: keep-all;
 }
 
 .risk-types-table th,
@@ -3878,17 +3856,17 @@ body[data-theme="light"] select option:checked {
 
 .risks-table th:nth-child(3),
 .risks-table td:nth-child(3) {
-    width: 9%;
+    width: 10%;
 }
 
 .risks-table th:nth-child(4),
 .risks-table td:nth-child(4) {
-    width: 14%;
+    width: 18%;
 }
 
 .risks-table th:nth-child(5),
 .risks-table td:nth-child(5) {
-    width: 13%;
+    width: 16%;
 }
 
 .risks-table th:nth-child(6),
@@ -3897,35 +3875,18 @@ body[data-theme="light"] select option:checked {
 .risks-table td:nth-child(7),
 .risks-table th:nth-child(8),
 .risks-table td:nth-child(8) {
-    width: 5%;
+    width: 6%;
 }
 
 .risks-table th:nth-child(9),
 .risks-table td:nth-child(9) {
-    width: 10%;
-}
-
-.risks-table th:nth-child(10),
-.risks-table td:nth-child(10) {
-    width: 11%;
-}
-
-.risks-table th:nth-child(11),
-.risks-table td:nth-child(11) {
-    width: 8%;
-}
-
-.risks-table th:nth-child(12),
-.risks-table td:nth-child(12) {
-    width: 15%;
+    width: 36%;
 }
 
 .risk-type-select,
 .risk-probability-select,
 .risk-severity-select,
-.risk-response-select,
-.risk-status-select,
-.risk-responsable-select {
+.risk-status-select {
     width: 100%;
     min-width: 0;
     height: 24px;
@@ -4072,69 +4033,18 @@ body[data-theme="light"] .raci-legend span {
         grid-template-columns: 1fr;
     }
 
-    .risk-types-card,
+    .risks-sidebar-stack,
     .kpi-types-card {
         position: static;
     }
 }
 
 
-/* V33 — Analyse des risques étoffée + matrice */
-.risks-table th:nth-child(3),
-.risks-table td:nth-child(3) {
-    width: 10%;
-}
-
-.risks-table th:nth-child(4),
-.risks-table td:nth-child(4) {
-    width: 16%;
-}
-
-.risks-table th:nth-child(5),
-.risks-table td:nth-child(5) {
-    width: 15%;
-}
-
-.risks-table th:nth-child(6),
-.risks-table td:nth-child(6),
-.risks-table th:nth-child(7),
-.risks-table td:nth-child(7),
-.risks-table th:nth-child(8),
-.risks-table td:nth-child(8) {
-    width: 5%;
-}
-
-.risks-table th:nth-child(9),
-.risks-table td:nth-child(9) {
-    width: 11%;
-}
-
-.risks-table th:nth-child(10),
-.risks-table td:nth-child(10) {
-    width: 12%;
-}
-
-.risks-table th:nth-child(11),
-.risks-table td:nth-child(11) {
-    width: 17%;
-}
-
 .risk-matrix-panel {
     padding: 12px;
-    border-top: 1px solid rgba(56, 189, 248, 0.10);
     background:
         radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 12rem),
         rgba(5, 10, 18, 0.38);
-}
-
-.risk-matrix-panel h3 {
-    margin: 0 0 10px;
-    color: #e6faff;
-    font-size: 0.86rem;
-    font-weight: 950;
-    text-align: center;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
 }
 
 .risk-matrix {
@@ -4247,11 +4157,6 @@ body[data-theme="light"] .raci-legend span {
 
 body[data-theme="light"] .risk-matrix-panel {
     background: rgba(241, 247, 255, 0.72);
-    border-color: rgba(15, 23, 42, 0.10);
-}
-
-body[data-theme="light"] .risk-matrix-panel h3 {
-    color: #0f172a;
 }
 
 body[data-theme="light"] .risk-matrix-corner,
@@ -4268,18 +4173,12 @@ body[data-theme="light"] .risk-matrix-severity-label {
     grid-template-columns: 360px minmax(0, 1fr);
 }
 
-.risk-types-card {
+.risks-sidebar-stack {
     min-width: 0;
 }
 
 .risk-matrix-panel {
     padding: 14px;
-}
-
-.risk-matrix-panel h3 {
-    margin-bottom: 12px;
-    font-size: 0.98rem;
-    color: #ffffff;
 }
 
 .risk-matrix {
@@ -4388,10 +4287,6 @@ body[data-theme="light"] .risk-matrix-severity-label {
     font-weight: 800;
     line-height: 1.25;
     text-align: center;
-}
-
-body[data-theme="light"] .risk-matrix-panel h3 {
-    color: #0f172a;
 }
 
 body[data-theme="light"] .risk-matrix-probability-label,
@@ -7033,14 +6928,7 @@ body[data-theme="orange"] .forge-logo-bar {
 }
 
 .coherence-pill::after {
-    content: "";
-    position: absolute;
-    width: 54px;
-    height: 54px;
-    right: -18px;
-    top: -20px;
-    border-radius: 999px;
-    background: rgba(34, 211, 238, 0.10);
+    content: none;
 }
 
 .coherence-list {
@@ -7223,7 +7111,7 @@ body {
     margin: 10px auto 0 !important;
     padding: 8px 16px !important;
     display: grid !important;
-    grid-template-columns: auto minmax(160px, 260px) auto auto auto !important;
+    grid-template-columns: auto auto minmax(160px, 260px) auto auto auto !important;
     justify-content: flex-start !important;
     align-items: end !important;
     gap: 14px !important;
@@ -10659,4 +10547,693 @@ body[data-theme="executive"] .gantt-periods-toggle-btn {
 
 body[data-theme="executive"] .gantt-periods-count {
     color: #475569;
+}
+
+/* ===== Budget (Base de coûts / TCO / Comparatifs) ===== */
+
+.budget-layout,
+.budget-tco-layout,
+.budget-comparatifs-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.budget-sidebar-stack,
+.budget-tco-profiles-card,
+.budget-comparatifs-checklist-card {
+    position: sticky;
+    top: 114px;
+}
+
+.budget-sidebar-stack {
+    display: grid;
+    gap: 14px;
+}
+
+.budget-types-table,
+.budget-tco-profiles-table,
+.budget-info-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.budget-info-col-name {
+    width: 38%;
+}
+
+.budget-info-col-value {
+    width: 62%;
+}
+
+.budget-info-table th,
+.budget-info-table td {
+    padding: 5px 7px;
+    font-size: 0.76rem;
+}
+
+.budget-info-table .editable {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.budget-types-table th,
+.budget-types-table td,
+.budget-tco-profiles-table th,
+.budget-tco-profiles-table td {
+    padding: 5px 7px;
+    font-size: 0.76rem;
+}
+
+.budget-hint {
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.10);
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+
+.budget-type-number-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow:
+        0 0 10px var(--row-glow),
+        0 4px 10px rgba(0, 0, 0, 0.24);
+    transition: transform 0.14s ease, filter 0.16s ease;
+}
+
+.budget-type-number-btn:hover {
+    transform: scale(1.05);
+    filter: brightness(1.14);
+}
+
+/* Lignes d'en-tête de type groupé, miroir de .wbs-phase-row */
+.budget-type-row td {
+    padding: 8px 12px !important;
+    border-top: 2px solid rgba(255, 255, 255, 0.14) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.budget-type-row-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+
+.budget-type-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.budget-type-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+}
+
+.budget-type-title {
+    font-size: 0.82rem;
+    font-weight: 1000;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.budget-type-count {
+    margin-left: 4px;
+    padding: 3px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.16);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.62rem;
+    font-weight: 900;
+}
+
+.budget-type-add-btn {
+    border: 1px solid rgba(0, 230, 118, 0.34);
+    border-radius: 6px;
+    background: rgba(0, 230, 118, 0.14);
+    color: #bbf7d0;
+    padding: 4px 10px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.budget-type-add-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.16);
+}
+
+.budget-type-unassigned td {
+    opacity: 0.92;
+}
+
+.budget-elements-table,
+.budget-tco-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.budget-comparatifs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.budget-elements-table th,
+.budget-elements-table td,
+.budget-tco-table th,
+.budget-tco-table td,
+.budget-comparatifs-table th,
+.budget-comparatifs-table td {
+    padding: 7px 11px;
+    text-align: left;
+    font-size: 0.8rem;
+}
+
+.budget-col-nature {
+    width: 90px;
+}
+
+.budget-col-cycle {
+    width: 150px;
+}
+
+.budget-col-price {
+    width: 130px;
+}
+
+.budget-col-scope {
+    width: 110px;
+}
+
+.budget-col-carbon {
+    width: 150px;
+}
+
+.budget-elements-table .editable,
+.budget-info-table .editable {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.budget-nature-select,
+.budget-cycle-select,
+.budget-scope-select,
+.budget-price-input,
+.budget-quantity-input,
+.budget-carbon-input {
+    width: 100%;
+    height: 28px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 5px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #f8fafc;
+    padding: 2px 6px;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.budget-nature-select:focus,
+.budget-cycle-select:focus,
+.budget-scope-select:focus,
+.budget-price-input:focus,
+.budget-quantity-input:focus,
+.budget-carbon-input:focus {
+    border-color: rgba(34, 211, 238, 0.52);
+    outline-color: rgba(34, 211, 238, 0.30);
+}
+
+.budget-scope-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.budget-scope-pill.budget-scope-scope1 {
+    color: #fecaca;
+    background: rgba(251, 59, 95, 0.18);
+}
+
+.budget-scope-pill.budget-scope-scope2 {
+    color: #fde68a;
+    background: rgba(255, 145, 0, 0.18);
+}
+
+.budget-scope-pill.budget-scope-scope3 {
+    color: #bbf7d0;
+    background: rgba(0, 230, 118, 0.18);
+}
+
+body[data-theme="light"] .budget-scope-pill.budget-scope-scope1,
+body[data-theme="executive"] .budget-scope-pill.budget-scope-scope1 {
+    color: #9f1239;
+    background: rgba(251, 59, 95, 0.24);
+}
+
+body[data-theme="light"] .budget-scope-pill.budget-scope-scope2,
+body[data-theme="executive"] .budget-scope-pill.budget-scope-scope2 {
+    color: #92400e;
+    background: rgba(255, 145, 0, 0.30);
+}
+
+body[data-theme="light"] .budget-scope-pill.budget-scope-scope3,
+body[data-theme="executive"] .budget-scope-pill.budget-scope-scope3 {
+    color: #14532d;
+    background: rgba(0, 230, 118, 0.28);
+}
+
+.budget-carbon-source-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.10);
+}
+
+.budget-carbon-source-field label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+}
+
+.budget-carbon-source-field select {
+    min-width: 220px;
+    height: 30px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 5px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #f8fafc;
+    padding: 2px 8px;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.budget-hint-inline {
+    color: var(--muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.budget-comparatifs-mode-toggle {
+    margin: 12px 12px 0;
+}
+
+.budget-nature-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.budget-nature-pill.budget-nature-capex {
+    color: #bae6fd;
+    background: rgba(56, 189, 248, 0.18);
+}
+
+.budget-nature-pill.budget-nature-opex {
+    color: #fde68a;
+    background: rgba(255, 145, 0, 0.18);
+}
+
+body[data-theme="light"] .budget-nature-pill.budget-nature-capex,
+body[data-theme="executive"] .budget-nature-pill.budget-nature-capex {
+    color: #075985;
+    background: rgba(56, 189, 248, 0.30);
+}
+
+body[data-theme="light"] .budget-nature-pill.budget-nature-opex,
+body[data-theme="executive"] .budget-nature-pill.budget-nature-opex {
+    color: #92400e;
+    background: rgba(255, 145, 0, 0.30);
+}
+
+.budget-tco-main-zone {
+    display: grid;
+    gap: 14px;
+}
+
+.budget-tco-summary-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.budget-tco-summary-table th,
+.budget-tco-summary-table td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.82rem;
+}
+
+.budget-tco-summary-table th {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.budget-tco-summary-table td:first-child {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.budget-tco-summary-table td:not(:first-child) {
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #f8fafc;
+}
+
+.budget-tco-summary-total-row td {
+    border-top: 2px solid rgba(255, 255, 255, 0.14);
+}
+
+.budget-tco-lines-card .card-header,
+.budget-comparatifs-table-card .card-header {
+    justify-content: space-between !important;
+    gap: 12px;
+}
+
+.budget-horizon-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.budget-horizon-toggle button {
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--muted);
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.budget-horizon-toggle button.active {
+    background: rgba(56, 189, 248, 0.22);
+    color: #f8fafc;
+}
+
+.budget-tco-profile-active {
+    outline: 1px solid rgba(255, 255, 255, 0.55);
+    outline-offset: -1px;
+}
+
+.budget-tco-profiles-table tr[data-profile-id] {
+    cursor: pointer;
+}
+
+.budget-comparatifs-checklist {
+    display: grid;
+    gap: 8px;
+    padding: 6px 4px;
+}
+
+.budget-comparatif-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.budget-comparatifs-table-wrapper {
+    overflow-x: auto;
+}
+
+.budget-comparatifs-summary-row td {
+    border-top: 2px solid rgba(255, 255, 255, 0.14) !important;
+    font-weight: 800;
+}
+
+body[data-theme="light"] .budget-type-number-btn,
+body[data-theme="executive"] .budget-type-number-btn {
+    border-color: rgba(15, 23, 42, 0.32);
+    color: #ffffff;
+}
+
+body[data-theme="light"] .budget-nature-select,
+body[data-theme="light"] .budget-cycle-select,
+body[data-theme="light"] .budget-scope-select,
+body[data-theme="light"] .budget-price-input,
+body[data-theme="light"] .budget-quantity-input,
+body[data-theme="light"] .budget-carbon-input,
+body[data-theme="light"] .budget-carbon-source-field select,
+body[data-theme="executive"] .budget-nature-select,
+body[data-theme="executive"] .budget-cycle-select,
+body[data-theme="executive"] .budget-scope-select,
+body[data-theme="executive"] .budget-price-input,
+body[data-theme="executive"] .budget-quantity-input,
+body[data-theme="executive"] .budget-carbon-input,
+body[data-theme="executive"] .budget-carbon-source-field select {
+    background: rgba(255, 255, 255, 0.86);
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.14);
+}
+
+body[data-theme="orange"] .budget-nature-select,
+body[data-theme="orange"] .budget-cycle-select,
+body[data-theme="orange"] .budget-scope-select,
+body[data-theme="orange"] .budget-price-input,
+body[data-theme="orange"] .budget-quantity-input,
+body[data-theme="orange"] .budget-carbon-input,
+body[data-theme="orange"] .budget-carbon-source-field select {
+    background: rgba(55, 33, 16, 0.86);
+    color: #fff7ed;
+    border-color: rgba(251, 146, 60, 0.28);
+}
+
+body[data-theme="light"] .budget-tco-summary-table td:not(:first-child),
+body[data-theme="executive"] .budget-tco-summary-table td:not(:first-child) {
+    color: #0f172a;
+}
+
+body[data-theme="light"] .budget-horizon-toggle,
+body[data-theme="executive"] .budget-horizon-toggle {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(15, 23, 42, 0.14);
+}
+
+body[data-theme="light"] .budget-horizon-toggle button,
+body[data-theme="executive"] .budget-horizon-toggle button {
+    color: #475569;
+}
+
+body[data-theme="light"] .budget-horizon-toggle button.active,
+body[data-theme="executive"] .budget-horizon-toggle button.active {
+    background: rgba(56, 189, 248, 0.30);
+    color: #0f172a;
+}
+
+
+/* ===== V79 — Matrices Atouts / Limites ===== */
+
+.atouts-limites-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+}
+
+.atouts-limites-list,
+#atouts-limites-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.atouts-limites-card .card-header {
+    justify-content: space-between !important;
+}
+
+.atouts-limites-card .card-header h2 {
+    text-align: left !important;
+    flex: 1 1 auto;
+}
+
+.atouts-limites-col {
+    width: 50%;
+}
+
+.atouts-limites-atout-cell,
+.atouts-limites-limite-cell {
+    min-height: 20px;
+}
+
+
+/* ===== V80 — Habillage visuel : marque en en-tête + icônes de nav ===== */
+
+.topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-right: 14px;
+    margin-right: 2px;
+    border-right: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.topbar-brand .forge-logo {
+    width: 22px;
+    height: 22px;
+}
+
+.topbar-brand .forge-name {
+    font-size: 0.92rem;
+    letter-spacing: 0.10em;
+}
+
+body[data-theme="light"] .topbar-brand,
+body[data-theme="executive"] .topbar-brand {
+    border-right-color: rgba(15, 23, 42, 0.14);
+}
+
+body[data-theme="executive"] .forge-logo-head {
+    border-color: #1e3a5f;
+}
+
+@media (max-width: 900px) {
+    .topbar-brand .forge-name {
+        display: none;
+    }
+
+    .topbar-brand {
+        padding-right: 8px;
+        gap: 0;
+    }
+}
+
+/* Icônes de nav : traits fins héritant la couleur du texte, sobres sur les 4 thèmes. */
+.nav-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    opacity: 0.92;
+}
+
+.nav-group-label {
+    gap: 7px !important;
+}
+
+.nav-link {
+    gap: 8px !important;
+}
+
+.nav-link .nav-icon {
+    width: 15px;
+    height: 15px;
+}
+
+.nav-group-label-text,
+.nav-link-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* ===== V81 — Densité du dashboard (écran ET captures 📸 pour rapports) =====
+   Les encarts du dashboard (anneaux KPI, mini-cartes stats, liste de contrôles
+   de cohérence) avaient une hauteur généreuse pensée pour un usage tactile/souris
+   à l'écran, mais ça devient un problème une fois capturé en image pour un
+   rapport : peu d'info par écran, beaucoup de scroll/pages pour la même donnée.
+   On resserre les paddings/marges partout ici (les tailles de police, elles,
+   ne bougent presque pas, pour rester lisibles). */
+
+.dashboard-ring-card {
+    padding: 11px !important;
+    gap: 11px !important;
+    grid-template-columns: 82px minmax(0, 1fr) !important;
+}
+
+.dashboard-ring {
+    width: 78px !important;
+    height: 78px !important;
+}
+
+.dashboard-ring::before {
+    inset: 8px !important;
+}
+
+.dashboard-ring-value {
+    font-size: 1.02rem !important;
+}
+
+.dashboard-ring-content h3 {
+    margin: 0 0 4px !important;
+    font-size: 0.8rem !important;
+}
+
+.dashboard-stat-card {
+    min-height: 0 !important;
+    padding: 10px 12px !important;
+}
+
+.dashboard-stat-label {
+    margin: 0 0 5px !important;
+}
+
+.dashboard-stat-value {
+    font-size: 1.4rem !important;
+}
+
+.dashboard-stat-note {
+    margin: 5px 0 0 !important;
+}
+
+.coherence-pill {
+    padding: 7px 9px !important;
+}
+
+.coherence-item {
+    padding: 7px 9px !important;
+}
+
+.coherence-item-title {
+    margin: 0 0 3px !important;
+}
+
+.dashboard-mini-row {
+    min-height: 34px !important;
 }

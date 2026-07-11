@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js && node scripts/check-server-modules.js && node --check public/script.js && node --check public/vm-sizing.js && node scripts/validate-forge.js && node scripts/code-review.js",
+    "test": "node scripts/run-tests.js",
     "healthcheck": "node scripts/healthcheck.js",
     "review": "node scripts/code-review.js"
   },
@@ -14,5 +15,8 @@
     "better-sqlite3": "11.9.1",
     "compression": "1.7.4",
     "express": "4.21.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }

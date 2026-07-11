@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forge - Découpage</title>
+    <title>Forge - Budget - Comparatifs</title>
     <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="decoupage">
+<body data-page="budget-comparatifs">
     <header class="topbar">
         <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
 
@@ -46,67 +46,31 @@
 
     <nav id="page-nav" class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale"></nav>
 
-    <main class="container wbs-container">
-        <div class="wbs-layout">
-            <aside class="wbs-sidebar">
-                <section class="card phases-card">
-                    <div class="card-header">
-                        <h2>Phases</h2>
-                    </div>
-
-                    <div class="table-wrapper">
-                        <table class="phases-table">
-                            <colgroup>
-                                <col class="phase-col-number" />
-                                <col class="phase-col-name" />
-                                <col class="select-col" />
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th>N°</th>
-                                    <th>Phase</th>
-                                    <th class="select-col"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="decoupage-phases-table"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn" id="add-decoupage-phase-btn" type="button" title="Ajouter une phase" aria-label="Ajouter une phase">+</button>
-                        </div>
-                        <button class="btn btn-danger btn-reset" id="reset-decoupage-btn" type="button">Réinitialiser</button>
-                    </div>
-                </section>
+    <main class="container budget-comparatifs-container">
+        <section class="budget-comparatifs-layout">
+            <aside class="card budget-comparatifs-checklist-card">
+                <div class="card-header">
+                    <h2 id="budget-comparatifs-checklist-title">TCO à comparer</h2>
+                </div>
+                <div class="budget-horizon-toggle budget-comparatifs-mode-toggle" id="budget-comparatifs-mode-toggle" role="group" aria-label="Comparer les coûts ou le carbone">
+                    <button type="button" data-mode="cost" class="active">Coûts</button>
+                    <button type="button" data-mode="carbon">Carbone</button>
+                </div>
+                <div class="budget-comparatifs-checklist" id="budget-comparatifs-checklist"></div>
             </aside>
 
-            <section class="card wbs-card">
+            <section class="card budget-comparatifs-table-card">
                 <div class="card-header">
-                    <h2>Découpage</h2>
+                    <h2>Comparatif</h2>
+                    <div class="budget-horizon-toggle" id="budget-comparatifs-horizon-toggle" role="group" aria-label="Horizon affiché pour le coût de chaque élément">
+                        <button type="button" data-horizon="1">1 an</button>
+                        <button type="button" data-horizon="5" class="active">5 ans</button>
+                        <button type="button" data-horizon="10">10 ans</button>
+                    </div>
                 </div>
-
-                <div class="table-wrapper">
-                    <table class="wbs-table decoupage-table">
-                        <colgroup>
-                            <col class="wbs-col-number" />
-                            <col class="wbs-col-move" />
-                            <col class="decoupage-col-label" />
-                            <col class="select-col" />
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th>N°</th>
-                                <th class="wbs-move-header"></th>
-                                <th>Étape</th>
-                                <th class="select-col"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="decoupage-steps-table"></tbody>
-                    </table>
-                </div>
+                <div class="table-wrapper budget-comparatifs-table-wrapper" id="budget-comparatifs-table-wrapper"></div>
             </section>
-        </div>
+        </section>
     </main>
 
     <footer>
@@ -129,6 +93,7 @@
         </div>
     </div>
 
+    <script src="budget.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

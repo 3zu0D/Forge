@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge - Budget - Base de coûts</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body data-page="budget-couts">
+    <header class="topbar">
+        <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
+
+        <div class="project-info" aria-label="Informations générales du projet">
+            <label class="project-field">
+                <span>Nom</span>
+                <input id="project-name" type="text" placeholder="Nom du projet" data-project-field="name" />
+            </label>
+        </div>
+
+        <div class="project-switcher" aria-label="Sélection du projet">
+            <label class="project-switcher-field">
+                <span>Projet actif</span>
+                <select id="project-selector"></select>
+            </label>
+            <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
+        </div>
+
+        <div class="theme-switcher" aria-label="Sélection du thème">
+            <label class="theme-switcher-field">
+                <span>Thème</span>
+                <select id="theme-selector">
+                    <option value="cyber">Cyber dark</option>
+                    <option value="light">Clair</option>
+                    <option value="orange">Orange dusk</option>
+                    <option value="executive">Executive report</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="portable-controls" aria-label="Sauvegarde portable">
+            <button class="portable-btn" id="export-data-btn" type="button" title="Télécharger une sauvegarde complète (JSON)">Exporter</button>
+            <button class="portable-btn" id="import-data-btn" type="button" title="Restaurer une sauvegarde complète (JSON)">Importer</button>
+            <input id="import-data-input" type="file" accept="application/json,.json" hidden />
+        </div>
+    </header>
+
+    <nav id="page-nav" class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale"></nav>
+
+    <main class="container budget-container">
+        <div class="budget-layout">
+            <aside class="budget-sidebar-stack">
+                <div class="card budget-types-card">
+                    <div class="card-header">
+                        <h2>Types d'éléments</h2>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="budget-types-table">
+                            <colgroup>
+                                <col class="phase-col-select" />
+                                <col class="phase-col-number" />
+                                <col class="phase-col-name" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="select-col">
+                                        <input id="select-all-budget-types" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner les types" />
+                                    </th>
+                                    <th>N°</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budget-types-table-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-budget-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
+                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-types-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                        </div>
+                        <button class="btn btn-danger btn-reset" id="reset-budget-types-btn" type="button">Réinitialiser</button>
+                    </div>
+                </div>
+
+                <div class="card budget-info-card">
+                    <div class="card-header">
+                        <h2>Informations</h2>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="budget-info-table">
+                            <colgroup>
+                                <col class="select-col" />
+                                <col class="budget-info-col-name" />
+                                <col class="budget-info-col-value" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="select-col">
+                                        <input id="select-all-budget-info" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner les informations" />
+                                    </th>
+                                    <th>Nom</th>
+                                    <th>Valeur</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budget-info-table-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-budget-info-btn" type="button" title="Ajouter une information" aria-label="Ajouter une information">+</button>
+                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-info-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="card budget-elements-card">
+                <div class="card-header">
+                    <h2>Base de coûts</h2>
+                </div>
+
+                <p class="budget-hint">Ajoute ici les éléments de coût réutilisables dans plusieurs TCO. Le prix unitaire est la base commune ; les quantités se définissent dans chaque TCO. Le scope et le facteur d'émission alimentent le bilan carbone (page "Bilan carbone"). Pas de total ici.</p>
+
+                <div class="table-wrapper">
+                    <table class="budget-elements-table">
+                        <colgroup>
+                            <col class="budget-col-name" />
+                            <col class="budget-col-nature" />
+                            <col class="budget-col-cycle" />
+                            <col class="budget-col-price" />
+                            <col class="budget-col-scope" />
+                            <col class="budget-col-carbon" />
+                            <col class="select-col" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Élément</th>
+                                <th>Nature</th>
+                                <th>Cycle de renouvellement</th>
+                                <th>Prix unitaire (€)</th>
+                                <th>Scope carbone</th>
+                                <th>Facteur d'émission (kg CO2e)</th>
+                                <th class="select-col"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="budget-elements-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="forge-footer-brand" aria-label="Forge">
+            <span class="forge-logo" aria-hidden="true">
+                <span class="forge-logo-bar"></span>
+                <span class="forge-logo-head"></span>
+            </span>
+            <span class="forge-name">Forge</span>
+        </div>
+    </footer>
+
+    <div class="color-menu hidden" id="color-menu" aria-label="Choix de couleur"></div>
+
+    <div class="modal-overlay hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="help-title">Aide</h2>
+                <button class="modal-close" id="help-close-btn" type="button" aria-label="Fermer l’aide">×</button>
+            </div>
+            <div class="modal-body" id="help-content"></div>
+        </div>
+    </div>
+
+    <script src="budget.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

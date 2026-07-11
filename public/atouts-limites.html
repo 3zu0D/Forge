@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forge - Découpage</title>
+    <title>Forge - Atouts / Limites</title>
     <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="decoupage">
+<body data-page="atouts-limites">
     <header class="topbar">
         <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
 
@@ -46,67 +46,12 @@
 
     <nav id="page-nav" class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale"></nav>
 
-    <main class="container wbs-container">
-        <div class="wbs-layout">
-            <aside class="wbs-sidebar">
-                <section class="card phases-card">
-                    <div class="card-header">
-                        <h2>Phases</h2>
-                    </div>
-
-                    <div class="table-wrapper">
-                        <table class="phases-table">
-                            <colgroup>
-                                <col class="phase-col-number" />
-                                <col class="phase-col-name" />
-                                <col class="select-col" />
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th>N°</th>
-                                    <th>Phase</th>
-                                    <th class="select-col"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="decoupage-phases-table"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn" id="add-decoupage-phase-btn" type="button" title="Ajouter une phase" aria-label="Ajouter une phase">+</button>
-                        </div>
-                        <button class="btn btn-danger btn-reset" id="reset-decoupage-btn" type="button">Réinitialiser</button>
-                    </div>
-                </section>
-            </aside>
-
-            <section class="card wbs-card">
-                <div class="card-header">
-                    <h2>Découpage</h2>
-                </div>
-
-                <div class="table-wrapper">
-                    <table class="wbs-table decoupage-table">
-                        <colgroup>
-                            <col class="wbs-col-number" />
-                            <col class="wbs-col-move" />
-                            <col class="decoupage-col-label" />
-                            <col class="select-col" />
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                <th>N°</th>
-                                <th class="wbs-move-header"></th>
-                                <th>Étape</th>
-                                <th class="select-col"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="decoupage-steps-table"></tbody>
-                    </table>
-                </div>
-            </section>
+    <main class="container atouts-limites-container">
+        <div class="atouts-limites-toolbar">
+            <button class="btn icon-action-btn icon-add-btn" id="add-atouts-limites-matrix-btn" type="button" title="Ajouter une matrice" aria-label="Ajouter une matrice">+</button>
         </div>
+
+        <div id="atouts-limites-list"></div>
     </main>
 
     <footer>

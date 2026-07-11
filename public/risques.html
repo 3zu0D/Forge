@@ -44,109 +44,69 @@
         </div>
     </header>
 
-    <nav class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale">
-        <div class="nav-group">
-            <span class="nav-group-label">Vue globale</span>
-            <div class="nav-group-links">
-                <a class="nav-link" href="dashboard.html">Tableau de bord</a>
-            </div>
-        </div>
-        <div class="nav-group">
-            <span class="nav-group-label">Rédactionnel</span>
-            <div class="nav-group-links">
-                <a class="nav-link" href="contexte.html">Contexte</a>
-                <a class="nav-link" href="objectifs.html">Objectifs</a>
-                <a class="nav-link" href="enjeux.html">Enjeux</a>
-                <a class="nav-link" href="perimetre.html">Périmètre</a>
-                <a class="nav-link" href="contraintes.html">Contraintes</a>
-                <a class="nav-link" href="hypotheses.html">Hypothèses</a>
-                <a class="nav-link" href="succes.html">Critères succès</a>
-            </div>
-        </div>
-        <div class="nav-group">
-            <span class="nav-group-label">Matrices</span>
-            <div class="nav-group-links">
-                <a class="nav-link" href="competences.html">Compétences</a>
-                <a class="nav-link" href="swot.html">SWOT</a>
-                <a class="nav-link" href="decision.html">Décision pondérée</a>
-            </div>
-        </div>
-        <div class="nav-group">
-            <span class="nav-group-label">Pilotage</span>
-            <div class="nav-group-links">
-                <a class="nav-link" href="index.html">Parties Prenantes</a>
-                <a class="nav-link" href="decoupage.html">Découpage</a>
-                <a class="nav-link" href="wbs.html">WBS</a>
-                <a class="nav-link" href="gantt.html">GANTT</a>
-                <a class="nav-link" href="raci.html">RACI</a>
-                <a class="nav-link active" href="risques.html">Analyse des risques</a>
-                <a class="nav-link" href="smart.html">SMART</a>
-                <a class="nav-link" href="kpis.html">KPIs</a>
-            </div>
-        </div>
-        <div class="nav-group">
-            <span class="nav-group-label">Infrastructure</span>
-            <div class="nav-group-links">
-                <a class="nav-link" href="vm-sizing.html">Dimensionnement VM</a>
-            </div>
-        </div>
-    </nav>
+    <nav id="page-nav" class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale"></nav>
 
     <main class="container risks-container">
         <section class="risks-layout">
-            <aside class="card risk-types-card">
-                <div class="card-header">
-                    <h2>Types de risques</h2>
-                </div>
-
-                <div class="table-wrapper">
-                    <table class="risk-types-table">
-                        <thead>
-                            <tr>
-                                <th class="risk-type-col-select">
-                                    <input id="select-all-risk-types" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
-                                </th>
-                                <th class="risk-type-col-number">N°</th>
-                                <th class="risk-type-col-name">Type</th>
-                            </tr>
-                        </thead>
-                        <tbody id="risk-types-table-body"></tbody>
-                    </table>
-                </div>
-
-                <div class="table-actions">
-                    <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="add-risk-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
-                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-risk-types-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+            <aside class="risks-sidebar-stack">
+                <div class="card risk-types-card">
+                    <div class="card-header">
+                        <h2>Types de risques</h2>
                     </div>
-                    <button class="btn btn-danger btn-reset" id="reset-risk-types-btn" type="button">Réinitialiser</button>
-                </div>
 
-                <div class="risk-matrix-panel">
-                    <h3>Matrice du risque</h3>
-                    <div class="risk-matrix-layout" aria-label="Matrice de criticité des risques">
-                        <div class="risk-matrix-header">
-                            <div class="risk-matrix-left-spacer" aria-hidden="true"></div>
-                            <div class="risk-probability-label">Probabilité</div>
-                        </div>
-                        <div class="risk-matrix-axis-row">
-                            <div class="risk-matrix-left-spacer" aria-hidden="true"></div>
-                            <div class="risk-probability-dots" id="risk-probability-dots"></div>
-                        </div>
-                        <div class="risk-matrix-body">
-                            <div class="risk-severity-label">Gravité</div>
-                            <div class="risk-severity-dots" id="risk-severity-dots"></div>
-                            <div class="risk-matrix-grid" id="risk-matrix-grid"></div>
-                        </div>
+                    <div class="table-wrapper">
+                        <table class="risk-types-table">
+                            <thead>
+                                <tr>
+                                    <th class="risk-type-col-select">
+                                        <input id="select-all-risk-types" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
+                                    </th>
+                                    <th class="risk-type-col-number">N°</th>
+                                    <th class="risk-type-col-name">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="risk-types-table-body"></tbody>
+                        </table>
                     </div>
-                    <div class="risk-matrix-legend">
-                        <span class="risk-level-low">Faible</span>
-                        <span class="risk-level-medium">Moyen</span>
-                        <span class="risk-level-high">Élevé</span>
-                        <span class="risk-level-critical">Critique</span>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-risk-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
+                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-risk-types-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+                        </div>
+                        <button class="btn btn-danger btn-reset" id="reset-risk-types-btn" type="button">Réinitialiser</button>
                     </div>
                 </div>
 
+                <div class="card risk-matrix-card">
+                    <div class="card-header">
+                        <h2>Matrice du risque</h2>
+                    </div>
+
+                    <div class="risk-matrix-panel">
+                        <div class="risk-matrix-layout" aria-label="Matrice de criticité des risques">
+                            <div class="risk-matrix-header">
+                                <div class="risk-matrix-left-spacer" aria-hidden="true"></div>
+                                <div class="risk-probability-label">Probabilité</div>
+                            </div>
+                            <div class="risk-matrix-axis-row">
+                                <div class="risk-matrix-left-spacer" aria-hidden="true"></div>
+                                <div class="risk-probability-dots" id="risk-probability-dots"></div>
+                            </div>
+                            <div class="risk-matrix-body">
+                                <div class="risk-severity-label">Gravité</div>
+                                <div class="risk-severity-dots" id="risk-severity-dots"></div>
+                                <div class="risk-matrix-grid" id="risk-matrix-grid"></div>
+                            </div>
+                        </div>
+                        <div class="risk-matrix-legend">
+                            <span class="risk-level-low">Faible</span>
+                            <span class="risk-level-medium">Moyen</span>
+                            <span class="risk-level-high">Élevé</span>
+                            <span class="risk-level-critical">Critique</span>
+                        </div>
+                    </div>
+                </div>
             </aside>
 
             <section class="card risks-main-card">
@@ -168,12 +128,10 @@
                                 <th>N°</th>
                                 <th>Type</th>
                                 <th>Risque</th>
-                                <th>Source</th>
+                                <th>Conséquence</th>
                                 <th>Prob.</th>
                                 <th>Grav.</th>
                                 <th>Crit.</th>
-                                <th>Réponse</th>
-                                <th>Responsable</th>
                                 <th>Mitigation</th>
                             </tr>
                         </thead>
