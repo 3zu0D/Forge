@@ -127,42 +127,4 @@ Pour ton NAS :
 3. Sauvegarde régulièrement `data/forge.db`.
 4. Active `FORGE_AUTH_USER` / `FORGE_AUTH_PASSWORD` seulement si tu veux une couche de mot de passe en plus.
 
-
-
-## Forge 0.1.1 — Hardening & Cleanup
-
-Cette version ne change pas les fonctionnalités visibles. Elle renforce le fond de l’application.
-
-Points principaux :
-- serveur Express durci,
-- validation API plus stricte,
-- healthcheck Docker,
-- arrêt propre avec fermeture SQLite,
-- checkpoint WAL,
-- route interne de backup SQLite : `POST /api/maintenance/backup`,
-- scripts de contrôle : `npm run check` et `npm run healthcheck`,
-- Dockerfile et Compose renforcés,
-- archive toujours livrée sans `data/`, sans `start-forge.bat`, sans `stop-forge.bat`.
-
-Pour mettre à jour le NAS :
-1. garder le dossier `data` existant,
-2. remplacer les fichiers de l’application,
-3. redémarrer le conteneur Forge.
-
-
-## Forge 0.1.2 — Code Review & Refactor
-
-Cette version ne change pas les fonctionnalités visibles. Elle refactorise le backend pour rendre Forge plus maintenable.
-
-Points principaux :
-- `server.js` allégé,
-- backend découpé dans `server/`,
-- validations techniques renforcées,
-- script de review ajouté avec `npm run review`,
-- script de contrôle complet avec `npm run check`,
-- frontend conservé tel quel pour éviter les régressions sur les écrans validés.
-
-Pour mettre à jour le NAS :
-1. conserver le dossier `data` déjà présent,
-2. remplacer les fichiers de l’application,
-3. redémarrer le conteneur Forge.
+Historique des versions (0.1, 0.1.1, 0.1.2, 0.1.3...) : voir `docs/CHANGELOG.md`.
