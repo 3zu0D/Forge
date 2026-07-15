@@ -268,7 +268,7 @@ function vmSizingRenderServerTable() {
                     aria-label="Changer la couleur du serveur ${index + 1}"
                 >${index + 1}</button>
             </td>
-            <td class="editable vmsizing-server-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(profile.name)}</td>
+            <td class="editable vmsizing-server-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(profile.name)}</td>
         `;
 
         body.appendChild(row);
@@ -303,7 +303,7 @@ function vmSizingRenderServerTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             if (!vmSizingProfiles[index]) return;
-            vmSizingProfiles[index].name = event.target.textContent.trim();
+            vmSizingProfiles[index].name = sanitizeRichText(event.target.innerHTML);
             vmSizingSaveProfiles();
 
             if (vmSizingProfiles[index].id === vmSizingActiveProfileId) {

@@ -362,7 +362,7 @@ function renderBudgetTypesTable() {
                     aria-label="Changer la couleur du type ${index + 1}"
                 >${index + 1}</button>
             </td>
-            <td class="editable budget-type-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${escapeHtml(type.name)}</td>
+            <td class="editable budget-type-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${sanitizeRichText(type.name)}</td>
         `;
 
         body.appendChild(row);
@@ -389,7 +389,7 @@ function renderBudgetTypesTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             if (!budgetElementTypes[index]) return;
-            budgetElementTypes[index].name = event.target.textContent.trim();
+            budgetElementTypes[index].name = sanitizeRichText(event.target.innerHTML);
             saveBudgetElementTypes();
             renderBudgetElementsTable();
         });
@@ -523,7 +523,7 @@ function renderBudgetElementsTable() {
             row.style.backgroundColor = hexToRgba(color, 0.10);
 
             row.innerHTML = `
-                <td class="editable budget-element-name-cell" contenteditable="true" data-field="name" spellcheck="true">${escapeHtml(element.name)}</td>
+                <td class="editable budget-element-name-cell" contenteditable="true" data-field="name" spellcheck="true">${sanitizeRichText(element.name)}</td>
                 <td>
                     <select class="budget-nature-select" data-field="nature">
                         <option value="capex" ${element.nature === "capex" ? "selected" : ""}>CAPEX</option>
@@ -571,7 +571,7 @@ function bindBudgetElementsTableEvents() {
             const elementId = event.target.closest("tr")?.dataset.elementId;
             const element = budgetElements.find((item) => item.id === elementId);
             if (!element) return;
-            element.name = event.target.textContent.trim();
+            element.name = sanitizeRichText(event.target.innerHTML);
             saveBudgetElements();
         });
     });
@@ -686,8 +686,8 @@ function renderBudgetInfoTable() {
             <td class="select-col">
                 <input class="row-checkbox budget-info-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner l'information ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
-            <td class="editable budget-info-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${escapeHtml(row.name)}</td>
-            <td class="editable budget-info-value-cell" contenteditable="true" data-index="${index}" data-field="value" spellcheck="true">${escapeHtml(row.value)}</td>
+            <td class="editable budget-info-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${sanitizeRichText(row.name)}</td>
+            <td class="editable budget-info-value-cell" contenteditable="true" data-index="${index}" data-field="value" spellcheck="true">${sanitizeRichText(row.value)}</td>
         `;
 
         body.appendChild(tr);
@@ -707,7 +707,7 @@ function renderBudgetInfoTable() {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
             if (!budgetInfoRows[index] || !field) return;
-            budgetInfoRows[index][field] = event.target.textContent.trim();
+            budgetInfoRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveBudgetInfoRows();
         });
     });
@@ -856,7 +856,7 @@ function renderBudgetTcoProfilesTable() {
                 <input class="row-checkbox budget-tco-profile-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le TCO ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
             <td>${index + 1}</td>
-            <td class="editable budget-tco-profile-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(profile.name)}</td>
+            <td class="editable budget-tco-profile-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(profile.name)}</td>
         `;
 
         body.appendChild(row);
@@ -877,7 +877,7 @@ function renderBudgetTcoProfilesTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             if (!budgetTcoProfiles[index]) return;
-            budgetTcoProfiles[index].name = event.target.textContent.trim();
+            budgetTcoProfiles[index].name = sanitizeRichText(event.target.innerHTML);
             saveBudgetTcoProfiles();
 
             if (budgetTcoProfiles[index].id === budgetTcoActiveProfileId) {
@@ -1219,7 +1219,7 @@ function renderBudgetCarbonProfilesTable() {
                 <input class="row-checkbox budget-carbon-profile-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le bilan carbone ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
             <td>${index + 1}</td>
-            <td class="editable budget-carbon-profile-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(profile.name)}</td>
+            <td class="editable budget-carbon-profile-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(profile.name)}</td>
         `;
 
         body.appendChild(row);
@@ -1240,7 +1240,7 @@ function renderBudgetCarbonProfilesTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             if (!budgetCarbonProfiles[index]) return;
-            budgetCarbonProfiles[index].name = event.target.textContent.trim();
+            budgetCarbonProfiles[index].name = sanitizeRichText(event.target.innerHTML);
             saveBudgetCarbonProfiles();
 
             if (budgetCarbonProfiles[index].id === budgetCarbonActiveProfileId) {

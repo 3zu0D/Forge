@@ -17,12 +17,13 @@
             </label>
         </div>
 
+        <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
+
         <div class="project-switcher" aria-label="Sélection du projet">
             <label class="project-switcher-field">
                 <span>Projet actif</span>
                 <select id="project-selector"></select>
             </label>
-            <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
         </div>
 
         <div class="theme-switcher" aria-label="Sélection du thème">
@@ -53,7 +54,7 @@
             </div>
 
             <div class="redaction-intro">
-                <p>Sépare clairement ce qui fait partie du projet, ce qui n’en fait pas partie, et les éléments encore à clarifier.</p>
+                <p>Sépare clairement ce qui fait partie du projet de ce qui n’en fait pas partie.</p>
             </div>
         </section>
 
@@ -72,9 +73,8 @@
                         <thead>
                             <tr>
                                 <th class="select-col">Sel.</th>
-                                <th>N°</th>
-                                <th>Élément</th>
-                                <th>Description</th>
+                                <th class="scope-index-cell">N°</th>
+                                <th class="scope-title-cell">Élément</th>
                             </tr>
                         </thead>
                         <tbody id="scope-included-body"></tbody>
@@ -100,9 +100,8 @@
                         <thead>
                             <tr>
                                 <th class="select-col">Sel.</th>
-                                <th>N°</th>
-                                <th>Élément</th>
-                                <th>Description</th>
+                                <th class="scope-index-cell">N°</th>
+                                <th class="scope-title-cell">Élément</th>
                             </tr>
                         </thead>
                         <tbody id="scope-excluded-body"></tbody>
@@ -111,34 +110,6 @@
 
                 <div class="scope-column-actions">
                     <button class="btn btn-danger scope-delete-btn icon-action-btn icon-delete-btn" type="button" data-scope-type="Hors périmètre" disabled title="Supprimer sélection" aria-label="Supprimer sélection">-</button>
-                </div>
-            </article>
-
-            <article class="card scope-column-card scope-clarify-card" data-scope-type="À clarifier">
-                <div class="scope-column-header">
-                    <div>
-                        <h2>À clarifier</h2>
-                        <p>Ce qui doit être arbitré avant validation du périmètre.</p>
-                    </div>
-                    <button class="btn scope-add-btn icon-action-btn icon-add-btn" type="button" data-scope-type="À clarifier" title="Ajouter" aria-label="Ajouter">+</button>
-                </div>
-
-                <div class="table-wrapper scope-table-wrapper">
-                    <table class="scope-table">
-                        <thead>
-                            <tr>
-                                <th class="select-col">Sel.</th>
-                                <th>N°</th>
-                                <th>Élément</th>
-                                <th>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody id="scope-clarify-body"></tbody>
-                    </table>
-                </div>
-
-                <div class="scope-column-actions">
-                    <button class="btn btn-danger scope-delete-btn icon-action-btn icon-delete-btn" type="button" data-scope-type="À clarifier" disabled title="Supprimer sélection" aria-label="Supprimer sélection">-</button>
                 </div>
             </article>
         </section>

@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forge - Matrice de compétences</title>
+    <title>Forge - Scénario de test</title>
     <link rel="stylesheet" href="style.css" />
 </head>
-<body data-page="competences">
+<body data-page="tests-scenario">
     <header class="topbar">
         <button class="help-btn" id="help-btn" type="button" aria-label="Afficher l’aide">?</button>
 
@@ -47,50 +47,40 @@
 
     <nav id="page-nav" class="page-nav grouped-page-nav structured-page-nav" aria-label="Navigation principale"></nav>
 
-    <main class="container competences-container">
-        <section class="competences-layout">
-            <aside class="card competence-categories-card">
+    <main class="container tests-scenario-container">
+        <section class="tests-scenario-layout">
+            <aside class="card tests-scenario-list-card">
                 <div class="card-header">
-                    <h2>Catégories</h2>
+                    <h2>Scénario</h2>
                 </div>
 
                 <div class="table-wrapper">
-                    <table class="competence-categories-table">
+                    <table class="tests-scenario-list-table">
                         <thead>
                             <tr>
-                                <th class="competence-category-col-select">
-                                    <input id="select-all-competence-categories" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
+                                <th class="select-col">
+                                    <input id="select-all-test-scenarios" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
                                 </th>
-                                <th class="competence-category-col-number">N°</th>
-                                <th class="competence-category-col-name">Catégorie</th>
+                                <th class="tests-scenario-col-number">N°</th>
+                                <th>Scénario</th>
                             </tr>
                         </thead>
-                        <tbody id="competence-categories-table-body"></tbody>
+                        <tbody id="test-scenarios-table-body"></tbody>
                     </table>
                 </div>
 
                 <div class="table-actions">
                     <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="add-competence-category-btn" type="button" title="Ajouter une catégorie" aria-label="Ajouter une catégorie">+</button>
-                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-competence-categories-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+                        <button class="btn icon-action-btn icon-add-btn" id="add-test-scenario-btn" type="button" title="Ajouter un scénario" aria-label="Ajouter un scénario">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-test-scenarios-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
                     </div>
-                    <button class="btn btn-danger btn-reset" id="reset-competence-categories-btn" type="button">Réinitialiser</button>
+                    <button class="btn btn-danger btn-reset" id="reset-test-scenarios-btn" type="button">Réinitialiser</button>
                 </div>
 
-                <div class="competence-level-legend">
-                    <h3>Légende niveaux</h3>
-                    <div class="competence-level-list">
-                        <span><strong>0</strong> Non maîtrisé</span>
-                        <span><strong>1</strong> Notions</span>
-                        <span><strong>2</strong> Débutant</span>
-                        <span><strong>3</strong> Autonome</span>
-                        <span><strong>4</strong> Avancé</span>
-                        <span><strong>5</strong> Référent</span>
-                    </div>
-                </div>
+                <p class="decision-hint">Écris le contexte général de chaque scénario, puis détaille-le étape par étape à droite.</p>
             </aside>
 
-            <section class="competence-matrices-zone" id="competence-matrices-zone"></section>
+            <section class="tests-scenario-detail-container" id="test-scenario-detail-container"></section>
         </section>
     </main>
 
@@ -104,8 +94,6 @@
         </div>
     </footer>
 
-    <div class="color-menu hidden" id="color-menu" aria-label="Choix de couleur"></div>
-
     <div class="modal-overlay hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
         <div class="modal">
             <div class="modal-header">
@@ -115,6 +103,8 @@
             <div class="modal-body" id="help-content"></div>
         </div>
     </div>
+
+    <div class="color-menu hidden" id="color-menu" aria-label="Choix de couleur"></div>
 
     <script src="script.js"></script>
 </body>

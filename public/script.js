@@ -117,9 +117,15 @@ let raciData = {};
 let ganttPeriods = [];
 let decoupagePhases = [];
 let decoupageSteps = [];
+let decisionCategories = [];
+let selectedDecisionCategories = new Set();
 let decisionCriteria = [];
 let decisionOptions = [];
 let atoutsLimitesMatrices = [];
+let testScenarios = [];
+let selectedTestScenarios = new Set();
+let testContextSteps = [];
+let testDerouleSteps = [];
 let selectedSwotItems = { strengths: new Set(), weaknesses: new Set(), opportunities: new Set(), threats: new Set() };
 
 const currentPage = document.body.dataset.page;
@@ -158,7 +164,14 @@ const FORGE_NAV_ICON_SHAPES = {
     "budget-couts": '<ellipse cx="11" cy="15.5" rx="6.5" ry="3"/><path d="M4.5 15.5V11M17.5 15.5V11"/><ellipse cx="11" cy="11" rx="6.5" ry="3"/>',
     "budget-tco": '<circle cx="11" cy="11" r="8"/><path d="M11 3v8l6.2-4.3"/>',
     "budget-carbone": '<path d="M4.5 18.5C3.8 9.8 11 4 18.5 4.5c.7 8.7-6.5 14.5-14 14Z"/><path d="M5.5 17.5c3-3.5 6.5-6.5 11-11"/>',
-    "budget-comparatifs": '<line x1="6" y1="18.5" x2="6" y2="10" stroke-width="3"/><line x1="11" y1="18.5" x2="11" y2="4" stroke-width="3"/><line x1="16" y1="18.5" x2="16" y2="12.5" stroke-width="3"/>'
+    "budget-comparatifs": '<line x1="6" y1="18.5" x2="6" y2="10" stroke-width="3"/><line x1="11" y1="18.5" x2="11" y2="4" stroke-width="3"/><line x1="16" y1="18.5" x2="16" y2="12.5" stroke-width="3"/>',
+    tests: '<path d="M8.5 2.5h5v3.2l3.6 7.8a2 2 0 0 1-1.8 2.8H6.7a2 2 0 0 1-1.8-2.8l3.6-7.8z"/><line x1="7" y1="2.5" x2="15" y2="2.5"/><line x1="7.2" y1="12" x2="14.8" y2="12"/>',
+    "tests-scenario": '<rect x="4" y="2.5" width="14" height="17" rx="1.5"/><line x1="7" y1="7" x2="15" y2="7"/><line x1="7" y1="10.5" x2="15" y2="10.5"/><line x1="7" y1="14" x2="12" y2="14"/>',
+    "tests-deroule": '<circle cx="6" cy="5.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="6" cy="11" r="1.6" fill="currentColor" stroke="none"/><circle cx="6" cy="16.5" r="1.6" fill="currentColor" stroke="none"/><line x1="10" y1="5.5" x2="18" y2="5.5"/><line x1="10" y1="11" x2="18" y2="11"/><line x1="10" y1="16.5" x2="18" y2="16.5"/>',
+    "align-left": '<line x1="3" y1="5.5" x2="19" y2="5.5"/><line x1="3" y1="9.5" x2="14" y2="9.5"/><line x1="3" y1="13.5" x2="19" y2="13.5"/><line x1="3" y1="17.5" x2="11" y2="17.5"/>',
+    "align-center": '<line x1="3" y1="5.5" x2="19" y2="5.5"/><line x1="7" y1="9.5" x2="15" y2="9.5"/><line x1="3" y1="13.5" x2="19" y2="13.5"/><line x1="6" y1="17.5" x2="16" y2="17.5"/>',
+    "align-right": '<line x1="3" y1="5.5" x2="19" y2="5.5"/><line x1="8" y1="9.5" x2="19" y2="9.5"/><line x1="3" y1="13.5" x2="19" y2="13.5"/><line x1="11" y1="17.5" x2="19" y2="17.5"/>',
+    "align-justify": '<line x1="3" y1="5.5" x2="19" y2="5.5"/><line x1="3" y1="9.5" x2="19" y2="9.5"/><line x1="3" y1="13.5" x2="19" y2="13.5"/><line x1="3" y1="17.5" x2="19" y2="17.5"/>'
 };
 
 function navIcon(name) {
@@ -227,6 +240,14 @@ const FORGE_NAV_GROUPS = [
             { page: "budget-carbone", href: "budget-carbone.html", label: "Bilan carbone", icon: "budget-carbone" },
             { page: "budget-comparatifs", href: "budget-comparatifs.html", label: "Comparatifs", icon: "budget-comparatifs" }
         ]
+    },
+    {
+        label: "Tests",
+        icon: "tests",
+        links: [
+            { page: "tests-scenario", href: "tests-scenario.html", label: "Scénario", icon: "tests-scenario" },
+            { page: "tests-deroule", href: "tests-deroule.html", label: "Déroulé", icon: "tests-deroule" }
+        ]
     }
 ];
 
@@ -268,6 +289,380 @@ function renderPageNav() {
         </div>
     `
     ).join("");
+}
+
+/* V90 — Barre d'outils de mise en forme, injectée une fois sous la nav sur
+   toutes les pages (même patron que renderTopbarBrand/renderPageNav : pas de
+   HTML dupliqué par page). Désactivée tant qu'aucune cellule éditable n'a le
+   focus — c'est aussi son état correct sur les pages sans édition. */
+let activeEditableCell = null;
+let formattingToolbarEl = null;
+
+// Sélection multi-cellules par glissement (souris maintenue + survol d'une
+// AUTRE cellule éditable) — permet d'appliquer une action de mise en forme
+// (gras, alignement, taille...) à plusieurs cellules d'un coup, comme un
+// tableur. `multiSelectDragState` ne sert qu'à distinguer un simple clic
+// (aucun mouseover sur une autre cellule pendant que le bouton est tenu) d'un
+// vrai glissement — un simple clic doit garder son comportement normal
+// (placer le curseur), pas basculer en sélection multiple.
+let multiSelectedCells = [];
+let multiSelectDragState = null;
+
+function renderFormattingToolbar() {
+    const nav = document.getElementById("page-nav");
+    if (!nav || document.getElementById("formatting-toolbar")) return;
+
+    const toolbar = document.createElement("div");
+    toolbar.id = "formatting-toolbar";
+    toolbar.className = "formatting-toolbar";
+    toolbar.setAttribute("role", "toolbar");
+    toolbar.setAttribute("aria-label", "Mise en forme du texte");
+    toolbar.innerHTML = `
+        <button type="button" class="formatting-btn" data-command="bold" title="Gras" aria-label="Gras"><b>G</b></button>
+        <button type="button" class="formatting-btn" data-command="italic" title="Italique" aria-label="Italique"><i>I</i></button>
+        <button type="button" class="formatting-btn" data-command="underline" title="Souligné" aria-label="Souligné"><u>S</u></button>
+        <button type="button" class="formatting-btn" data-command="strikeThrough" title="Barré" aria-label="Barré"><s>B</s></button>
+        <span class="formatting-toolbar-sep" aria-hidden="true"></span>
+        <button type="button" class="formatting-btn" data-align="left" title="Aligner à gauche" aria-label="Aligner à gauche">${navIcon("align-left")}</button>
+        <button type="button" class="formatting-btn" data-align="center" title="Centrer" aria-label="Centrer">${navIcon("align-center")}</button>
+        <button type="button" class="formatting-btn" data-align="right" title="Aligner à droite" aria-label="Aligner à droite">${navIcon("align-right")}</button>
+        <button type="button" class="formatting-btn" data-align="justify" title="Justifier" aria-label="Justifier">${navIcon("align-justify")}</button>
+        <span class="formatting-toolbar-sep" aria-hidden="true"></span>
+        <button type="button" class="formatting-btn formatting-btn-text" data-font-step="-1" title="Réduire la taille du texte" aria-label="Réduire la taille du texte">A-</button>
+        <button type="button" class="formatting-btn formatting-btn-text" data-font-step="1" title="Augmenter la taille du texte" aria-label="Augmenter la taille du texte">A+</button>
+    `;
+
+    nav.insertAdjacentElement("afterend", toolbar);
+    formattingToolbarEl = toolbar;
+
+    // Un clic sur un bouton ne doit jamais faire perdre le focus/la sélection
+    // de la cellule en cours d'édition avant que la commande ne s'exécute.
+    toolbar.addEventListener("mousedown", (event) => event.preventDefault());
+
+    toolbar.querySelectorAll("[data-command]").forEach((button) => {
+        button.addEventListener("click", () => toggleRichTextTag(button.dataset.command));
+    });
+
+    toolbar.querySelectorAll("[data-align]").forEach((button) => {
+        button.addEventListener("click", () => applyRichTextAlignment(button.dataset.align));
+    });
+
+    toolbar.querySelectorAll("[data-font-step]").forEach((button) => {
+        button.addEventListener("click", () => adjustRichTextFontSize(Number(button.dataset.fontStep)));
+    });
+
+    document.addEventListener("focusin", handleEditableFocusIn);
+    document.addEventListener("focusout", handleEditableFocusOut);
+    document.addEventListener("selectionchange", updateFormattingToolbarActiveStates);
+    document.addEventListener("paste", handleEditablePaste);
+    document.addEventListener("mousedown", handleEditableMouseDown);
+    document.addEventListener("mouseover", handleEditableMouseOver);
+    document.addEventListener("mouseup", handleEditableMouseUp);
+    window.addEventListener("resize", syncFormattingToolbarOffset);
+
+    syncFormattingToolbarOffset();
+    updateFormattingToolbarState();
+}
+
+function syncFormattingToolbarOffset() {
+    const topbar = document.querySelector(".topbar");
+    const nav = document.getElementById("page-nav");
+    if (!topbar || !nav) return;
+
+    document.documentElement.style.setProperty("--formatting-toolbar-top", `${topbar.offsetHeight + nav.offsetHeight}px`);
+}
+
+function handleEditableFocusIn(event) {
+    const cell = event.target.closest?.('[contenteditable="true"]');
+    activeEditableCell = cell && !cell.classList.contains("wbs-duration-cell") ? cell : null;
+    updateFormattingToolbarState();
+}
+
+function handleEditableFocusOut(event) {
+    const cell = event.target.closest?.('[contenteditable="true"]');
+    if (cell && cell === activeEditableCell) {
+        activeEditableCell = null;
+        updateFormattingToolbarState();
+    }
+}
+
+function clearMultiCellSelection() {
+    if (multiSelectedCells.length === 0) return;
+
+    multiSelectedCells.forEach((cell) => cell.classList.remove("multi-cell-selected"));
+    multiSelectedCells = [];
+    updateFormattingToolbarState();
+}
+
+function addCellToMultiSelection(cell) {
+    if (!cell || cell.classList.contains("wbs-duration-cell") || multiSelectedCells.includes(cell)) return;
+
+    multiSelectedCells.push(cell);
+    cell.classList.add("multi-cell-selected");
+}
+
+function handleEditableMouseDown(event) {
+    const cell = event.target.closest?.('[contenteditable="true"]');
+    const onToolbar = event.target.closest?.("#formatting-toolbar");
+
+    // Un clic ailleurs (bouton, texte non éditable...) referme la sélection —
+    // sauf un clic sur la barre d'outils elle-même, dont le mousedown est déjà
+    // neutralisé par ailleurs pour ne jamais faire perdre le focus en cours.
+    if (!cell) {
+        if (!onToolbar) clearMultiCellSelection();
+        multiSelectDragState = null;
+        return;
+    }
+
+    multiSelectDragState = cell.classList.contains("wbs-duration-cell") ? null : { anchor: cell, active: false };
+    clearMultiCellSelection();
+}
+
+function handleEditableMouseOver(event) {
+    if (!multiSelectDragState || event.buttons !== 1) return;
+
+    const cell = event.target.closest?.('[contenteditable="true"]');
+    if (!cell || cell.classList.contains("wbs-duration-cell")) return;
+    if (cell === multiSelectDragState.anchor && !multiSelectDragState.active) return;
+
+    if (!multiSelectDragState.active) {
+        multiSelectDragState.active = true;
+        // Un vrai glissement démarre : on neutralise la sélection de texte
+        // native du navigateur (qui continuerait sinon en parallèle et
+        // rendrait le résultat imprévisible) et on démarre la sélection
+        // multiple par la cellule de départ.
+        document.body.classList.add("multi-cell-selecting");
+        window.getSelection()?.removeAllRanges();
+        addCellToMultiSelection(multiSelectDragState.anchor);
+    }
+
+    addCellToMultiSelection(cell);
+    updateFormattingToolbarState();
+}
+
+function handleEditableMouseUp() {
+    if (multiSelectDragState?.active) {
+        document.body.classList.remove("multi-cell-selecting");
+    }
+
+    multiSelectDragState = null;
+}
+
+function updateFormattingToolbarState() {
+    if (!formattingToolbarEl) return;
+
+    const enabled = Boolean(activeEditableCell) || multiSelectedCells.length > 1;
+    formattingToolbarEl.querySelectorAll(".formatting-btn").forEach((button) => {
+        button.disabled = !enabled;
+    });
+
+    updateFormattingToolbarActiveStates();
+}
+
+// La CSS de base de l'app pose font-weight:650 sur à peu près tout (td, th,
+// .editable...), un rendu "gras-clair" volontaire. document.execCommand('bold')
+// s'appuie sur queryCommandState/le computed style pour décider s'il doit
+// ajouter ou retirer le gras — avec 650 déjà présent partout, il considère le
+// texte comme "déjà gras" et bascule sur font-weight:normal au lieu de
+// vraiment mettre en gras. Bold/Italique/Souligné/Barré sont donc implémentés
+// ici avec le même mécanisme Range/Selection maison que l'alignement et la
+// taille de police, plutôt que execCommand — état actif détecté par la
+// présence de NOTRE PROPRE balise (<b>/<i>/<u>/<s>), pas par le style hérité.
+const RICH_TEXT_TOGGLE_TAGS = { bold: "b", italic: "i", underline: "u", strikeThrough: "s" };
+
+function getActiveFormattingRange() {
+    if (!activeEditableCell) return null;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return null;
+
+    const current = selection.getRangeAt(0);
+    if (!current.collapsed && activeEditableCell.contains(current.commonAncestorContainer)) {
+        return current;
+    }
+
+    const wholeCell = document.createRange();
+    wholeCell.selectNodeContents(activeEditableCell);
+    return wholeCell;
+}
+
+// Une action de la barre d'outils s'applique soit à la sélection réelle dans
+// LA cellule active (comportement historique, une seule cellule), soit — si
+// une sélection multi-cellules par glissement est en cours — au contenu
+// ENTIER de chacune des cellules sélectionnées (on sélectionne des cellules,
+// pas un morceau de texte à l'intérieur de chacune).
+function getFormattingTargets() {
+    if (multiSelectedCells.length > 1) {
+        return multiSelectedCells.map((cell) => {
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            return { cell, range };
+        });
+    }
+
+    if (!activeEditableCell) return [];
+
+    const range = getActiveFormattingRange();
+    return range ? [{ cell: activeEditableCell, range }] : [];
+}
+
+function findExactAncestorMatch(range, predicate) {
+    const ancestor = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+        ? range.commonAncestorContainer.parentElement
+        : range.commonAncestorContainer;
+
+    if (!ancestor || !predicate(ancestor)) return null;
+
+    const ancestorRange = document.createRange();
+    ancestorRange.selectNodeContents(ancestor);
+    return range.toString() === ancestorRange.toString() ? ancestor : null;
+}
+
+function isCaretInsideTag(range, tagName) {
+    let node = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+    while (node && node !== activeEditableCell) {
+        if (node.tagName && node.tagName.toLowerCase() === tagName) return true;
+        node = node.parentElement;
+    }
+    return false;
+}
+
+function wrapRangeInElement(range, element) {
+    try {
+        range.surroundContents(element);
+    } catch (error) {
+        // La sélection chevauche partiellement une autre balise : surroundContents()
+        // lève, on reconstruit la portion sélectionnée à la main.
+        const fragment = range.extractContents();
+        element.appendChild(fragment);
+        range.insertNode(element);
+    }
+
+    const selection = window.getSelection();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(element);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+}
+
+function unwrapElement(element) {
+    const parent = element.parentNode;
+    while (element.firstChild) parent.insertBefore(element.firstChild, element);
+    parent.removeChild(element);
+}
+
+function toggleRichTextTag(command) {
+    const tagName = RICH_TEXT_TOGGLE_TAGS[command];
+    if (!tagName) return;
+
+    const targets = getFormattingTargets();
+    if (targets.length === 0) return;
+
+    targets.forEach(({ cell, range }) => {
+        const existing = findExactAncestorMatch(range, (el) => el.tagName.toLowerCase() === tagName);
+
+        if (existing) {
+            unwrapElement(existing);
+        } else {
+            wrapRangeInElement(range, document.createElement(tagName));
+        }
+
+        cell.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    updateFormattingToolbarActiveStates();
+}
+
+function updateFormattingToolbarActiveStates() {
+    if (!formattingToolbarEl) return;
+
+    // Pas de surbrillance d'état actif en sélection multi-cellules : des
+    // cellules différentes peuvent être dans des états différents (gras sur
+    // l'une, pas sur l'autre), donc rien de fiable à afficher — cohérent avec
+    // l'alignement/la taille de police, qui n'ont déjà pas de surbrillance.
+    if (multiSelectedCells.length > 1) {
+        formattingToolbarEl.querySelectorAll("[data-command]").forEach((button) => button.classList.remove("active"));
+        return;
+    }
+
+    const selection = window.getSelection();
+    const liveRange = activeEditableCell && selection && selection.rangeCount > 0 && activeEditableCell.contains(selection.getRangeAt(0).commonAncestorContainer)
+        ? selection.getRangeAt(0)
+        : null;
+
+    formattingToolbarEl.querySelectorAll("[data-command]").forEach((button) => {
+        const tagName = RICH_TEXT_TOGGLE_TAGS[button.dataset.command];
+        const active = Boolean(liveRange) && isCaretInsideTag(liveRange, tagName);
+        button.classList.toggle("active", active);
+    });
+}
+
+function applyRichTextAlignment(align) {
+    if (!RICH_TEXT_ALIGN_VALUES.has(align)) return;
+
+    const targets = getFormattingTargets();
+    if (targets.length === 0) return;
+
+    targets.forEach(({ cell }) => {
+        let wrapper = cell.childNodes.length === 1 && cell.firstChild.nodeType === Node.ELEMENT_NODE && cell.firstChild.tagName === "DIV"
+            ? cell.firstChild
+            : null;
+
+        if (!wrapper) {
+            wrapper = document.createElement("div");
+            while (cell.firstChild) wrapper.appendChild(cell.firstChild);
+            cell.appendChild(wrapper);
+        }
+
+        if (align === "left") {
+            wrapper.style.removeProperty("text-align");
+        } else {
+            wrapper.style.textAlign = align;
+        }
+
+        cell.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+}
+
+function adjustRichTextFontSize(direction) {
+    const targets = getFormattingTargets();
+    if (targets.length === 0) return;
+
+    targets.forEach(({ cell, range }) => adjustRichTextFontSizeForTarget(cell, range, direction));
+}
+
+function adjustRichTextFontSizeForTarget(cell, range, direction) {
+    // Si la sélection correspond exactement au contenu d'un <span style="font-size">
+    // déjà posé par un clic précédent, on ajuste CE span au lieu d'en imbriquer
+    // un nouveau à chaque clic (sinon : <span 14px><span 16px><span 18px>...).
+    const existingSpan = findExactAncestorMatch(range, (el) => el.tagName === "SPAN" && Boolean(el.style.fontSize));
+
+    if (existingSpan) {
+        const currentPx = parseFloat(existingSpan.style.fontSize) || RICH_TEXT_FONT_SIZE_DEFAULT;
+        const nextPx = Math.min(RICH_TEXT_FONT_SIZE_MAX, Math.max(RICH_TEXT_FONT_SIZE_MIN, currentPx + direction * RICH_TEXT_FONT_SIZE_STEP));
+        existingSpan.style.fontSize = `${nextPx}px`;
+        cell.dispatchEvent(new Event("input", { bubbles: true }));
+        return;
+    }
+
+    const refNode = range.startContainer.nodeType === Node.TEXT_NODE ? range.startContainer.parentElement : range.startContainer;
+    const currentPx = parseFloat(getComputedStyle(refNode).fontSize) || RICH_TEXT_FONT_SIZE_DEFAULT;
+    const nextPx = Math.min(RICH_TEXT_FONT_SIZE_MAX, Math.max(RICH_TEXT_FONT_SIZE_MIN, currentPx + direction * RICH_TEXT_FONT_SIZE_STEP));
+
+    const span = document.createElement("span");
+    span.style.fontSize = `${nextPx}px`;
+    wrapRangeInElement(range, span);
+
+    cell.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function handleEditablePaste(event) {
+    const target = event.target.closest?.('[contenteditable="true"]');
+    if (!target) return;
+
+    event.preventDefault();
+    const text = (event.clipboardData || window.clipboardData)?.getData("text/plain") ?? "";
+    document.execCommand("insertText", false, text);
 }
 
 const tableBody = document.getElementById("stakeholders-table");
@@ -694,7 +1089,7 @@ function bindStakeholdersTableEvents() {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
 
-            stakeholders[index][field] = event.target.textContent.trim();
+            stakeholders[index][field] = sanitizeRichText(event.target.innerHTML);
             saveStakeholders();
         });
     });
@@ -814,7 +1209,7 @@ function renderPhasesTable() {
                     ${isSelected ? "checked" : ""}
                 />
             </td>
-            <td>
+            <td class="phase-number-cell">
                 <button
                     class="phase-number-btn"
                     type="button"
@@ -840,7 +1235,7 @@ function bindPhasesTableEvents() {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
 
-            phases[index][field] = event.target.textContent.trim();
+            phases[index][field] = sanitizeRichText(event.target.innerHTML);
             savePhases();
             renderWbsTable();
         });
@@ -1029,7 +1424,7 @@ function renderSwot() {
                     spellcheck="true"
                     data-category="${category}"
                     data-index="${index}"
-                >${escapeHtml(item.text)}</div>
+                >${sanitizeRichText(item.text)}</div>
             `;
 
             list.appendChild(row);
@@ -1049,7 +1444,7 @@ function bindSwotEvents(category) {
             const category = event.target.dataset.category;
             const index = Number(event.target.dataset.index);
 
-            swotData[category][index].text = event.target.textContent.trim();
+            swotData[category][index].text = sanitizeRichText(event.target.innerHTML);
             saveSwot();
         });
     });
@@ -1243,7 +1638,7 @@ function createEditableCell(value, index, field, extraClass = "") {
             data-index="${index}"
             data-field="${field}"
             spellcheck="true"
-        >${escapeHtml(value)}</td>
+        >${sanitizeRichText(value)}</td>
     `;
 }
 
@@ -1287,6 +1682,96 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
+}
+
+/* V90 — Mise en forme (gras/italique/souligné/barré/alignement/taille) sur les
+   cellules éditables. sanitizeRichText() est le seul point de confiance : les
+   valeurs stockées peuvent venir soit d'anciennes données en texte brut, soit
+   du innerHTML produit par la barre d'outils/execCommand — dans les deux cas,
+   on reconstruit l'arbre élément par élément (jamais de clonage brut, jamais
+   de regex) via un <template> inerte (pas d'exécution de script/chargement
+   d'image même hors DOM), en ne gardant qu'une liste blanche stricte de
+   balises et de propriétés CSS. Le texte brut sans balise ressort identique à
+   ce que produisait escapeHtml. */
+const RICH_TEXT_KEPT_TAGS = new Set(["B", "I", "U", "S", "STRIKE", "SPAN", "DIV", "BR"]);
+const RICH_TEXT_DROPPED_TAGS = new Set([
+    "SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "SVG", "MATH", "IMG", "VIDEO",
+    "AUDIO", "SOURCE", "TRACK", "CANVAS", "NOSCRIPT", "TEMPLATE", "LINK", "META",
+    "BASE", "FORM", "INPUT", "BUTTON", "SELECT", "OPTION", "TEXTAREA", "LABEL",
+    "TITLE", "HEAD", "APPLET", "FRAME", "FRAMESET"
+]);
+const RICH_TEXT_ALIGN_VALUES = new Set(["left", "center", "right", "justify"]);
+const RICH_TEXT_FONT_SIZE_MIN = 10;
+const RICH_TEXT_FONT_SIZE_MAX = 28;
+const RICH_TEXT_FONT_SIZE_DEFAULT = 14;
+const RICH_TEXT_FONT_SIZE_STEP = 2;
+
+function sanitizeRichText(html) {
+    const template = document.createElement("template");
+    template.innerHTML = String(html ?? "");
+
+    const output = document.createDocumentFragment();
+    sanitizeRichTextInto(template.content, output);
+
+    const holder = document.createElement("div");
+    holder.appendChild(output);
+    return holder.innerHTML;
+}
+
+function sanitizeRichTextInto(sourceParent, targetParent) {
+    sourceParent.childNodes.forEach((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            targetParent.appendChild(document.createTextNode(node.nodeValue));
+            return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const tag = node.tagName;
+
+        if (RICH_TEXT_DROPPED_TAGS.has(tag)) return;
+
+        if (tag === "BR") {
+            targetParent.appendChild(document.createElement("br"));
+            return;
+        }
+
+        if (!RICH_TEXT_KEPT_TAGS.has(tag)) {
+            sanitizeRichTextInto(node, targetParent);
+            return;
+        }
+
+        const clean = document.createElement(tag.toLowerCase());
+
+        if (tag === "SPAN" || tag === "DIV") {
+            const style = sanitizeRichTextStyle(node.getAttribute("style") || "");
+            if (style) clean.setAttribute("style", style);
+        }
+
+        sanitizeRichTextInto(node, clean);
+        targetParent.appendChild(clean);
+    });
+}
+
+function sanitizeRichTextStyle(styleText) {
+    if (!styleText) return "";
+
+    const probe = document.createElement("span");
+    probe.setAttribute("style", styleText);
+
+    const parts = [];
+    const fontSize = parseFloat(probe.style.fontSize);
+
+    if (Number.isFinite(fontSize)) {
+        const clamped = Math.min(RICH_TEXT_FONT_SIZE_MAX, Math.max(RICH_TEXT_FONT_SIZE_MIN, fontSize));
+        parts.push(`font-size:${clamped}px`);
+    }
+
+    if (RICH_TEXT_ALIGN_VALUES.has(probe.style.textAlign)) {
+        parts.push(`text-align:${probe.style.textAlign}`);
+    }
+
+    return parts.join(";");
 }
 
 function createId() {
@@ -2068,7 +2553,7 @@ function renderKpiTypesTable() {
                 data-index="${index}"
                 data-field="name"
                 spellcheck="true"
-            >${escapeHtml(type.name)}</td>
+            >${sanitizeRichText(type.name)}</td>
         `;
 
         body.appendChild(row);
@@ -2104,9 +2589,9 @@ function renderKpiTypesTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
-            kpiTypes[index][field] = event.target.textContent.trim();
+            kpiTypes[index][field] = sanitizeRichText(event.target.innerHTML);
             saveKpiTypes();
-            renderKpiTable();
+            renderKpiGroups();
         });
     });
 
@@ -2126,7 +2611,7 @@ function createKpiEditableCell(value, index, field, extraClass = "") {
             data-index="${index}"
             data-field="${field}"
             spellcheck="true"
-        >${escapeHtml(value)}</td>
+        >${sanitizeRichText(value)}</td>
     `;
 }
 
@@ -2139,90 +2624,6 @@ function createKpiTypeOptions(selectedTypeId) {
     `).join("");
 }
 
-function createKpiStatusOptions(selectedStatus) {
-    const options = [
-        ["", "À définir"],
-        ["OK", "OK"],
-        ["À surveiller", "À surveiller"],
-        ["Alerte", "Alerte"]
-    ];
-
-    return options.map(([value, label]) => `
-        <option value="${escapeHtml(value)}" ${value === selectedStatus ? "selected" : ""}>
-            ${escapeHtml(label)}
-        </option>
-    `).join("");
-}
-
-function createKpiFrequencyOptions(selectedFrequency) {
-    const options = [
-        ["", "À définir"],
-        ["Hebdomadaire", "Hebdomadaire"],
-        ["Mensuel", "Mensuel"],
-        ["Trimestriel", "Trimestriel"],
-        ["Semestriel", "Semestriel"],
-        ["Annuel", "Annuel"],
-        ["Ponctuel", "Ponctuel"]
-    ];
-
-    return options.map(([value, label]) => `
-        <option value="${escapeHtml(value)}" ${value === selectedFrequency ? "selected" : ""}>
-            ${escapeHtml(label)}
-        </option>
-    `).join("");
-}
-
-function createKpiResponsableOptions(row) {
-    const selectedId = row.responsableId || "";
-    const currentText = row.responsable || "";
-    const options = ['<option value="">Aucun responsable</option>'];
-
-    stakeholders.forEach((person) => {
-        const stakeholderId = getStakeholderId(person);
-        const label = getStakeholderLabel(person);
-        options.push(`
-            <option value="${escapeHtml(stakeholderId)}" ${stakeholderId === selectedId ? "selected" : ""}>
-                ${escapeHtml(label)}
-            </option>
-        `);
-    });
-
-    if (currentText && selectedId && !stakeholders.some((person) => getStakeholderId(person) === selectedId)) {
-        options.push(`
-            <option value="${escapeHtml(selectedId)}" selected>
-                ${escapeHtml(currentText)}
-            </option>
-        `);
-    }
-
-    return options.join("");
-}
-
-function syncKpiResponsablesWithStakeholders() {
-    let changed = false;
-
-    kpiRows = kpiRows.map((row) => {
-        if (!row.responsableId) return row;
-
-        const stakeholder = stakeholders.find((person) => getStakeholderId(person) === row.responsableId);
-
-        if (!stakeholder) return row;
-
-        const label = getStakeholderLabel(stakeholder);
-
-        if (row.responsable !== label) {
-            changed = true;
-            return { ...row, responsable: label };
-        }
-
-        return row;
-    });
-
-    if (changed) {
-        saveKpis();
-    }
-}
-
 function calculateKpiGap(kpi) {
     const target = parseKpiNumber(kpi.target);
     const current = parseKpiNumber(kpi.current);
@@ -2231,8 +2632,23 @@ function calculateKpiGap(kpi) {
         return "";
     }
 
-    const gap = current - target;
-    return Number.isInteger(gap) ? String(gap) : gap.toFixed(2).replace(".", ",");
+    if (target === 0) {
+        // Un écart en % n'a pas de sens avec une cible de 0 (division par zéro) :
+        // on affiche l'écart brut plutôt que de masquer la ligne (une cible de 0
+        // est courante, ex. "incidents critiques").
+        const diff = current - target;
+        if (diff === 0) return "0";
+        const sign = diff > 0 ? "+" : "";
+        const formatted = Number.isInteger(diff) ? String(diff) : diff.toFixed(1).replace(".", ",");
+        return `${sign}${formatted}`;
+    }
+
+    const gapPercent = ((current - target) / target) * 100;
+    const rounded = Math.round(gapPercent * 10) / 10;
+    const sign = rounded > 0 ? "+" : "";
+    const formatted = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+
+    return `${sign}${formatted.replace(".", ",")}%`;
 }
 
 function parseKpiNumber(value) {
@@ -2244,15 +2660,6 @@ function parseKpiNumber(value) {
     return Number.isFinite(number) ? number : null;
 }
 
-function getKpiStatusClass(status) {
-    if (status === "OK") return "kpi-status-ok";
-    if (status === "À surveiller") return "kpi-status-watch";
-    if (status === "Alerte") return "kpi-status-alert";
-    return "";
-}
-
-
-
 
 
 
@@ -2263,8 +2670,7 @@ if (typeof helpTexts !== "undefined") {
         <ul>
             <li>Le petit tableau à gauche permet de gérer les types de KPIs : technique, financier, qualité, planning, etc.</li>
             <li>Le grand tableau contient les KPIs à suivre.</li>
-            <li>Tu peux choisir un responsable depuis les parties prenantes.</li>
-            <li>L’écart se calcule automatiquement si la cible et la valeur actuelle sont numériques.</li>
+            <li>L’écart (%) se calcule automatiquement si la cible et les résultats actuels sont numériques.</li>
             <li>Les KPIs sont inclus dans l’export/import portable et dans l’export Excel.</li>
         </ul>
     `;
@@ -2382,7 +2788,7 @@ function renderRiskTypesTable() {
                 data-index="${index}"
                 data-field="name"
                 spellcheck="true"
-            >${escapeHtml(type.name)}</td>
+            >${sanitizeRichText(type.name)}</td>
         `;
 
         body.appendChild(row);
@@ -2418,7 +2824,7 @@ function renderRiskTypesTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
-            riskTypes[index][field] = event.target.textContent.trim();
+            riskTypes[index][field] = sanitizeRichText(event.target.innerHTML);
             saveRiskTypes();
             renderRisksTable();
         });
@@ -2440,7 +2846,7 @@ function createRiskEditableCell(value, index, field, extraClass = "") {
             data-index="${index}"
             data-field="${field}"
             spellcheck="true"
-        >${escapeHtml(value)}</td>
+        >${sanitizeRichText(value)}</td>
     `;
 }
 
@@ -2549,6 +2955,7 @@ function initRisksPage() {
     renderColorMenu();
     renderRiskTypesTable();
     renderRiskMatrix();
+    renderRiskScaleTable();
     renderRisksTable();
 
     const addTypeButton = document.getElementById("add-risk-type-btn");
@@ -2758,8 +3165,8 @@ function renderRisksTable() {
                     ${isSelected ? "checked" : ""}
                 />
             </td>
-            <td>${index + 1}</td>
-            <td>
+            <td class="risk-number-cell">${index + 1}</td>
+            <td class="risk-type-cell">
                 <select class="risk-type-select" data-index="${index}" data-field="typeId">
                     <option value="">Sans type</option>
                     ${createRiskTypeOptions(risk.typeId)}
@@ -2767,12 +3174,12 @@ function renderRisksTable() {
             </td>
             ${createRiskEditableCell(risk.risk, index, "risk", "risk-name-cell")}
             ${createRiskEditableCell(risk.consequence, index, "consequence", "risk-consequence-cell")}
-            <td>
+            <td class="risk-prob-cell">
                 <select class="risk-probability-select" data-index="${index}" data-field="probability">
                     ${createRiskScoreOptions(risk.probability)}
                 </select>
             </td>
-            <td>
+            <td class="risk-grav-cell">
                 <select class="risk-severity-select" data-index="${index}" data-field="severity">
                     ${createRiskScoreOptions(risk.severity)}
                 </select>
@@ -2802,7 +3209,7 @@ function bindRisksTableEvents() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
-            riskRows[index][field] = event.target.textContent.trim();
+            riskRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveRisks();
         });
     });
@@ -2839,8 +3246,9 @@ if (typeof helpTexts !== "undefined") {
         <ul>
             <li>Le petit tableau à gauche permet de créer des types de risques, avec son propre bouton de capture 📸.</li>
             <li>La matrice du risque, juste en dessous, indique la criticité selon la probabilité et la gravité — elle a aussi son propre bouton de capture.</li>
+            <li>Sous la matrice, un petit tableau détaille chaque niveau de probabilité et de gravité (couleur + courte description).</li>
             <li>Chaque risque possède une conséquence, une probabilité, une gravité et une mitigation.</li>
-            <li>La criticité est calculée automatiquement : probabilité × gravité.</li>
+            <li>La criticité est calculée automatiquement (probabilité × gravité) et reprend la couleur de la matrice.</li>
             <li>Les risques sont inclus dans l’export/import portable et dans l’export Excel.</li>
         </ul>
     `;
@@ -2920,6 +3328,38 @@ function renderRiskMatrix() {
 /* V35 — Démarrage unique */
 
 
+/* V85 — Échelles de probabilité / gravité (couleurs + description courte) */
+const RISK_SCALE_LEVELS = [
+    { value: 1, className: "risk-scale-1", probLabel: "Rare", probDesc: "Quasiment improbable", sevLabel: "Négligeable", sevDesc: "Sans conséquence notable" },
+    { value: 2, className: "risk-scale-2", probLabel: "Improbable", probDesc: "Peu de chances que ça arrive", sevLabel: "Mineure", sevDesc: "Impact limité, vite absorbé" },
+    { value: 3, className: "risk-scale-3", probLabel: "Possible", probDesc: "Peut survenir à un moment donné", sevLabel: "Modérée", sevDesc: "Impact significatif à gérer" },
+    { value: 4, className: "risk-scale-4", probLabel: "Probable", probDesc: "Se produira vraisemblablement", sevLabel: "Majeure", sevDesc: "Impact important sur le projet" },
+    { value: 5, className: "risk-scale-5", probLabel: "Quasi certain", probDesc: "Surviendra presque à coup sûr", sevLabel: "Critique", sevDesc: "Met le projet en péril" }
+];
+
+function renderRiskScaleTable() {
+    const body = document.getElementById("risk-scale-table-body");
+
+    if (!body) return;
+
+    body.innerHTML = RISK_SCALE_LEVELS.map((level) => `
+        <tr>
+            <td class="risk-scale-value ${level.className}">${level.value}</td>
+            <td class="risk-scale-cell risk-scale-prob ${level.className}">
+                <strong>${escapeHtml(level.probLabel)}</strong>
+                <span>${escapeHtml(level.probDesc)}</span>
+            </td>
+            <td class="risk-scale-cell risk-scale-sev ${level.className}">
+                <strong>${escapeHtml(level.sevLabel)}</strong>
+                <span>${escapeHtml(level.sevDesc)}</span>
+            </td>
+        </tr>
+    `).join("");
+}
+
+/* V85 — Démarrage unique */
+
+
 /* V41 — Objectifs SMART + lien KPIs */
 let smartRows = [];
 let selectedSmartRows = new Set();
@@ -2936,74 +3376,11 @@ function saveSmartObjectives() {
 
 function createSmartEditableCell(value, index, field, extraClass = "") {
     return `
-        <td class="editable ${extraClass}" contenteditable="true" data-index="${index}" data-field="${field}" spellcheck="true">${escapeHtml(value)}</td>
+        <td class="editable ${extraClass}" contenteditable="true" data-index="${index}" data-field="${field}" spellcheck="true">${sanitizeRichText(value)}</td>
     `;
 }
 
 
-function createSmartResponsableOptions(row) {
-    const selectedId = row.responsableId || "";
-    const currentText = row.responsable || "";
-    const options = ['<option value="">Aucun</option>'];
-
-    stakeholders.forEach((person) => {
-        const stakeholderId = getStakeholderId(person);
-        const label = getStakeholderLabel(person);
-        options.push(`
-            <option value="${escapeHtml(stakeholderId)}" ${stakeholderId === selectedId ? "selected" : ""}>
-                ${escapeHtml(label)}
-            </option>
-        `);
-    });
-
-    if (currentText && selectedId && !stakeholders.some((person) => getStakeholderId(person) === selectedId)) {
-        options.push(`<option value="${escapeHtml(selectedId)}" selected>${escapeHtml(currentText)}</option>`);
-    }
-
-    return options.join("");
-}
-
-function createSmartStatusOptions(selectedStatus) {
-    const options = [
-        ["", "Brouillon"],
-        ["Actif", "Actif"],
-        ["À surveiller", "À surveiller"],
-        ["Atteint", "Atteint"]
-    ];
-
-    return options.map(([value, label]) => `
-        <option value="${escapeHtml(value)}" ${value === selectedStatus ? "selected" : ""}>${escapeHtml(label)}</option>
-    `).join("");
-}
-
-function getSmartStatusClass(status) {
-    if (status === "Actif") return "smart-status-active";
-    if (status === "À surveiller") return "smart-status-watch";
-    if (status === "Atteint") return "smart-status-done";
-    return "smart-status-draft";
-}
-
-function syncSmartResponsablesWithStakeholders() {
-    let changed = false;
-
-    smartRows = smartRows.map((row) => {
-        if (!row.responsableId) return row;
-
-        const stakeholder = stakeholders.find((person) => getStakeholderId(person) === row.responsableId);
-        if (!stakeholder) return row;
-
-        const label = getStakeholderLabel(stakeholder);
-
-        if (row.responsable !== label) {
-            changed = true;
-            return { ...row, responsable: label };
-        }
-
-        return row;
-    });
-
-    if (changed) saveSmartObjectives();
-}
 
 
 
@@ -3018,10 +3395,7 @@ function createEmptyKpiRow() {
         unit: "",
         target: "",
         current: "",
-        status: "",
-        frequency: "",
-        responsable: "",
-        responsableId: "",
+        gap: "",
         comment: ""
     };
 }
@@ -3048,10 +3422,7 @@ function loadKpis() {
             unit: row.unit || "",
             target: row.target || "",
             current: row.current || "",
-            status: row.status || "",
-            frequency: row.frequency || "",
-            responsable: row.responsable || "",
-            responsableId: row.responsableId || "",
+            gap: row.gap || "",
             comment: row.comment || ""
         }));
 
@@ -3067,21 +3438,18 @@ function initKpisPage() {
     kpiTypes = loadKpiTypes();
     kpiRows = loadKpis();
     smartRows = loadSmartObjectives();
-    stakeholders = loadStakeholders();
+    projectObjectives = loadProjectObjectives();
 
     renderColorMenu();
     renderKpiTypesTable();
-    renderKpiTable();
+    renderKpiGroups();
 
     const addTypeButton = document.getElementById("add-kpi-type-btn");
     const deleteTypesButton = document.getElementById("delete-selected-kpi-types-btn");
     const resetTypesButton = document.getElementById("reset-kpi-types-btn");
     const selectAllTypes = document.getElementById("select-all-kpi-types");
 
-    const addKpiButton = document.getElementById("add-kpi-btn");
-    const deleteKpisButton = document.getElementById("delete-selected-kpis-btn");
     const resetKpisButton = document.getElementById("reset-kpis-btn");
-    const selectAllKpis = document.getElementById("select-all-kpis");
 
     addTypeButton?.addEventListener("click", () => {
         kpiTypes.push({
@@ -3092,7 +3460,7 @@ function initKpisPage() {
 
         saveKpiTypes();
         renderKpiTypesTable();
-        renderKpiTable();
+        renderKpiGroups();
 
         const lastType = document.querySelector("#kpi-types-table-body tr:last-child .editable");
         if (lastType) lastType.focus();
@@ -3116,7 +3484,7 @@ function initKpisPage() {
         saveKpis();
         hideColorMenu();
         renderKpiTypesTable();
-        renderKpiTable();
+        renderKpiGroups();
     });
 
     resetTypesButton?.addEventListener("click", () => {
@@ -3129,7 +3497,7 @@ function initKpisPage() {
         saveKpiTypes();
         hideColorMenu();
         renderKpiTypesTable();
-        renderKpiTable();
+        renderKpiGroups();
     });
 
     selectAllTypes?.addEventListener("change", (event) => {
@@ -3140,90 +3508,133 @@ function initKpisPage() {
         renderKpiTypesTable();
     });
 
-    addKpiButton?.addEventListener("click", () => {
-        kpiRows.push(createEmptyKpiRow());
-        saveKpis();
-        renderKpiTable();
-
-        const lastKpi = document.querySelector("#kpi-table-body tr:last-child .kpi-name-cell");
-        if (lastKpi) lastKpi.focus();
-    });
-
-    deleteKpisButton?.addEventListener("click", () => {
-        if (selectedKpiRows.size === 0) return;
-
-        const confirmation = confirm("Tu veux vraiment supprimer les KPIs cochés ?");
-        if (!confirmation) return;
-
-        kpiRows = kpiRows.filter((_, index) => !selectedKpiRows.has(index));
-        selectedKpiRows.clear();
-        saveKpis();
-        renderKpiTable();
-    });
-
     resetKpisButton?.addEventListener("click", () => {
-        const confirmation = confirm("Tu veux vraiment réinitialiser le tableau KPIs ?");
+        const confirmation = confirm("Tu veux vraiment réinitialiser tous les KPIs ?");
         if (!confirmation) return;
 
         kpiRows = [];
         selectedKpiRows.clear();
         saveKpis();
-        renderKpiTable();
-    });
-
-    selectAllKpis?.addEventListener("change", (event) => {
-        selectedKpiRows.clear();
-
-        if (event.target.checked) kpiRows.forEach((_, index) => selectedKpiRows.add(index));
-
-        renderKpiTable();
+        renderKpiGroups();
     });
 
     document.addEventListener("click", closeColorMenuOnOutsideClick);
 }
 
-function renderKpiTable() {
-    const body = document.getElementById("kpi-table-body");
-    const deleteButton = document.getElementById("delete-selected-kpis-btn");
-    const selectAll = document.getElementById("select-all-kpis");
+// V89 — Un tableau KPI par objectif SMART : plus de sélecteur "Objectif lié"
+// par ligne (implicite selon la carte), donc les KPIs orphelins (smartId vide
+// ou pointant vers une ligne SMART supprimée) sont regroupés à part.
+function getKpiGroups() {
+    const groups = smartRows.map((smart) => {
+        const objectiveIndex = projectObjectives.findIndex((item) => item.id === smart.objectiveId);
+        const objective = objectiveIndex >= 0 ? projectObjectives[objectiveIndex] : null;
 
-    if (!body) return;
+        return {
+            smartId: smart.id,
+            title: getSmartObjectiveLabel(smart),
+            color: objective ? normalizeColor(objective.color, objectiveIndex) : "#94a3b8",
+            items: []
+        };
+    });
 
-    syncKpiResponsablesWithStakeholders();
-    body.innerHTML = "";
+    const orphanGroup = { smartId: "", title: "Sans objectif", color: "#64748b", items: [] };
 
-    if (kpiRows.length === 0) {
-        body.innerHTML = `<tr><td colspan="13" class="empty-state">Aucun KPI pour le moment. Clique sur “Ajouter un KPI” pour commencer.</td></tr>`;
-        if (deleteButton) deleteButton.disabled = true;
-        if (selectAll) selectAll.checked = false;
+    kpiRows.forEach((kpi, index) => {
+        const group = groups.find((item) => item.smartId === kpi.smartId);
+        (group || orphanGroup).items.push({ kpi, index });
+    });
+
+    return orphanGroup.items.length > 0 ? [...groups, orphanGroup] : groups;
+}
+
+function renderKpiGroups() {
+    const container = document.getElementById("kpi-groups-container");
+
+    if (!container) return;
+
+    const groups = getKpiGroups();
+
+    if (groups.length === 0) {
+        container.innerHTML = `<p class="empty-state kpi-groups-empty">Crée d’abord un objectif SMART dans l’onglet SMART pour pouvoir y rattacher des KPIs.</p>`;
         return;
     }
 
-    kpiRows.forEach((kpi, index) => {
-        const type = kpiTypes.find((item) => item.id === kpi.typeId);
-        const color = type ? normalizeColor(type.color, index) : "#94a3b8";
-        const row = document.createElement("tr");
-        const isSelected = selectedKpiRows.has(index);
-        const gap = calculateKpiGap(kpi);
-        const statusClass = getKpiStatusClass(kpi.status);
+    container.innerHTML = groups.map((group) => renderKpiGroupCard(group)).join("");
 
-        row.style.backgroundColor = hexToRgba(color, 0.18);
-        row.style.boxShadow = `inset 3px 0 0 ${color}`;
+    // .indeterminate ne peut se régler qu'en JS (pas d'attribut HTML) : posé ici
+    // après coup, dans le même ordre que les groupes rendus au-dessus.
+    const selectAllCheckboxes = container.querySelectorAll(".kpi-group-select-all");
+    groups.forEach((group, groupPosition) => {
+        const checkbox = selectAllCheckboxes[groupPosition];
+        if (!checkbox) return;
 
-        if (isSelected) row.classList.add("selected-row");
+        const groupIndices = group.items.map((item) => item.index);
+        const selectedInGroup = groupIndices.filter((index) => selectedKpiRows.has(index));
+        checkbox.indeterminate = selectedInGroup.length > 0 && selectedInGroup.length < groupIndices.length;
+    });
 
-        row.innerHTML = `
+    bindKpiGroupEvents();
+}
+
+function renderKpiGroupCard(group) {
+    const groupIndices = group.items.map((item) => item.index);
+    const selectedInGroup = groupIndices.filter((index) => selectedKpiRows.has(index));
+    const allSelected = groupIndices.length > 0 && selectedInGroup.length === groupIndices.length;
+
+    const rowsHtml = group.items.length === 0
+        ? `<tr><td colspan="10" class="empty-state">Aucun KPI pour le moment.</td></tr>`
+        : group.items.map(({ kpi, index }, localIndex) => renderKpiRowHtml(kpi, index, localIndex + 1, selectedKpiRows.has(index))).join("");
+
+    return `
+        <div class="card kpi-group-card">
+            <div class="card-header">
+                <h2><span class="kpi-group-color-dot" style="background-color: ${escapeHtml(group.color)};"></span>${escapeHtml(group.title)}</h2>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="kpi-table">
+                    <thead>
+                        <tr>
+                            <th class="select-col">
+                                <input type="checkbox" class="row-checkbox kpi-group-select-all" data-smart-id="${escapeHtml(group.smartId)}" ${allSelected ? "checked" : ""} aria-label="Tout sélectionner" />
+                            </th>
+                            <th class="kpi-index-cell">N°</th>
+                            <th class="kpi-type-cell">Type</th>
+                            <th class="kpi-name-cell">KPI</th>
+                            <th class="kpi-objective-cell">Objectif</th>
+                            <th class="kpi-unit-cell">Mesure</th>
+                            <th class="kpi-target-cell">Cible</th>
+                            <th class="kpi-current-cell">Résultats actuels</th>
+                            <th class="kpi-gap-cell">Écart (%)</th>
+                            <th class="kpi-comment-cell">Commentaires</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+
+            <div class="table-actions">
+                <div class="left-actions">
+                    <button class="btn icon-action-btn icon-add-btn kpi-group-add-btn" type="button" data-smart-id="${escapeHtml(group.smartId)}" title="Ajouter un KPI" aria-label="Ajouter un KPI">+</button>
+                    <button class="btn btn-danger icon-action-btn icon-delete-btn kpi-group-delete-btn" type="button" data-smart-id="${escapeHtml(group.smartId)}" ${selectedInGroup.length === 0 ? "disabled" : ""} title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderKpiRowHtml(kpi, index, displayNumber, isSelected) {
+    const type = kpiTypes.find((item) => item.id === kpi.typeId);
+    const color = type ? normalizeColor(type.color, index) : "#94a3b8";
+    const gap = kpi.gap || calculateKpiGap(kpi);
+
+    return `
+        <tr style="background-color: ${hexToRgba(color, 0.18)}; box-shadow: inset 3px 0 0 ${color};" class="${isSelected ? "selected-row" : ""}">
             <td class="select-col">
-                <input class="row-checkbox kpi-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le KPI ${index + 1}" ${isSelected ? "checked" : ""} />
+                <input class="row-checkbox kpi-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le KPI ${displayNumber}" ${isSelected ? "checked" : ""} />
             </td>
-            <td>${index + 1}</td>
-            <td>
-                <select class="kpi-smart-select" data-index="${index}" data-field="smartId">
-                    <option value="">Sans objectif</option>
-                    ${createKpiSmartOptions(kpi.smartId)}
-                </select>
-            </td>
-            <td>
+            <td class="kpi-index-cell">${displayNumber}</td>
+            <td class="kpi-type-cell">
                 <select class="kpi-type-select" data-index="${index}" data-field="typeId">
                     <option value="">Sans type</option>
                     ${createKpiTypeOptions(kpi.typeId)}
@@ -3232,87 +3643,49 @@ function renderKpiTable() {
             ${createKpiEditableCell(kpi.name, index, "name", "kpi-name-cell")}
             ${createKpiEditableCell(kpi.objective, index, "objective", "kpi-objective-cell")}
             ${createKpiEditableCell(kpi.unit, index, "unit", "kpi-unit-cell")}
-            ${createKpiEditableCell(kpi.target, index, "target", "kpi-number-cell")}
-            ${createKpiEditableCell(kpi.current, index, "current", "kpi-number-cell")}
-            <td class="kpi-gap-cell">${escapeHtml(gap)}</td>
-            <td>
-                <select class="kpi-status-select ${statusClass}" data-index="${index}" data-field="status">
-                    ${createKpiStatusOptions(kpi.status)}
-                </select>
-            </td>
-            <td>
-                <select class="kpi-frequency-select" data-index="${index}" data-field="frequency">
-                    ${createKpiFrequencyOptions(kpi.frequency)}
-                </select>
-            </td>
-            <td>
-                <select class="kpi-responsable-select" data-index="${index}" data-field="responsableId">
-                    ${createKpiResponsableOptions(kpi)}
-                </select>
-            </td>
-        `;
-
-        body.appendChild(row);
-    });
-
-    bindKpiTableEvents();
-
-    if (deleteButton) deleteButton.disabled = selectedKpiRows.size === 0;
-    if (selectAll) {
-        selectAll.checked = kpiRows.length > 0 && selectedKpiRows.size === kpiRows.length;
-        selectAll.indeterminate = selectedKpiRows.size > 0 && selectedKpiRows.size < kpiRows.length;
-    }
+            ${createKpiEditableCell(kpi.target, index, "target", "kpi-target-cell")}
+            ${createKpiEditableCell(kpi.current, index, "current", "kpi-current-cell")}
+            ${createKpiEditableCell(gap, index, "gap", "kpi-gap-cell")}
+            ${createKpiEditableCell(kpi.comment, index, "comment", "kpi-comment-cell")}
+        </tr>
+    `;
 }
 
-function createKpiSmartOptions(selectedSmartId) {
-    return smartRows.map((objective) => `
-        <option value="${escapeHtml(objective.id)}" ${objective.id === selectedSmartId ? "selected" : ""}>
-            ${escapeHtml(getSmartObjectiveLabel(objective))}
-        </option>
-    `).join("");
+function kpiBelongsToGroup(kpi, smartId) {
+    return smartId === ""
+        ? !smartRows.some((smart) => smart.id === kpi.smartId)
+        : kpi.smartId === smartId;
 }
 
-function bindKpiTableEvents() {
-    const body = document.getElementById("kpi-table-body");
-    if (!body) return;
+function bindKpiGroupEvents() {
+    const container = document.getElementById("kpi-groups-container");
 
-    body.querySelectorAll(".editable").forEach((cell) => {
+    if (!container) return;
+
+    container.querySelectorAll(".editable").forEach((cell) => {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
-            kpiRows[index][field] = event.target.textContent.trim();
+            kpiRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveKpis();
         });
 
         cell.addEventListener("blur", (event) => {
             const field = event.target.dataset.field;
-            if (field === "target" || field === "current") renderKpiTable();
+            if (field === "target" || field === "current") renderKpiGroups();
         });
     });
 
-    body.querySelectorAll(".kpi-smart-select, .kpi-type-select, .kpi-status-select, .kpi-frequency-select").forEach((select) => {
+    container.querySelectorAll(".kpi-type-select").forEach((select) => {
         select.addEventListener("change", (event) => {
             const index = Number(event.target.dataset.index);
-            const field = event.target.dataset.field;
-            kpiRows[index][field] = event.target.value;
+            kpiRows[index].typeId = event.target.value;
             saveKpis();
-            renderKpiTable();
+            renderKpiGroups();
         });
     });
 
-    body.querySelectorAll(".kpi-responsable-select").forEach((select) => {
-        select.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
-            const stakeholderId = event.target.value;
-            const stakeholder = stakeholders.find((person) => getStakeholderId(person) === stakeholderId);
-
-            kpiRows[index].responsableId = stakeholderId;
-            kpiRows[index].responsable = stakeholder ? getStakeholderLabel(stakeholder) : "";
-            saveKpis();
-        });
-    });
-
-    body.querySelectorAll(".kpi-checkbox").forEach((checkbox) => {
+    container.querySelectorAll(".kpi-checkbox").forEach((checkbox) => {
         checkbox.addEventListener("change", (event) => {
             const index = Number(event.target.dataset.index);
 
@@ -3322,7 +3695,73 @@ function bindKpiTableEvents() {
                 selectedKpiRows.delete(index);
             }
 
-            renderKpiTable();
+            renderKpiGroups();
+        });
+    });
+
+    container.querySelectorAll(".kpi-group-select-all").forEach((checkbox) => {
+        checkbox.addEventListener("change", (event) => {
+            const smartId = event.target.dataset.smartId;
+
+            kpiRows.forEach((kpi, index) => {
+                if (!kpiBelongsToGroup(kpi, smartId)) return;
+
+                if (event.target.checked) {
+                    selectedKpiRows.add(index);
+                } else {
+                    selectedKpiRows.delete(index);
+                }
+            });
+
+            renderKpiGroups();
+        });
+    });
+
+    container.querySelectorAll(".kpi-group-add-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const smartId = event.currentTarget.dataset.smartId;
+            const newKpi = createEmptyKpiRow();
+
+            newKpi.smartId = smartId;
+            kpiRows.push(newKpi);
+            saveKpis();
+            renderKpiGroups();
+
+            const newCell = container.querySelector(`.kpi-name-cell[data-index="${kpiRows.length - 1}"]`);
+            if (newCell) newCell.focus();
+        });
+    });
+
+    container.querySelectorAll(".kpi-group-delete-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const smartId = event.currentTarget.dataset.smartId;
+
+            const idsToDelete = new Set(
+                kpiRows
+                    .filter((kpi, index) => selectedKpiRows.has(index) && kpiBelongsToGroup(kpi, smartId))
+                    .map((kpi) => kpi.id)
+            );
+
+            if (idsToDelete.size === 0) return;
+
+            const confirmation = confirm("Tu veux vraiment supprimer les KPIs cochés ?");
+            if (!confirmation) return;
+
+            const remainingSelectedIds = new Set(
+                kpiRows
+                    .filter((kpi, index) => selectedKpiRows.has(index) && !idsToDelete.has(kpi.id))
+                    .map((kpi) => kpi.id)
+            );
+
+            kpiRows = kpiRows.filter((kpi) => !idsToDelete.has(kpi.id));
+
+            selectedKpiRows.clear();
+            kpiRows.forEach((kpi, index) => {
+                if (remainingSelectedIds.has(kpi.id)) selectedKpiRows.add(index);
+            });
+
+            saveKpis();
+            renderKpiGroups();
         });
     });
 }
@@ -3351,10 +3790,10 @@ if (typeof helpTexts !== "undefined") {
     helpTexts.kpis = `
         <p>Cette page sert à piloter les indicateurs clés du projet.</p>
         <ul>
-            <li>Chaque KPI peut être rattaché à un objectif SMART.</li>
+            <li>Un tableau de KPIs est généré automatiquement par objectif SMART — clique sur “+” dans le bon tableau pour ajouter un KPI, pas besoin de choisir l’objectif.</li>
             <li>Le petit tableau à gauche permet de gérer les types de KPIs : technique, financier, qualité, planning, etc.</li>
-            <li>Tu peux choisir un responsable depuis les parties prenantes.</li>
-            <li>L’écart se calcule automatiquement si la cible et la valeur actuelle sont numériques.</li>
+            <li>L’écart (%) se calcule automatiquement si la cible et les résultats actuels sont numériques (modifiable à la main si besoin).</li>
+            <li>Chaque tableau a son propre bouton de capture 📸.</li>
             <li>Les KPIs sont inclus dans l’export/import portable et dans l’export Excel.</li>
         </ul>
     `;
@@ -3586,7 +4025,7 @@ function renderCompetenceCategoriesTable() {
                     aria-label="Changer la couleur de la catégorie ${index + 1}"
                 >${index + 1}</button>
             </td>
-            <td class="editable competence-category-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${escapeHtml(category.name)}</td>
+            <td class="editable competence-category-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${sanitizeRichText(category.name)}</td>
         `;
 
         body.appendChild(row);
@@ -3622,7 +4061,7 @@ function renderCompetenceCategoriesTable() {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
-            competenceCategories[index][field] = event.target.textContent.trim();
+            competenceCategories[index][field] = sanitizeRichText(event.target.innerHTML);
             saveCompetenceCategories();
             renderCompetenceMatrices();
         });
@@ -3753,7 +4192,7 @@ function buildCompetenceSkillRow(category, skill, skillIndex, selectedSet) {
                     ${isSelected ? "checked" : ""}
                 />
             </td>
-            <td class="editable competence-skill-cell" contenteditable="true" data-category-id="${escapeHtml(category.id)}" data-skill-index="${skillIndex}" spellcheck="true">${escapeHtml(skill.name)}</td>
+            <td class="editable competence-skill-cell" contenteditable="true" data-category-id="${escapeHtml(category.id)}" data-skill-index="${skillIndex}" spellcheck="true">${sanitizeRichText(skill.name)}</td>
             ${stakeholders.map((person) => buildCompetenceLevelCell(category.id, skill, skillIndex, person)).join("")}
         </tr>
     `;
@@ -3850,7 +4289,7 @@ function bindCompetenceMatrixEvents() {
 
             if (!competenceMatrices[categoryId]?.[skillIndex]) return;
 
-            competenceMatrices[categoryId][skillIndex].name = event.target.textContent.trim();
+            competenceMatrices[categoryId][skillIndex].name = sanitizeRichText(event.target.innerHTML);
             saveCompetenceMatrices();
         });
     });
@@ -3945,7 +4384,7 @@ function renderColorMenu() {
                 saveKpiTypes();
                 hideColorMenu();
                 renderKpiTypesTable();
-                renderKpiTable();
+                renderKpiGroups();
                 return;
             }
 
@@ -3955,6 +4394,14 @@ function renderColorMenu() {
                 hideColorMenu();
                 renderRiskTypesTable();
                 renderRisksTable();
+                return;
+            }
+
+            if (activeColorTarget.type === "objective") {
+                redactionRows[activeColorTarget.index].color = color;
+                saveRedactionRows("objectives", redactionRows);
+                hideColorMenu();
+                renderRedactionTable("objectives");
                 return;
             }
 
@@ -3972,6 +4419,22 @@ function renderColorMenu() {
                 hideColorMenu();
                 renderBudgetTypesTable();
                 renderBudgetElementsTable();
+                return;
+            }
+
+            if (activeColorTarget.type === "decisionCategory") {
+                decisionCategories[activeColorTarget.index].color = color;
+                saveDecisionCategories();
+                hideColorMenu();
+                renderDecisionCategoriesTable();
+                return;
+            }
+
+            if (activeColorTarget.type === "testScenario") {
+                testScenarios[activeColorTarget.index].color = color;
+                saveTestScenarios();
+                hideColorMenu();
+                renderTestScenariosListTable();
             }
         });
 
@@ -4009,8 +4472,20 @@ function showColorMenu(anchor) {
             activeColor = riskTypes[activeColorTarget.index]?.color;
         }
 
+        if (activeColorTarget?.type === "objective") {
+            activeColor = redactionRows[activeColorTarget.index]?.color;
+        }
+
         if (activeColorTarget?.type === "budgetElementType" && typeof budgetElementTypes !== "undefined") {
             activeColor = budgetElementTypes[activeColorTarget.index]?.color;
+        }
+
+        if (activeColorTarget?.type === "decisionCategory") {
+            activeColor = decisionCategories[activeColorTarget.index]?.color;
+        }
+
+        if (activeColorTarget?.type === "testScenario") {
+            activeColor = testScenarios[activeColorTarget.index]?.color;
         }
 
         choice.classList.toggle("active", choice.dataset.color === activeColor);
@@ -4018,7 +4493,7 @@ function showColorMenu(anchor) {
 }
 
 function closeColorMenuOnOutsideClick(event) {
-    const clickedNumber = event.target.closest(".row-number-btn, .competence-category-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .budget-type-number-btn");
+    const clickedNumber = event.target.closest(".row-number-btn, .competence-category-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .budget-type-number-btn, .objective-number-btn, .decision-category-number-btn, .test-scenario-number-btn");
     const clickedMenu = event.target.closest("#color-menu");
 
     if (!clickedNumber && !clickedMenu) {
@@ -4148,37 +4623,43 @@ const REDACTION_SECTIONS_V44 = {
         storageKey: "objectives",
         label: "Objectifs",
         singular: "objectif",
-        hasType: false
+        hasType: false,
+        hasColor: true
     },
     stakes: {
         storageKey: "stakes",
         label: "Enjeux",
         singular: "enjeu",
-        hasType: false
+        hasType: false,
+        hasColor: false
     },
     scope: {
         storageKey: "scope",
         label: "Périmètre",
         singular: "élément de périmètre",
-        hasType: true
+        hasType: true,
+        hasColor: false
     },
     constraints: {
         storageKey: "constraints",
         label: "Contraintes",
         singular: "contrainte",
-        hasType: false
+        hasType: false,
+        hasColor: false
     },
     assumptions: {
         storageKey: "assumptions",
         label: "Hypothèses",
         singular: "hypothèse",
-        hasType: false
+        hasType: false,
+        hasColor: false
     },
     success: {
         storageKey: "success_criteria",
         label: "Critères de succès",
         singular: "critère",
-        hasType: false
+        hasType: false,
+        hasColor: false
     }
 };
 
@@ -4327,6 +4808,7 @@ function initRedactionPage(sectionKey) {
     redactionRows = loadRedactionRows(section.storageKey);
     selectedRedactionRows.clear();
 
+    renderColorMenu();
     renderRedactionTable(sectionKey);
 
     document.getElementById("add-redaction-row-btn")?.addEventListener("click", () => {
@@ -4382,14 +4864,19 @@ function initRedactionPage(sectionKey) {
 
         renderRedactionTable(sectionKey);
     });
+
+    document.addEventListener("click", closeColorMenuOnOutsideClick);
 }
 
 function createEmptyRedactionRow(sectionKey) {
+    const section = REDACTION_SECTIONS_V44[sectionKey];
+
     return {
         id: createId(),
         title: "",
         description: "",
-        type: sectionKey === "scope" ? "Inclus" : ""
+        type: sectionKey === "scope" ? "Inclus" : "",
+        color: section?.hasColor ? predefinedColors[redactionRows.length % predefinedColors.length] : ""
     };
 }
 
@@ -4410,7 +4897,8 @@ function loadRedactionRows(storageKey) {
             id: row.id || createId(),
             title: row.title || row.name || row.objective || "",
             description: row.description || row.note || "",
-            type: row.type || ""
+            type: row.type || "",
+            color: row.color || ""
         }));
 
         localStorage.setItem(getProjectKey(storageKey), JSON.stringify(normalized));
@@ -4448,16 +4936,22 @@ function renderRedactionTable(sectionKey) {
         const row = document.createElement("tr");
         const isSelected = selectedRedactionRows.has(index);
 
+        if (section.hasColor) {
+            const color = normalizeColor(rowData.color, index);
+            row.style.backgroundColor = hexToRgba(color, 0.18);
+            row.style.boxShadow = `inset 3px 0 0 ${color}`;
+        }
+
         if (isSelected) row.classList.add("selected-row");
 
         row.innerHTML = `
             <td class="select-col">
                 <input class="row-checkbox redaction-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner la ligne ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
-            <td>${index + 1}</td>
+            ${section.hasColor ? createRedactionNumberCell(rowData, index) : `<td class="redaction-number-cell">${index + 1}</td>`}
             ${section.hasType ? createRedactionTypeCell(rowData, index) : ""}
-            <td class="editable redaction-title-cell" contenteditable="true" data-index="${index}" data-field="title" spellcheck="true">${escapeHtml(rowData.title)}</td>
-            <td class="editable redaction-description-cell" contenteditable="true" data-index="${index}" data-field="description" spellcheck="true">${escapeHtml(rowData.description)}</td>
+            <td class="editable redaction-title-cell" contenteditable="true" data-index="${index}" data-field="title" spellcheck="true">${sanitizeRichText(rowData.title)}</td>
+            <td class="editable redaction-description-cell" contenteditable="true" data-index="${index}" data-field="description" spellcheck="true">${sanitizeRichText(rowData.description)}</td>
         `;
 
         body.appendChild(row);
@@ -4472,6 +4966,23 @@ function renderRedactionTable(sectionKey) {
     }
 }
 
+function createRedactionNumberCell(rowData, index) {
+    const color = normalizeColor(rowData.color, index);
+
+    return `
+        <td class="redaction-number-cell">
+            <button
+                class="objective-number-btn"
+                type="button"
+                style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)};"
+                data-index="${index}"
+                aria-label="Changer la couleur de l'objectif ${index + 1}"
+                title="Choisir la couleur"
+            >${index + 1}</button>
+        </td>
+    `;
+}
+
 function createRedactionTypeCell(rowData, index) {
     const currentType = rowData.type || "Inclus";
 
@@ -4480,7 +4991,6 @@ function createRedactionTypeCell(rowData, index) {
             <select class="redaction-type-select" data-index="${index}" data-field="type">
                 <option value="Inclus" ${currentType === "Inclus" ? "selected" : ""}>Inclus</option>
                 <option value="Hors périmètre" ${currentType === "Hors périmètre" ? "selected" : ""}>Hors périmètre</option>
-                <option value="À clarifier" ${currentType === "À clarifier" ? "selected" : ""}>À clarifier</option>
             </select>
         </td>
     `;
@@ -4497,7 +5007,7 @@ function bindRedactionTableEvents(sectionKey) {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
 
-            redactionRows[index][field] = event.target.textContent.trim();
+            redactionRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveRedactionRows(section.storageKey, redactionRows);
         });
     });
@@ -4521,6 +5031,19 @@ function bindRedactionTableEvents(sectionKey) {
             }
 
             renderRedactionTable(sectionKey);
+        });
+    });
+
+    body.querySelectorAll(".objective-number-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            event.stopPropagation();
+
+            activeColorTarget = {
+                type: "objective",
+                index: Number(event.currentTarget.dataset.index)
+            };
+
+            showColorMenu(event.currentTarget);
         });
     });
 }
@@ -4612,11 +5135,7 @@ function createEmptySmartObjective() {
         achievable: "",
         realistic: "",
         timebound: "",
-        dueDate: "",
-        responsable: "",
-        responsableId: "",
-        status: "",
-        note: ""
+        dueDate: ""
     };
 }
 
@@ -4642,11 +5161,7 @@ function loadSmartObjectives() {
             achievable: row.achievable || "",
             realistic: row.realistic || "",
             timebound: row.timebound || "",
-            dueDate: row.dueDate || "",
-            responsable: row.responsable || "",
-            responsableId: row.responsableId || "",
-            status: row.status || "",
-            note: row.note || ""
+            dueDate: row.dueDate || ""
         }));
 
         localStorage.setItem(getProjectKey("smart"), JSON.stringify(normalized));
@@ -4665,11 +5180,10 @@ function renderSmartTable() {
     if (!body) return;
 
     projectObjectives = loadProjectObjectives();
-    syncSmartResponsablesWithStakeholders();
     body.innerHTML = "";
 
     if (smartRows.length === 0) {
-        body.innerHTML = `<tr><td colspan="12" class="empty-state">Aucune ligne SMART pour le moment. Crée d’abord un objectif dans l’onglet Objectifs, puis ajoute une ligne SMART ici.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="9" class="empty-state">Aucune ligne SMART pour le moment. Crée d’abord un objectif dans l’onglet Objectifs, puis ajoute une ligne SMART ici.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -4678,6 +5192,12 @@ function renderSmartTable() {
     smartRows.forEach((smart, index) => {
         const row = document.createElement("tr");
         const isSelected = selectedSmartRows.has(index);
+        const objectiveIndex = projectObjectives.findIndex((item) => item.id === smart.objectiveId);
+        const objective = objectiveIndex >= 0 ? projectObjectives[objectiveIndex] : null;
+        const color = objective ? normalizeColor(objective.color, objectiveIndex) : "#94a3b8";
+
+        row.style.backgroundColor = hexToRgba(color, 0.18);
+        row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
         if (isSelected) row.classList.add("selected-row");
 
@@ -4685,8 +5205,8 @@ function renderSmartTable() {
             <td class="select-col">
                 <input class="row-checkbox smart-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner la ligne SMART ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
-            <td>${index + 1}</td>
-            <td>
+            <td class="smart-index-cell">${index + 1}</td>
+            <td class="smart-objective-link-cell">
                 <select class="smart-objective-link-select" data-index="${index}" data-field="objectiveId">
                     <option value="">Sans objectif</option>
                     ${createSmartObjectiveLinkOptions(smart.objectiveId)}
@@ -4698,20 +5218,7 @@ function renderSmartTable() {
             ${createSmartEditableCell(smart.achievable, index, "achievable", "smart-achievable-cell")}
             ${createSmartEditableCell(smart.realistic, index, "realistic", "smart-realistic-cell")}
             ${createSmartEditableCell(smart.timebound, index, "timebound", "smart-timebound-cell")}
-            <td>
-                <input class="smart-date-input" type="date" value="${escapeHtml(smart.dueDate)}" data-index="${index}" data-field="dueDate" />
-            </td>
-            <td>
-                <select class="smart-responsable-select" data-index="${index}" data-field="responsableId">
-                    ${createSmartResponsableOptions(smart)}
-                </select>
-            </td>
-            <td>
-                <select class="smart-status-select ${getSmartStatusClass(smart.status)}" data-index="${index}" data-field="status">
-                    ${createSmartStatusOptions(smart.status)}
-                </select>
-            </td>
-            ${createSmartEditableCell(smart.note, index, "note", "smart-note-cell")}
+            ${createSmartEditableCell(smart.dueDate, index, "dueDate", "smart-duedate-cell")}
         `;
 
         body.appendChild(row);
@@ -4748,15 +5255,7 @@ function bindSmartTableEvents() {
             const index = Number(event.target.dataset.index);
             const field = event.target.dataset.field;
 
-            smartRows[index][field] = event.target.textContent.trim();
-            saveSmartObjectives();
-        });
-    });
-
-    body.querySelectorAll(".smart-date-input").forEach((input) => {
-        input.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
-            smartRows[index].dueDate = event.target.value;
+            smartRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveSmartObjectives();
         });
     });
@@ -4768,27 +5267,6 @@ function bindSmartTableEvents() {
             smartRows[index].objective = "";
             saveSmartObjectives();
             renderSmartTable();
-        });
-    });
-
-    body.querySelectorAll(".smart-status-select").forEach((select) => {
-        select.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
-            smartRows[index].status = event.target.value;
-            saveSmartObjectives();
-            renderSmartTable();
-        });
-    });
-
-    body.querySelectorAll(".smart-responsable-select").forEach((select) => {
-        select.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
-            const stakeholderId = event.target.value;
-            const stakeholder = stakeholders.find((person) => getStakeholderId(person) === stakeholderId);
-
-            smartRows[index].responsableId = stakeholderId;
-            smartRows[index].responsable = stakeholder ? getStakeholderLabel(stakeholder) : "";
-            saveSmartObjectives();
         });
     });
 
@@ -4813,10 +5291,7 @@ function getSmartObjectiveLabel(smart) {
     const linkedObjective = projectObjectives.find((objective) => objective.id === smart.objectiveId)
         || loadProjectObjectives().find((objective) => objective.id === smart.objectiveId);
 
-    const title = linkedObjective?.title || smart.objective || "Objectif sans nom";
-    const dueDate = smart.dueDate ? ` · ${smart.dueDate}` : "";
-
-    return `${title}${dueDate}`;
+    return linkedObjective?.title || smart.objective || "Objectif sans nom";
 }
 
 
@@ -4935,6 +5410,7 @@ if (typeof helpTexts !== "undefined") {
         <p>Cette page sert à lister les objectifs généraux du projet.</p>
         <ul>
             <li>Ajoute chaque objectif un par un avec sa description.</li>
+            <li>Clique sur le badge numéroté pour lui attribuer une couleur distincte — elle se retrouve ensuite dans le tableau SMART et dans les tableaux de KPIs.</li>
             <li>Les objectifs créés ici sont automatiquement disponibles dans l’onglet SMART.</li>
             <li>Le SMART permet ensuite de détailler chaque objectif selon les critères Spécifique, Mesurable, Atteignable, Réaliste et Temporel.</li>
         </ul>
@@ -4952,7 +5428,7 @@ if (typeof helpTexts !== "undefined") {
         <p>Cette page sert à clarifier le périmètre du projet.</p>
         <ul>
             <li>Ajoute chaque élément de périmètre un par un.</li>
-            <li>Le champ Type permet de distinguer Inclus, Hors périmètre et À clarifier.</li>
+            <li>Le champ Type permet de distinguer Inclus et Hors périmètre.</li>
         </ul>
     `;
 
@@ -4984,9 +5460,9 @@ if (typeof helpTexts !== "undefined") {
         <p>Cette page sert à transformer les objectifs généraux en objectifs SMART.</p>
         <ul>
             <li>Crée d’abord les objectifs dans l’onglet Objectifs.</li>
-            <li>Chaque ligne SMART peut ensuite être liée à un objectif existant.</li>
+            <li>Chaque ligne SMART peut ensuite être liée à un objectif existant — la ligne reprend la couleur de l’objectif.</li>
             <li>Renseigne les colonnes Spécifique, Mesurable, Atteignable, Réaliste et Temporel.</li>
-            <li>Les KPIs peuvent ensuite être rattachés aux lignes SMART.</li>
+            <li>Les KPIs peuvent ensuite être rattachés aux lignes SMART, avec un tableau de KPIs dédié par objectif.</li>
         </ul>
     `;
 }
@@ -4996,17 +5472,15 @@ if (typeof helpTexts !== "undefined") {
 
 
 /* V45 — Périmètre visuellement séparé */
-const V45_SCOPE_TYPES = ["Inclus", "Hors périmètre", "À clarifier"];
+const V45_SCOPE_TYPES = ["Inclus", "Hors périmètre"];
 const V45_SCOPE_BODY_IDS = {
     "Inclus": "scope-included-body",
-    "Hors périmètre": "scope-excluded-body",
-    "À clarifier": "scope-clarify-body"
+    "Hors périmètre": "scope-excluded-body"
 };
 
 let selectedScopeRows = {
     "Inclus": new Set(),
-    "Hors périmètre": new Set(),
-    "À clarifier": new Set()
+    "Hors périmètre": new Set()
 };
 
 
@@ -5024,7 +5498,6 @@ function initScopePage() {
             redactionRows.push({
                 id: createId(),
                 title: "",
-                description: "",
                 type
             });
 
@@ -5088,7 +5561,6 @@ function normalizeScopeRows() {
         return {
             id: row.id || createId(),
             title: row.title || "",
-            description: row.description || "",
             type
         };
     });
@@ -5101,8 +5573,7 @@ function normalizeScopeRows() {
 function resetScopeSelections() {
     selectedScopeRows = {
         "Inclus": new Set(),
-        "Hors périmètre": new Set(),
-        "À clarifier": new Set()
+        "Hors périmètre": new Set()
     };
 }
 
@@ -5125,7 +5596,7 @@ function renderScopeTypeTable(type) {
     body.innerHTML = "";
 
     if (rowsForType.length === 0) {
-        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun élément pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun élément pour le moment.</td></tr>`;
         return;
     }
 
@@ -5139,9 +5610,8 @@ function renderScopeTypeTable(type) {
             <td class="select-col">
                 <input class="row-checkbox scope-checkbox" type="checkbox" data-index="${item.globalIndex}" data-type="${escapeHtml(type)}" aria-label="Sélectionner l'élément ${localIndex + 1}" ${isSelected ? "checked" : ""} />
             </td>
-            <td>${localIndex + 1}</td>
-            <td class="editable scope-title-cell" contenteditable="true" data-index="${item.globalIndex}" data-type="${escapeHtml(type)}" data-field="title" spellcheck="true">${escapeHtml(item.row.title)}</td>
-            <td class="editable scope-description-cell" contenteditable="true" data-index="${item.globalIndex}" data-type="${escapeHtml(type)}" data-field="description" spellcheck="true">${escapeHtml(item.row.description)}</td>
+            <td class="scope-index-cell">${localIndex + 1}</td>
+            <td class="editable scope-title-cell" contenteditable="true" data-index="${item.globalIndex}" data-type="${escapeHtml(type)}" data-field="title" spellcheck="true">${sanitizeRichText(item.row.title)}</td>
         `;
 
         body.appendChild(tableRow);
@@ -5158,7 +5628,7 @@ function bindScopeTableEvents(body) {
 
             if (!redactionRows[index]) return;
 
-            redactionRows[index][field] = event.target.textContent.trim();
+            redactionRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveRedactionRows("scope", redactionRows);
         });
     });
@@ -5205,9 +5675,6 @@ function buildScopePlainText() {
         } else {
             rows.forEach((row, index) => {
                 lines.push(`${index + 1}. ${row.title || "Sans titre"}`);
-                if (row.description) {
-                    lines.push(`   ${row.description}`);
-                }
             });
         }
         lines.push("");
@@ -5222,8 +5689,7 @@ if (typeof helpTexts !== "undefined") {
         <ul>
             <li><strong>Inclus</strong> : ce qui fait explicitement partie du projet.</li>
             <li><strong>Hors périmètre</strong> : ce qui est explicitement exclu.</li>
-            <li><strong>À clarifier</strong> : ce qui doit encore être arbitré.</li>
-            <li>Chaque bloc possède son propre bouton d’ajout et sa propre suppression.</li>
+            <li>Chaque bloc possède son propre bouton d’ajout, sa propre suppression et son propre bouton de capture 📸, indépendant de l’autre bloc.</li>
         </ul>
     `;
 }
@@ -5320,7 +5786,7 @@ function buildDashboardStats(data, checks) {
         ? Math.round(wbsProgressValues.reduce((sum, value) => sum + value, 0) / wbsProgressValues.length)
         : 0;
 
-    const kpisWithStatus = data.kpis.filter((kpi) => (kpi.status || "").trim());
+    const kpisTracked = data.kpis.filter((kpi) => calculateKpiGap(kpi) !== "");
     const kpisIncomplete = data.kpis.filter((kpi) => isDashboardKpiIncomplete(kpi));
 
     const redactionSections = [
@@ -5357,7 +5823,7 @@ function buildDashboardStats(data, checks) {
         criticalRisks: criticalRisks.length,
         highRisks: highRisks.length,
         kpis: data.kpis.length,
-        kpisWithStatus: kpisWithStatus.length,
+        kpisTracked: kpisTracked.length,
         kpisIncomplete: kpisIncomplete.length,
         smartRows: data.smart.length,
         checks: checks.length,
@@ -5684,7 +6150,7 @@ function renderDashboardRisksKpis(data, stats) {
             ${createDashboardMiniRow("Risques élevés", stats.highRisks)}
             ${createDashboardMiniRow("Risques critiques", stats.criticalRisks)}
             ${createDashboardMiniRow("KPIs total", data.kpis.length)}
-            ${createDashboardMiniRow("KPIs avec statut", stats.kpisWithStatus)}
+            ${createDashboardMiniRow("KPIs suivis", stats.kpisTracked)}
             ${createDashboardMiniRow("KPIs incomplets", stats.kpisIncomplete)}
         </div>
     `;
@@ -5728,9 +6194,7 @@ function getDashboardRiskScore(risk) {
 function isDashboardKpiIncomplete(kpi) {
     return !String(kpi.name || "").trim()
         || !String(kpi.target || "").trim()
-        || !String(kpi.current || "").trim()
-        || !String(kpi.status || "").trim()
-        || (!String(kpi.responsable || "").trim() && !String(kpi.responsableId || "").trim());
+        || !String(kpi.current || "").trim();
 }
 
 function parseNumber(value) {
@@ -5861,7 +6325,7 @@ function renderDashboardKpis(stats) {
         ["Parties prenantes", stats.stakeholders, "acteurs projet"],
         ["Risques critiques", stats.criticalRisks, `${stats.risks} risque(s) au total`],
         ["Risques élevés", stats.highRisks, "à surveiller"],
-        ["KPIs", stats.kpis, `${stats.kpisWithStatus} avec statut`]
+        ["KPIs", stats.kpis, `${stats.kpisTracked} suivi(s)`]
     ];
 
     grid.innerHTML = `
@@ -6834,6 +7298,19 @@ async function captureCardToClipboard(card, triggerButton) {
 // nous-mêmes AVANT la capture (temporairement, sur la vraie carte) et
 // recalculer les colspan des lignes de séparation de phase en conséquence,
 // sinon le tableau se décale. On restaure tout juste après.
+//
+// Note : .remove() décale les :nth-child() des colonnes suivantes d'un cran
+// pendant la capture (checkbox=1er, N°=2e, Objectif=3e → une fois la checkbox
+// retirée, N°=1er, Objectif=2e), donc toute règle CSS qui cible une colonne
+// par position ("table td:nth-child(3) { width }") peut matcher la mauvaise
+// colonne pendant la capture — bug trouvé sur Objectifs et SMART. display:none
+// et visibility:hidden+dimensions à 0 ont été essayés comme alternative
+// préservant l'index DOM, mais html2canvas DROPPE quand même ces nœuds de son
+// propre clone interne (élément invisible ou de taille nulle = pas la peine de
+// le cloner) — le décalage revient de toute façon côté clone html2canvas. Pas
+// de solution "structurelle" ici : les colonnes concernées doivent être
+// stylées par une classe dédiée plutôt que par position (voir
+// .redaction-table td.redaction-title-cell plus bas pour l'exemple).
 function hideStructuralCaptureColumns(card) {
     const selector = "th.select-col, td.select-col, col.phase-col-select, col[class*='select'], .select-col, .wbs-move-header, .wbs-move-cell, col.wbs-col-move";
     const removedElements = Array.from(card.querySelectorAll(selector)).map((element) => ({
@@ -6873,7 +7350,67 @@ function hideStructuralCaptureColumns(card) {
     };
 }
 
+// html2canvas ne réplique pas fidèlement l'étirement des colonnes d'un
+// tableau table-layout:auto en width:100% : il a tendance à garder chaque
+// colonne de données à sa largeur de contenu minimale tout en étirant quand
+// même les lignes à colspan (bandeaux de catégorie) sur toute la largeur —
+// résultat, dans la matrice de décision, les bandeaux de catégorie captés
+// apparaissaient bien plus larges que les colonnes de score réellement
+// peuplées en dessous, alors qu'à l'écran tout est bien étiré de façon
+// cohérente. Fix : figer la largeur de chaque colonne dans un <colgroup> +
+// table-layout:fixed pour ne plus laisser html2canvas deviner quoi que ce
+// soit. Mesurée en DEUX temps, pas un seul : .capture-exact-mode fait déjà
+// retomber les colonnes à leur min-width AVANT même qu'on mesure quoi que ce
+// soit (une règle CSS ailleurs, sans rapport direct, réduit leur contenu) —
+// il faut donc mesurer les largeurs réelles (étirées) AVANT d'ajouter cette
+// classe (measureAutoLayoutTableColumnWidths, tout en haut de
+// prepareCardForExactCapture), puis seulement les figer une fois la classe et
+// hideStructuralCaptureColumns appliquées (lockAutoLayoutTableColumnWidths).
+const CAPTURE_COLUMN_LOCK_SELECTOR = ".decision-options-table";
+
+function measureAutoLayoutTableColumnWidths(card) {
+    const tables = Array.from(card.querySelectorAll(CAPTURE_COLUMN_LOCK_SELECTOR));
+
+    return tables.map((table) => {
+        const headerCells = Array.from(table.querySelectorAll(":scope > thead > tr > th"))
+            .filter((th) => !th.classList.contains("select-col"));
+
+        return { table, widths: headerCells.map((th) => th.getBoundingClientRect().width) };
+    });
+}
+
+function lockAutoLayoutTableColumnWidths(measurements) {
+    const restores = measurements.map(({ table, widths }) => {
+        if (widths.length === 0) return null;
+
+        const previousTableLayout = table.style.tableLayout;
+
+        const colgroup = document.createElement("colgroup");
+        widths.forEach((width) => {
+            const col = document.createElement("col");
+            col.style.width = `${width}px`;
+            colgroup.appendChild(col);
+        });
+
+        table.insertBefore(colgroup, table.firstChild);
+        table.style.tableLayout = "fixed";
+
+        return () => {
+            colgroup.remove();
+            table.style.tableLayout = previousTableLayout;
+        };
+    }).filter(Boolean);
+
+    return () => restores.forEach((restore) => restore());
+}
+
 function prepareCardForExactCapture(card) {
+    // Doit être mesuré AVANT d'ajouter .capture-exact-mode : cette classe
+    // (règle sans rapport direct, tout en bas du fichier) fait retomber les
+    // colonnes de .decision-options-table à leur min-width avant même qu'on
+    // ait eu la chance de mesurer leur largeur réellement étirée à l'écran.
+    const columnWidthMeasurements = measureAutoLayoutTableColumnWidths(card);
+
     const previousClasses = card.className;
     const previousDataset = card.dataset.captureExact || "";
 
@@ -6893,19 +7430,30 @@ function prepareCardForExactCapture(card) {
     const previousCardOverflow = card.style.overflow;
     const previousCardWidth = card.style.width;
 
-    if (hasGanttTimeline) {
-        card.style.overflow = "visible";
-    }
-
     // .gantt-v76-board/.gantt-v77-board portent le scroll vertical de la grille
     // GANTT (max-height + overflow-y:auto dès qu'une phase a beaucoup de tâches),
-    // .gantt-v76-timeline-scroll porte le scroll horizontal de la frise des jours —
-    // sans ce reset, la capture s'arrête à la zone actuellement visible à l'écran.
+    // .gantt-v76-timeline-scroll porte le scroll horizontal de la frise des jours,
+    // .table-wrapper (global, style.css) a overflow-x:auto par défaut — sans ce
+    // reset, la capture s'arrête à la zone actuellement visible à l'écran.
     const tableWrappers = Array.from(
         card.querySelectorAll(
             ".table-wrapper, .gantt-wrapper, .redaction-table-wrapper, .scope-table-wrapper, .gantt-v76-board, .gantt-v77-board, .gantt-v76-timeline-scroll, .coherence-list"
         )
     );
+
+    // Un wrapper dont le scrollWidth dépasse son clientWidth contient un
+    // tableau plus large que ce qui est actuellement affiché (ex. la matrice
+    // de décision avec beaucoup de colonnes d'options, ou la frise Gantt avec
+    // beaucoup de mois) — mesuré ICI, avant de débrider son overflow-x:auto
+    // juste en dessous, pendant qu'il mesure encore correctement le
+    // débordement via son propre scrollbar.
+    const hasHorizontalOverflow = hasGanttTimeline
+        || tableWrappers.some((element) => element.scrollWidth > element.clientWidth + 1);
+
+    if (hasHorizontalOverflow) {
+        card.style.overflow = "visible";
+    }
+
     const previousWrapperStyles = tableWrappers.map((element) => ({
         element,
         overflow: element.style.overflow,
@@ -6921,17 +7469,16 @@ function prepareCardForExactCapture(card) {
         element.style.maxHeight = "none";
     });
 
-    // La règle CSS .capture-exact-mode .gantt-v77-board élargit déjà la grille
-    // elle-même (grid-template-columns → max-content) une fois son scroll
-    // horizontal débridé ci-dessus, mais ça ne fait grandir QUE la grille : ses
-    // ancêtres (.gantt-wrapper, la carte) gardent leur largeur normale (ils ne
-    // s'agrandissent pas juste parce qu'un enfant déborde). Comme html2canvas
-    // dimensionne le canvas de sortie sur la boîte de l'élément capturé (la
-    // carte), pas sur son contenu qui déborde, il faut élargir la carte
-    // elle-même — .scrollWidth la mesure correctement à ce stade (la grille est
-    // déjà large), et élargir la carte suffit à ce que .gantt-wrapper (qui
-    // remplit sa largeur) suive.
-    if (hasGanttTimeline) {
+    // Débrider l'overflow-x d'un wrapper (ci-dessus) ne fait grandir QUE ce
+    // wrapper et son contenu direct : ses ancêtres (la carte) gardent leur
+    // largeur normale (ils ne s'agrandissent pas juste parce qu'un enfant
+    // déborde — même asymétrie que pour l'overflow vertical, qui lui grandit
+    // naturellement). Comme html2canvas dimensionne le canvas de sortie sur
+    // la boîte de l'élément capturé (la carte), pas sur son contenu qui
+    // déborde, il faut élargir la carte elle-même — .scrollWidth la mesure
+    // correctement à ce stade (le contenu est déjà large), et élargir la
+    // carte suffit à ce que ses wrappers (qui remplissent sa largeur) suivent.
+    if (hasHorizontalOverflow) {
         card.style.width = `${Math.ceil(card.scrollWidth)}px`;
     }
 
@@ -6941,7 +7488,14 @@ function prepareCardForExactCapture(card) {
 
     const restoreStructuralColumns = hideStructuralCaptureColumns(card);
 
+    // Doit s'exécuter APRÈS hideStructuralCaptureColumns : la colonne de
+    // suppression (.select-col) vient d'être retirée et les colonnes
+    // restantes ont déjà fini de se réétirer pour la combler — c'est cette
+    // disposition finale, déjà correcte côté navigateur, qu'on fige.
+    const restoreColumnWidths = lockAutoLayoutTableColumnWidths(columnWidthMeasurements);
+
     return () => {
+        restoreColumnWidths();
         restoreStructuralColumns();
 
         card.className = previousClasses;
@@ -6961,7 +7515,7 @@ function prepareCardForExactCapture(card) {
         selectedRows.forEach((row) => row.classList.add("selected-row"));
         selectedRows.forEach((row) => row.classList.remove("capture-row-was-selected"));
 
-        if (hasGanttTimeline) {
+        if (hasHorizontalOverflow) {
             card.style.overflow = previousCardOverflow;
             card.style.width = previousCardWidth;
         }
@@ -6973,7 +7527,7 @@ function prepareCardForExactCapture(card) {
 // ligne) et doivent rester visibles dans la capture — contrairement aux vrais
 // boutons d'action (+/-/reset/etc.) exclus par ailleurs.
 const CAPTURE_NUMBER_BADGE_SELECTOR =
-    ".row-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .competence-category-number-btn, .budget-type-number-btn, .vmsizing-server-number-btn";
+    ".row-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .competence-category-number-btn, .budget-type-number-btn, .vmsizing-server-number-btn, .objective-number-btn, .decision-category-number-btn, .test-scenario-number-btn";
 
 // html2canvas (et le rendu SVG/foreignObject) ne dessine pas correctement le
 // contenu des <button> natifs, même quand on ne les exclut pas de la capture
@@ -7106,7 +7660,11 @@ function showCaptureResultModal(blob, filename) {
 
 function addCaptureButtonsToCards() {
     document.querySelectorAll("main .card").forEach((card) => {
-        const header = card.querySelector(":scope > .card-header");
+        // .scope-column-header : les cartes Inclus/Hors périmètre de la page
+        // Périmètre utilisent leur propre en-tête (avec un bouton "+" déjà
+        // dedans) plutôt que .card-header, donc elles étaient ignorées ici et
+        // n'avaient jamais de bouton de capture 📸 indépendant.
+        const header = card.querySelector(":scope > .card-header, :scope > .scope-column-header");
         if (!header || header.dataset.captureReady === "true") return;
 
         const button = document.createElement("button");
@@ -8103,7 +8661,7 @@ function renderWbsTable() {
                         ${isSelected ? "checked" : ""}
                     />
                 </td>
-                <td>${originalIndex + 1}</td>
+                <td class="wbs-number-cell">${originalIndex + 1}</td>
                 <td class="wbs-move-cell">
                     <button class="wbs-move-btn wbs-move-up-btn" type="button" data-index="${originalIndex}" ${isFirst ? "disabled" : ""} title="Monter" aria-label="Monter la tâche">&uarr;</button>
                     <button class="wbs-move-btn wbs-move-down-btn" type="button" data-index="${originalIndex}" ${isLast ? "disabled" : ""} title="Descendre" aria-label="Descendre la tâche">&darr;</button>
@@ -8148,7 +8706,7 @@ function createWbsEditableCell(value, index, field, extraClass = "") {
             data-index="${index}"
             data-field="${field}"
             spellcheck="true"
-        >${escapeHtml(value)}</td>
+        >${sanitizeRichText(value)}</td>
     `;
 }
 
@@ -8162,7 +8720,7 @@ function bindWbsTableEvents() {
 
             if (!Number.isInteger(index) || !wbsRows[index] || !field) return;
 
-            wbsRows[index][field] = event.target.textContent.trim();
+            wbsRows[index][field] = sanitizeRichText(event.target.innerHTML);
 
             if (field !== "duree") {
                 saveWbsRows();
@@ -8937,7 +9495,7 @@ function renderGanttPeriodsTable() {
                     <option value="formation" ${period.type === "formation" ? "selected" : ""}>Formation</option>
                 </select>
             </td>
-            <td class="editable" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(period.label)}</td>
+            <td class="editable" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(period.label)}</td>
             <td class="wbs-date-cell">
                 <input class="wbs-date-input" type="date" value="${escapeHtml(period.startDate)}" data-index="${index}" data-field="startDate" />
             </td>
@@ -8973,7 +9531,7 @@ function bindGanttPeriodsEvents() {
             const index = Number(event.target.dataset.index);
             if (!ganttPeriods[index]) return;
 
-            ganttPeriods[index].label = event.target.textContent.trim();
+            ganttPeriods[index].label = sanitizeRichText(event.target.innerHTML);
             saveGanttPeriods();
         });
 
@@ -9275,6 +9833,7 @@ if (typeof helpTexts !== "undefined") {
 function forgeBootstrap() {
     renderTopbarBrand();
     renderPageNav();
+    renderFormattingToolbar();
     bootstrapForgeAsync();
 }
 
@@ -9310,6 +9869,8 @@ async function bootstrapForgeAsync() {
     if (currentPage === "budget-tco" && typeof initBudgetTcoPage === "function") initBudgetTcoPage();
     if (currentPage === "budget-carbone" && typeof initBudgetCarbonPage === "function") initBudgetCarbonPage();
     if (currentPage === "budget-comparatifs" && typeof initBudgetComparatifsPage === "function") initBudgetComparatifsPage();
+    if (currentPage === "tests-scenario") initTestsScenarioPage();
+    if (currentPage === "tests-deroule") initTestsDeroulePage();
 
     initCaptureButtons();
     initForgeDbNavigationSync();
@@ -9805,8 +10366,8 @@ function renderDecoupagePhasesTable() {
         row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
         row.innerHTML = `
-            <td>${index + 1}</td>
-            <td class="editable phase-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(phase.name)}</td>
+            <td class="phase-number-cell">${index + 1}</td>
+            <td class="editable phase-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(phase.name)}</td>
             <td class="select-col">
                 <button class="row-delete-btn" type="button" data-remove-decoupage-phase="${index}" title="Supprimer la phase" aria-label="Supprimer la phase">&times;</button>
             </td>
@@ -9827,7 +10388,7 @@ function bindDecoupagePhasesEvents() {
             const index = Number(event.target.dataset.index);
             if (!decoupagePhases[index]) return;
 
-            decoupagePhases[index].name = event.target.textContent.trim();
+            decoupagePhases[index].name = sanitizeRichText(event.target.innerHTML);
             saveDecoupagePhases();
         });
 
@@ -9966,12 +10527,12 @@ function renderDecoupageStepsTable() {
             const isLast = originalIndex === lastIndex;
 
             row.innerHTML = `
-                <td>${originalIndex + 1}</td>
+                <td class="wbs-number-cell">${originalIndex + 1}</td>
                 <td class="wbs-move-cell">
                     <button class="wbs-move-btn decoupage-move-up-btn" type="button" data-index="${originalIndex}" ${isFirst ? "disabled" : ""} title="Monter" aria-label="Monter l'étape">&uarr;</button>
                     <button class="wbs-move-btn decoupage-move-down-btn" type="button" data-index="${originalIndex}" ${isLast ? "disabled" : ""} title="Descendre" aria-label="Descendre l'étape">&darr;</button>
                 </td>
-                <td class="editable decoupage-step-cell" contenteditable="true" data-index="${originalIndex}" spellcheck="true">${escapeHtml(step.label)}</td>
+                <td class="editable decoupage-step-cell" contenteditable="true" data-index="${originalIndex}" spellcheck="true">${sanitizeRichText(step.label)}</td>
                 <td class="select-col">
                     <button class="row-delete-btn" type="button" data-remove-decoupage-step="${originalIndex}" title="Supprimer l'étape" aria-label="Supprimer l'étape">&times;</button>
                 </td>
@@ -9993,7 +10554,7 @@ function bindDecoupageStepsEvents() {
             const index = Number(event.target.dataset.index);
             if (!decoupageSteps[index]) return;
 
-            decoupageSteps[index].label = event.target.textContent.trim();
+            decoupageSteps[index].label = sanitizeRichText(event.target.innerHTML);
             saveDecoupageSteps();
         });
 
@@ -10171,6 +10732,29 @@ if (typeof helpTexts !== "undefined") {
 
 /* V83 — Matrice de décision pondérée */
 
+function loadDecisionCategories() {
+    const savedData = localStorage.getItem(getProjectKey("decision_categories"));
+    if (!savedData) return [];
+
+    try {
+        const parsed = JSON.parse(savedData);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((category, index) => ({
+            id: category.id || createId(),
+            color: normalizeColor(category.color, index),
+            name: category.name || ""
+        }));
+    } catch (error) {
+        console.error("Impossible de charger les catégories de décision :", error);
+        return [];
+    }
+}
+
+function saveDecisionCategories() {
+    localStorage.setItem(getProjectKey("decision_categories"), JSON.stringify(decisionCategories));
+}
+
 function loadDecisionCriteria() {
     const savedData = localStorage.getItem(getProjectKey("decision_criteria"));
     if (!savedData) return [];
@@ -10182,7 +10766,8 @@ function loadDecisionCriteria() {
         return parsed.map((criterion) => ({
             id: criterion.id || createId(),
             name: criterion.name || "",
-            weight: Number.isFinite(Number(criterion.weight)) ? Number(criterion.weight) : 0
+            weight: Number.isFinite(Number(criterion.weight)) ? Number(criterion.weight) : 0,
+            categoryId: criterion.categoryId || ""
         }));
     } catch (error) {
         console.error("Impossible de charger les critères de décision :", error);
@@ -10192,6 +10777,29 @@ function loadDecisionCriteria() {
 
 function saveDecisionCriteria() {
     localStorage.setItem(getProjectKey("decision_criteria"), JSON.stringify(decisionCriteria));
+}
+
+function groupDecisionCriteriaByCategory() {
+    const groups = decisionCategories.map((category) => ({
+        categoryId: category.id,
+        category,
+        isUnassigned: false,
+        items: []
+    }));
+
+    const groupById = new Map(groups.map((group) => [group.categoryId, group]));
+    const unassigned = { categoryId: "", category: null, isUnassigned: true, items: [] };
+
+    decisionCriteria.forEach((criterion, index) => {
+        const group = (criterion.categoryId && groupById.get(criterion.categoryId)) || unassigned;
+        group.items.push({ criterion, index });
+    });
+
+    if (unassigned.items.length > 0 || decisionCategories.length === 0) {
+        groups.push(unassigned);
+    }
+
+    return groups;
 }
 
 function loadDecisionOptions() {
@@ -10229,33 +10837,100 @@ function calculateDecisionWeightedScore(option, criteria, totalWeight) {
     return sum / totalWeight;
 }
 
-function renderDecisionCriteriaTable() {
-    const tbody = document.getElementById("decision-criteria-table-body");
-    if (!tbody) return;
+function renderDecisionCategoriesTable() {
+    const body = document.getElementById("decision-categories-table-body");
+    const deleteButton = document.getElementById("delete-selected-decision-categories-btn");
+    const selectAll = document.getElementById("select-all-decision-categories");
 
-    tbody.innerHTML = "";
+    if (!body) return;
 
-    if (decisionCriteria.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun critère pour le moment.</td></tr>`;
+    body.innerHTML = "";
+
+    if (decisionCategories.length === 0) {
+        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucune catégorie pour le moment.</td></tr>`;
+        if (deleteButton) deleteButton.disabled = true;
+        if (selectAll) selectAll.checked = false;
     } else {
-        decisionCriteria.forEach((criterion, index) => {
+        decisionCategories.forEach((category, index) => {
+            const color = normalizeColor(category.color, index);
             const row = document.createElement("tr");
+            const isSelected = selectedDecisionCategories.has(index);
+
+            row.style.backgroundColor = hexToRgba(color, 0.20);
+            row.style.boxShadow = `inset 3px 0 0 ${color}`;
+
+            if (isSelected) row.classList.add("selected-row");
 
             row.innerHTML = `
-                <td>${index + 1}</td>
-                <td class="editable decision-criterion-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(criterion.name)}</td>
-                <td class="decision-weight-cell">
-                    <input class="decision-weight-input" type="number" min="0" max="100" step="1" data-index="${index}" value="${escapeHtml(String(criterion.weight || ""))}" aria-label="Poids du critère ${index + 1}" />
-                </td>
                 <td class="select-col">
-                    <button class="row-delete-btn" type="button" data-remove-decision-criterion="${index}" title="Supprimer le critère" aria-label="Supprimer le critère">&times;</button>
+                    <input
+                        class="row-checkbox decision-category-checkbox"
+                        type="checkbox"
+                        data-index="${index}"
+                        aria-label="Sélectionner la catégorie ${index + 1}"
+                        ${isSelected ? "checked" : ""}
+                    />
                 </td>
+                <td>
+                    <button
+                        class="decision-category-number-btn"
+                        type="button"
+                        data-index="${index}"
+                        style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
+                        aria-label="Changer la couleur de la catégorie ${index + 1}"
+                    >${index + 1}</button>
+                </td>
+                <td
+                    class="editable decision-category-name-cell"
+                    contenteditable="true"
+                    data-index="${index}"
+                    data-field="name"
+                    spellcheck="true"
+                >${sanitizeRichText(category.name)}</td>
             `;
 
-            tbody.appendChild(row);
+            body.appendChild(row);
         });
 
-        bindDecisionCriteriaEvents();
+        body.querySelectorAll(".decision-category-checkbox").forEach((checkbox) => {
+            checkbox.addEventListener("change", (event) => {
+                const index = Number(event.target.dataset.index);
+
+                if (event.target.checked) {
+                    selectedDecisionCategories.add(index);
+                } else {
+                    selectedDecisionCategories.delete(index);
+                }
+
+                renderDecisionCategoriesTable();
+            });
+        });
+
+        body.querySelectorAll(".decision-category-number-btn").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                const index = Number(event.currentTarget.dataset.index);
+                activeColorTarget = { type: "decisionCategory", index };
+                showColorMenu(event.currentTarget);
+            });
+        });
+
+        body.querySelectorAll(".editable").forEach((cell) => {
+            cell.addEventListener("input", (event) => {
+                const index = Number(event.target.dataset.index);
+                const field = event.target.dataset.field;
+                if (!decisionCategories[index]) return;
+
+                decisionCategories[index][field] = sanitizeRichText(event.target.innerHTML);
+                saveDecisionCategories();
+                renderDecisionOptionsTable();
+            });
+        });
+
+        if (deleteButton) deleteButton.disabled = selectedDecisionCategories.size === 0;
+        if (selectAll) {
+            selectAll.checked = decisionCategories.length > 0 && selectedDecisionCategories.size === decisionCategories.length;
+            selectAll.indeterminate = selectedDecisionCategories.size > 0 && selectedDecisionCategories.size < decisionCategories.length;
+        }
     }
 
     const weightSumEl = document.getElementById("decision-weight-sum");
@@ -10267,101 +10942,73 @@ function renderDecisionCriteriaTable() {
     renderDecisionOptionsTable();
 }
 
-function bindDecisionCriteriaEvents() {
-    const tbody = document.getElementById("decision-criteria-table-body");
-    if (!tbody) return;
-
-    tbody.querySelectorAll(".editable").forEach((cell) => {
-        cell.addEventListener("input", (event) => {
-            const index = Number(event.target.dataset.index);
-            if (!decisionCriteria[index]) return;
-
-            decisionCriteria[index].name = event.target.textContent.trim();
-            saveDecisionCriteria();
-        });
-
-        cell.addEventListener("blur", () => {
-            renderDecisionOptionsTable();
-        });
-    });
-
-    tbody.querySelectorAll(".decision-weight-input").forEach((input) => {
-        input.addEventListener("change", (event) => {
-            const index = Number(event.target.dataset.index);
-            if (!decisionCriteria[index]) return;
-
-            const value = Math.max(0, Math.min(100, Math.round(Number(event.target.value)) || 0));
-            decisionCriteria[index].weight = value;
-            event.target.value = value || "";
-
-            saveDecisionCriteria();
-            renderDecisionCriteriaTable();
-        });
-    });
-
-    tbody.querySelectorAll("[data-remove-decision-criterion]").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            const index = Number(event.currentTarget.dataset.removeDecisionCriterion);
-            const removed = decisionCriteria[index];
-            if (!removed) return;
-
-            decisionCriteria = decisionCriteria.filter((_, itemIndex) => itemIndex !== index);
-            decisionOptions = decisionOptions.map((option) => {
-                if (!option.scores || !(removed.id in option.scores)) return option;
-                const remainingScores = { ...option.scores };
-                delete remainingScores[removed.id];
-                return { ...option, scores: remainingScores };
-            });
-
-            saveDecisionCriteria();
-            saveDecisionOptions();
-            renderDecisionCriteriaTable();
-        });
-    });
-}
-
-// Critères en lignes, options en colonnes : ça laisse la place à beaucoup
-// plus de critères sans que le tableau explose en largeur. Le score pondéré
-// de chaque option devient une ligne de synthèse en bas plutôt qu'une
-// colonne à droite.
+// Un seul tableau : les critères sont groupés par catégorie (ligne d'en-tête
+// colorée avec bouton "+ Critère", même patron que .budget-type-row / groupBudgetElementsByType),
+// avec le poids à gauche du nom du critère. Les options restent en colonnes,
+// et le score pondéré de chaque option devient une ligne de synthèse en bas.
 function buildDecisionOptionsTable() {
-    if (decisionCriteria.length === 0) {
-        return `<div class="empty-state">Ajoute au moins un critère à gauche pour commencer à noter des options.</div>`;
-    }
-
-    if (decisionOptions.length === 0) {
-        return `<div class="empty-state">Ajoute au moins une option pour commencer à noter.</div>`;
-    }
-
+    const groups = groupDecisionCriteriaByCategory();
     const totalWeight = decisionCriteria.reduce((sum, criterion) => sum + (Number(criterion.weight) || 0), 0);
     const weightedScores = decisionOptions.map((option) => calculateDecisionWeightedScore(option, decisionCriteria, totalWeight));
-    const bestScore = Math.max(...weightedScores);
+    const bestScore = decisionOptions.length > 0 ? Math.max(...weightedScores) : 0;
     const isBestOption = (index) => decisionOptions.length > 1 && weightedScores[index] > 0 && weightedScores[index] === bestScore;
+    const totalCols = decisionOptions.length + 3;
 
     const optionHeaderCells = decisionOptions.map((option, index) => `
         <th class="decision-option-header${isBestOption(index) ? " decision-best-cell" : ""}" title="${isBestOption(index) ? "Meilleure option" : ""}">
-            <span class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${escapeHtml(option.name)}</span>
+            <span class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(option.name)}</span>
             <button class="row-delete-btn decision-option-delete-btn" type="button" data-remove-decision-option="${index}" title="Supprimer l'option" aria-label="Supprimer l'option">&times;</button>
         </th>
     `).join("");
 
-    const criteriaRows = decisionCriteria.map((criterion) => `
-        <tr>
-            <td class="decision-criterion-row-header">${escapeHtml(criterion.name || "Critère sans nom")}<br><span class="decision-criterion-weight">${escapeHtml(String(criterion.weight || 0))}%</span></td>
-            ${decisionOptions.map((option, index) => `
-                <td class="decision-score-cell${isBestOption(index) ? " decision-best-cell" : ""}">
-                    <input class="decision-score-input" type="number" min="1" max="10" step="1" data-option-index="${index}" data-criterion-id="${escapeHtml(criterion.id)}" value="${escapeHtml(String(option.scores?.[criterion.id] || ""))}" aria-label="Note de ${escapeHtml(option.name || "cette option")} pour ${escapeHtml(criterion.name || "ce critère")}" />
-                </td>
-            `).join("")}
-        </tr>
-    `).join("");
+    const groupsHtml = groups.map((group) => {
+        const color = group.category ? normalizeColor(group.category.color, 0) : "#94a3b8";
+        const label = group.isUnassigned ? "Sans catégorie" : (group.category.name || "Catégorie sans nom");
 
-    const scoreRow = `
+        const headerRow = `
+            <tr class="decision-category-row${group.isUnassigned ? " decision-category-unassigned" : ""}" style="background-color: ${hexToRgba(color, group.isUnassigned ? 0.14 : 0.26)}; box-shadow: inset 4px 0 0 ${color};">
+                <td colspan="${totalCols}">
+                    <div class="decision-category-row-inner">
+                        <span class="decision-category-label">
+                            <span class="decision-category-dot" style="background-color: ${escapeHtml(color)};"></span>
+                            <span class="decision-category-title">${escapeHtml(label)}</span>
+                            <span class="decision-category-count">${group.items.length} critère${group.items.length > 1 ? "s" : ""}</span>
+                        </span>
+                        <button class="decision-category-add-btn" type="button" data-add-decision-category-id="${escapeHtml(group.categoryId)}" title="Ajouter un critère à cette catégorie" aria-label="Ajouter un critère à cette catégorie">+ Critère</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        const itemsHtml = group.items.length === 0
+            ? `<tr class="decision-category-empty-row"><td colspan="${totalCols}" class="empty-state">Aucun critère dans cette catégorie pour le moment.</td></tr>`
+            : group.items.map(({ criterion, index }) => `
+                <tr>
+                    <td class="decision-weight-cell">
+                        <input class="decision-weight-input" type="number" min="0" max="100" step="1" data-index="${index}" value="${escapeHtml(String(criterion.weight || ""))}" aria-label="Poids du critère ${index + 1}" />
+                    </td>
+                    <td class="editable decision-criterion-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(criterion.name)}</td>
+                    ${decisionOptions.map((option, optionIndex) => `
+                        <td class="decision-score-cell${isBestOption(optionIndex) ? " decision-best-cell" : ""}">
+                            <input class="decision-score-input" type="number" min="1" max="10" step="1" data-option-index="${optionIndex}" data-criterion-id="${escapeHtml(criterion.id)}" value="${escapeHtml(String(option.scores?.[criterion.id] || ""))}" aria-label="Note de ${escapeHtml(option.name || "cette option")} pour ${escapeHtml(criterion.name || "ce critère")}" />
+                        </td>
+                    `).join("")}
+                    <td class="select-col">
+                        <button class="row-delete-btn" type="button" data-remove-decision-criterion="${index}" title="Supprimer le critère" aria-label="Supprimer le critère">&times;</button>
+                    </td>
+                </tr>
+            `).join("");
+
+        return headerRow + itemsHtml;
+    }).join("");
+
+    const scoreRow = decisionOptions.length === 0 ? "" : `
         <tr class="decision-score-row">
-            <td class="decision-score-row-label">Score pondéré /10</td>
+            <td class="decision-score-row-label" colspan="2">Score pondéré /10</td>
             ${decisionOptions.map((option, index) => `
                 <td class="decision-weighted-cell${isBestOption(index) ? " decision-best-cell" : ""}" title="${isBestOption(index) ? "Meilleure option" : ""}">${weightedScores[index] ? weightedScores[index].toFixed(1) : "—"}</td>
             `).join("")}
+            <td></td>
         </tr>
     `;
 
@@ -10369,12 +11016,14 @@ function buildDecisionOptionsTable() {
         <table class="decision-options-table">
             <thead>
                 <tr>
+                    <th class="decision-col-weight">Poids %</th>
                     <th class="decision-row-header-col">Critère</th>
                     ${optionHeaderCells}
+                    <th class="select-col"></th>
                 </tr>
             </thead>
             <tbody>
-                ${criteriaRows}
+                ${groupsHtml}
                 ${scoreRow}
             </tbody>
         </table>
@@ -10393,12 +11042,62 @@ function bindDecisionOptionsEvents() {
     const wrapper = document.getElementById("decision-options-wrapper");
     if (!wrapper) return;
 
-    wrapper.querySelectorAll(".editable").forEach((cell) => {
+    wrapper.querySelectorAll("[data-add-decision-category-id]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            addDecisionCriterion(event.currentTarget.dataset.addDecisionCategoryId);
+        });
+    });
+
+    wrapper.querySelectorAll(".decision-weight-input").forEach((input) => {
+        input.addEventListener("change", (event) => {
+            const index = Number(event.target.dataset.index);
+            if (!decisionCriteria[index]) return;
+
+            const value = Math.max(0, Math.min(100, Math.round(Number(event.target.value)) || 0));
+            decisionCriteria[index].weight = value;
+            event.target.value = value || "";
+
+            saveDecisionCriteria();
+            renderDecisionCategoriesTable();
+        });
+    });
+
+    wrapper.querySelectorAll(".decision-criterion-cell").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const index = Number(event.target.dataset.index);
+            if (!decisionCriteria[index]) return;
+
+            decisionCriteria[index].name = sanitizeRichText(event.target.innerHTML);
+            saveDecisionCriteria();
+        });
+    });
+
+    wrapper.querySelectorAll("[data-remove-decision-criterion]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const index = Number(event.currentTarget.dataset.removeDecisionCriterion);
+            const removed = decisionCriteria[index];
+            if (!removed) return;
+
+            decisionCriteria = decisionCriteria.filter((_, itemIndex) => itemIndex !== index);
+            decisionOptions = decisionOptions.map((option) => {
+                if (!option.scores || !(removed.id in option.scores)) return option;
+                const remainingScores = { ...option.scores };
+                delete remainingScores[removed.id];
+                return { ...option, scores: remainingScores };
+            });
+
+            saveDecisionCriteria();
+            saveDecisionOptions();
+            renderDecisionCategoriesTable();
+        });
+    });
+
+    wrapper.querySelectorAll(".decision-option-cell").forEach((cell) => {
         cell.addEventListener("input", (event) => {
             const index = Number(event.target.dataset.index);
             if (!decisionOptions[index]) return;
 
-            decisionOptions[index].name = event.target.textContent.trim();
+            decisionOptions[index].name = sanitizeRichText(event.target.innerHTML);
             saveDecisionOptions();
         });
     });
@@ -10435,12 +11134,12 @@ function bindDecisionOptionsEvents() {
     });
 }
 
-function addDecisionCriterion() {
-    decisionCriteria.push({ id: createId(), name: "", weight: 10 });
+function addDecisionCriterion(categoryId) {
+    decisionCriteria.push({ id: createId(), name: "", weight: 10, categoryId: categoryId || "" });
     saveDecisionCriteria();
-    renderDecisionCriteriaTable();
+    renderDecisionCategoriesTable();
 
-    document.querySelector("#decision-criteria-table-body tr:last-child .editable")?.focus();
+    document.querySelector(`#decision-options-wrapper .decision-criterion-cell[data-index="${decisionCriteria.length - 1}"]`)?.focus();
 }
 
 function addDecisionOption() {
@@ -10452,40 +11151,91 @@ function addDecisionOption() {
 }
 
 function initDecisionPage() {
-    const criteriaBody = document.getElementById("decision-criteria-table-body");
-    if (!criteriaBody) return;
+    const categoriesBody = document.getElementById("decision-categories-table-body");
+    if (!categoriesBody) return;
 
+    decisionCategories = loadDecisionCategories();
     decisionCriteria = loadDecisionCriteria();
     decisionOptions = loadDecisionOptions();
 
-    renderDecisionCriteriaTable();
+    renderColorMenu();
+    renderDecisionCategoriesTable();
 
-    document.getElementById("add-decision-criterion-btn")?.addEventListener("click", addDecisionCriterion);
+    document.getElementById("add-decision-category-btn")?.addEventListener("click", () => {
+        decisionCategories.push({
+            id: createId(),
+            color: predefinedColors[decisionCategories.length % predefinedColors.length],
+            name: ""
+        });
 
-    document.getElementById("reset-decision-btn")?.addEventListener("click", () => {
-        if (decisionCriteria.length === 0 && decisionOptions.length === 0) return;
+        saveDecisionCategories();
+        renderDecisionCategoriesTable();
 
-        const confirmation = confirm("Tu veux vraiment réinitialiser la matrice de décision (critères ET options) ?");
+        const lastCategory = document.querySelector("#decision-categories-table-body tr:last-child .editable");
+        if (lastCategory) lastCategory.focus();
+    });
+
+    document.getElementById("delete-selected-decision-categories-btn")?.addEventListener("click", () => {
+        if (selectedDecisionCategories.size === 0) return;
+
+        const confirmation = confirm("Tu veux vraiment supprimer les catégories cochées ? Les critères liés passeront sans catégorie.");
         if (!confirmation) return;
 
+        const deletedIds = decisionCategories
+            .filter((_, index) => selectedDecisionCategories.has(index))
+            .map((category) => category.id);
+
+        decisionCategories = decisionCategories.filter((_, index) => !selectedDecisionCategories.has(index));
+        decisionCriteria = decisionCriteria.map((criterion) => deletedIds.includes(criterion.categoryId) ? { ...criterion, categoryId: "" } : criterion);
+
+        selectedDecisionCategories.clear();
+        saveDecisionCategories();
+        saveDecisionCriteria();
+        hideColorMenu();
+        renderDecisionCategoriesTable();
+    });
+
+    document.getElementById("select-all-decision-categories")?.addEventListener("change", (event) => {
+        selectedDecisionCategories.clear();
+
+        if (event.target.checked) {
+            decisionCategories.forEach((_, index) => selectedDecisionCategories.add(index));
+        }
+
+        renderDecisionCategoriesTable();
+    });
+
+    document.getElementById("reset-decision-btn")?.addEventListener("click", () => {
+        if (decisionCategories.length === 0 && decisionCriteria.length === 0 && decisionOptions.length === 0) return;
+
+        const confirmation = confirm("Tu veux vraiment réinitialiser la matrice de décision (catégories, critères ET options) ?");
+        if (!confirmation) return;
+
+        decisionCategories = [];
         decisionCriteria = [];
         decisionOptions = [];
+        selectedDecisionCategories.clear();
+
+        saveDecisionCategories();
         saveDecisionCriteria();
         saveDecisionOptions();
-        renderDecisionCriteriaTable();
+        hideColorMenu();
+        renderDecisionCategoriesTable();
     });
 
     document.getElementById("add-decision-option-btn")?.addEventListener("click", addDecisionOption);
+
+    document.addEventListener("click", closeColorMenuOnOutsideClick);
 }
 
 if (typeof helpTexts !== "undefined") {
     helpTexts.decision = `
         <p>Cette page sert à comparer plusieurs options de façon objective, à partir de critères pondérés.</p>
         <ul>
-            <li>Le tableau de gauche définit les critères de décision et leur poids (en %). Le poids reflète l’importance relative de chaque critère.</li>
-            <li>Le tableau principal liste les critères en lignes et les options en colonnes : note chaque option de 1 (faible) à 10 (excellent) pour chaque critère.</li>
-            <li>Le score pondéré (sur 10) se calcule automatiquement en bas du tableau, une colonne par option. L’option avec le meilleur score est surlignée.</li>
-            <li>Supprimer un critère retire automatiquement les notes associées dans toutes les options.</li>
+            <li>Le tableau de gauche définit les catégories de critères (couleur cliquable sur le numéro, comme les types de risques/KPIs). Les catégories n’ont pas de poids propre.</li>
+            <li>Le tableau principal regroupe les critères par catégorie : le bouton “+ Critère” d’une catégorie y ajoute directement une ligne, avec le poids (en %) à gauche du nom du critère.</li>
+            <li>Note chaque option de 1 (faible) à 10 (excellent) pour chaque critère. Le score pondéré (sur 10) se calcule automatiquement en bas du tableau, une colonne par option. L’option avec le meilleur score est surlignée.</li>
+            <li>Supprimer un critère retire automatiquement les notes associées dans toutes les options. Supprimer une catégorie ne supprime pas ses critères : ils passent “Sans catégorie”.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
         </ul>
     `;
@@ -10544,8 +11294,8 @@ function renderAtoutsLimitesMatrices() {
                       .map(
                           (row) => `
                 <tr data-row-id="${row.id}">
-                    <td class="editable atouts-limites-atout-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${escapeHtml(row.atout)}</td>
-                    <td class="editable atouts-limites-limite-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${escapeHtml(row.limite)}</td>
+                    <td class="editable atouts-limites-atout-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${sanitizeRichText(row.atout)}</td>
+                    <td class="editable atouts-limites-limite-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${sanitizeRichText(row.limite)}</td>
                     <td class="select-col">
                         <button class="row-delete-btn" type="button" data-matrix-id="${matrix.id}" data-row-id="${row.id}" title="Supprimer la ligne" aria-label="Supprimer la ligne">&times;</button>
                     </td>
@@ -10558,7 +11308,7 @@ function renderAtoutsLimitesMatrices() {
             return `
                 <section class="card atouts-limites-card" data-matrix-id="${matrix.id}">
                     <div class="card-header">
-                        <h2 class="editable atouts-limites-name-input" contenteditable="true" data-matrix-id="${matrix.id}" spellcheck="false">${escapeHtml(matrix.name) || "Matrice sans nom"}</h2>
+                        <h2 class="editable atouts-limites-name-input" contenteditable="true" data-matrix-id="${matrix.id}" spellcheck="false">${sanitizeRichText(matrix.name) || "Matrice sans nom"}</h2>
                         <button class="btn btn-danger icon-action-btn icon-delete-btn atouts-limites-delete-matrix-btn" type="button" data-matrix-id="${matrix.id}" title="Supprimer cette matrice" aria-label="Supprimer cette matrice">-</button>
                     </div>
 
@@ -10606,7 +11356,7 @@ function bindAtoutsLimitesEvents() {
             const matrix = getMatrix(event.target.dataset.matrixId);
             if (!matrix) return;
 
-            matrix.name = event.target.textContent.trim();
+            matrix.name = sanitizeRichText(event.target.innerHTML);
             saveAtoutsLimitesMatrices();
         });
     });
@@ -10618,9 +11368,9 @@ function bindAtoutsLimitesEvents() {
             if (!row) return;
 
             if (event.target.classList.contains("atouts-limites-atout-cell")) {
-                row.atout = event.target.textContent.trim();
+                row.atout = sanitizeRichText(event.target.innerHTML);
             } else {
-                row.limite = event.target.textContent.trim();
+                row.limite = sanitizeRichText(event.target.innerHTML);
             }
 
             saveAtoutsLimitesMatrices();
@@ -10698,6 +11448,525 @@ if (typeof helpTexts !== "undefined") {
             <li>Utilise le “+” d’une matrice pour ajouter une ligne, et le “×” d’une ligne pour la retirer.</li>
             <li>Le “-” dans l’en-tête d’une matrice la supprime entièrement.</li>
             <li>Chaque matrice a son propre bouton de capture (📸) pour la copier en image.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+            <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
+        </ul>
+    `;
+}
+
+/* V91 — Module Tests (Scénario + Déroulé) */
+
+function loadTestScenarios() {
+    const savedData = localStorage.getItem(getProjectKey("test_scenarios"));
+    if (!savedData) return [];
+
+    try {
+        const parsed = JSON.parse(savedData);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((scenario, index) => ({
+            id: scenario.id || createId(),
+            color: normalizeColor(scenario.color, index),
+            name: scenario.name || "",
+            contextGeneral: scenario.contextGeneral || ""
+        }));
+    } catch (error) {
+        console.error("Impossible de charger les scénarios de test :", error);
+        return [];
+    }
+}
+
+function saveTestScenarios() {
+    localStorage.setItem(getProjectKey("test_scenarios"), JSON.stringify(testScenarios));
+}
+
+function loadTestContextSteps() {
+    const savedData = localStorage.getItem(getProjectKey("test_context_steps"));
+    if (!savedData) return [];
+
+    try {
+        const parsed = JSON.parse(savedData);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((step) => ({
+            id: step.id || createId(),
+            scenarioId: step.scenarioId || "",
+            text: step.text || ""
+        }));
+    } catch (error) {
+        console.error("Impossible de charger les étapes de contexte :", error);
+        return [];
+    }
+}
+
+function saveTestContextSteps() {
+    localStorage.setItem(getProjectKey("test_context_steps"), JSON.stringify(testContextSteps));
+}
+
+function loadTestDerouleSteps() {
+    const savedData = localStorage.getItem(getProjectKey("test_deroule_steps"));
+    if (!savedData) return [];
+
+    try {
+        const parsed = JSON.parse(savedData);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((step) => ({
+            id: step.id || createId(),
+            scenarioId: step.scenarioId || "",
+            text: step.text || ""
+        }));
+    } catch (error) {
+        console.error("Impossible de charger les étapes de déroulé :", error);
+        return [];
+    }
+}
+
+function saveTestDerouleSteps() {
+    localStorage.setItem(getProjectKey("test_deroule_steps"), JSON.stringify(testDerouleSteps));
+}
+
+// Groupe une liste d'étapes (contexte détaillé OU déroulé, même forme {id,
+// scenarioId, text}) par scénario, dans l'ordre des scénarios — même patron
+// que getKpiGroups() (KPIs groupés par objectif SMART).
+function groupTestStepsByScenario(steps) {
+    const groups = testScenarios.map((scenario) => ({ scenario, items: [] }));
+    const groupByScenarioId = new Map(groups.map((group) => [group.scenario.id, group]));
+
+    steps.forEach((step, index) => {
+        const group = groupByScenarioId.get(step.scenarioId);
+        if (group) group.items.push({ step, index });
+    });
+
+    return groups;
+}
+
+function renderTestScenariosListTable() {
+    const body = document.getElementById("test-scenarios-table-body");
+    const deleteButton = document.getElementById("delete-selected-test-scenarios-btn");
+    const selectAll = document.getElementById("select-all-test-scenarios");
+
+    if (!body) return;
+
+    body.innerHTML = "";
+
+    if (testScenarios.length === 0) {
+        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun scénario pour le moment.</td></tr>`;
+        if (deleteButton) deleteButton.disabled = true;
+        if (selectAll) selectAll.checked = false;
+    } else {
+        testScenarios.forEach((scenario, index) => {
+            const color = normalizeColor(scenario.color, index);
+            const row = document.createElement("tr");
+            const isSelected = selectedTestScenarios.has(index);
+
+            row.style.backgroundColor = hexToRgba(color, 0.20);
+            row.style.boxShadow = `inset 3px 0 0 ${color}`;
+
+            if (isSelected) row.classList.add("selected-row");
+
+            row.innerHTML = `
+                <td class="select-col">
+                    <input
+                        class="row-checkbox test-scenario-checkbox"
+                        type="checkbox"
+                        data-index="${index}"
+                        aria-label="Sélectionner le scénario ${index + 1}"
+                        ${isSelected ? "checked" : ""}
+                    />
+                </td>
+                <td>
+                    <button
+                        class="test-scenario-number-btn"
+                        type="button"
+                        data-index="${index}"
+                        style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
+                        aria-label="Changer la couleur du scénario ${index + 1}"
+                    >${index + 1}</button>
+                </td>
+                <td
+                    class="editable test-scenario-name-cell"
+                    contenteditable="true"
+                    data-index="${index}"
+                    data-field="name"
+                    spellcheck="true"
+                >${sanitizeRichText(scenario.name)}</td>
+            `;
+
+            body.appendChild(row);
+        });
+
+        body.querySelectorAll(".test-scenario-checkbox").forEach((checkbox) => {
+            checkbox.addEventListener("change", (event) => {
+                const index = Number(event.target.dataset.index);
+
+                if (event.target.checked) {
+                    selectedTestScenarios.add(index);
+                } else {
+                    selectedTestScenarios.delete(index);
+                }
+
+                renderTestScenariosListTable();
+            });
+        });
+
+        body.querySelectorAll(".test-scenario-number-btn").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                const index = Number(event.currentTarget.dataset.index);
+                activeColorTarget = { type: "testScenario", index };
+                showColorMenu(event.currentTarget);
+            });
+        });
+
+        body.querySelectorAll(".editable").forEach((cell) => {
+            cell.addEventListener("input", (event) => {
+                const index = Number(event.target.dataset.index);
+                const field = event.target.dataset.field;
+                if (!testScenarios[index]) return;
+
+                testScenarios[index][field] = sanitizeRichText(event.target.innerHTML);
+                saveTestScenarios();
+                renderTestScenarioDetailCards();
+            });
+        });
+
+        if (deleteButton) deleteButton.disabled = selectedTestScenarios.size === 0;
+        if (selectAll) {
+            selectAll.checked = testScenarios.length > 0 && selectedTestScenarios.size === testScenarios.length;
+            selectAll.indeterminate = selectedTestScenarios.size > 0 && selectedTestScenarios.size < testScenarios.length;
+        }
+    }
+
+    renderTestScenarioDetailCards();
+}
+
+function renderTestScenarioDetailCards() {
+    const container = document.getElementById("test-scenario-detail-container");
+    if (!container) return;
+
+    if (testScenarios.length === 0) {
+        container.innerHTML = `<p class="empty-state tests-scenario-empty">Crée d'abord un scénario dans le tableau de gauche.</p>`;
+        return;
+    }
+
+    const stepGroups = groupTestStepsByScenario(testContextSteps);
+    const stepGroupByScenarioId = new Map(stepGroups.map((group) => [group.scenario.id, group]));
+
+    container.innerHTML = testScenarios.map((scenario, index) => {
+        const color = normalizeColor(scenario.color, index);
+        const group = stepGroupByScenarioId.get(scenario.id) || { items: [] };
+
+        const stepsHtml = group.items.length === 0
+            ? `<tr><td colspan="3" class="empty-state">Aucune étape pour le moment.</td></tr>`
+            : group.items.map(({ step }, localIndex) => `
+                <tr>
+                    <td class="tests-step-number-cell">${localIndex + 1}</td>
+                    <td class="editable tests-step-cell" contenteditable="true" data-step-id="${escapeHtml(step.id)}" spellcheck="true">${sanitizeRichText(step.text)}</td>
+                    <td class="select-col">
+                        <button class="row-delete-btn" type="button" data-remove-context-step="${escapeHtml(step.id)}" title="Supprimer l'étape" aria-label="Supprimer l'étape">&times;</button>
+                    </td>
+                </tr>
+            `).join("");
+
+        return `
+            <div class="card tests-scenario-card">
+                <div class="card-header">
+                    <h2><span class="tests-scenario-color-dot" style="background-color: ${escapeHtml(color)};"></span>${escapeHtml(scenario.name || "Scénario sans nom")}</h2>
+                </div>
+
+                <div class="tests-context-general">
+                    <span class="tests-context-general-label">Contexte général</span>
+                    <div
+                        class="editable tests-context-general-field"
+                        contenteditable="true"
+                        data-scenario-id="${escapeHtml(scenario.id)}"
+                        spellcheck="true"
+                        data-placeholder="Décris la situation générale de ce scénario..."
+                    >${sanitizeRichText(scenario.contextGeneral)}</div>
+                </div>
+
+                <div class="tests-context-steps">
+                    <div class="tests-section-label">Contexte détaillé</div>
+                    <table class="tests-steps-table">
+                        <thead>
+                            <tr>
+                                <th class="tests-step-number-cell">N°</th>
+                                <th>Étape</th>
+                                <th class="select-col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${stepsHtml}</tbody>
+                    </table>
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn tests-add-context-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    bindTestScenarioDetailEvents();
+}
+
+function bindTestScenarioDetailEvents() {
+    const container = document.getElementById("test-scenario-detail-container");
+    if (!container) return;
+
+    container.querySelectorAll(".tests-context-general-field").forEach((field) => {
+        field.addEventListener("input", (event) => {
+            const scenarioId = event.target.dataset.scenarioId;
+            const scenario = testScenarios.find((item) => item.id === scenarioId);
+            if (!scenario) return;
+
+            scenario.contextGeneral = sanitizeRichText(event.target.innerHTML);
+            saveTestScenarios();
+        });
+    });
+
+    container.querySelectorAll(".tests-step-cell").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const stepId = event.target.dataset.stepId;
+            const step = testContextSteps.find((item) => item.id === stepId);
+            if (!step) return;
+
+            step.text = sanitizeRichText(event.target.innerHTML);
+            saveTestContextSteps();
+        });
+    });
+
+    container.querySelectorAll("[data-remove-context-step]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const stepId = event.currentTarget.dataset.removeContextStep;
+            testContextSteps = testContextSteps.filter((step) => step.id !== stepId);
+            saveTestContextSteps();
+            renderTestScenarioDetailCards();
+        });
+    });
+
+    container.querySelectorAll(".tests-add-context-step-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const scenarioId = event.currentTarget.dataset.scenarioId;
+            const step = { id: createId(), scenarioId, text: "" };
+            testContextSteps.push(step);
+            saveTestContextSteps();
+            renderTestScenarioDetailCards();
+
+            document.querySelector(`.tests-step-cell[data-step-id="${step.id}"]`)?.focus();
+        });
+    });
+}
+
+function addTestScenario() {
+    testScenarios.push({
+        id: createId(),
+        color: predefinedColors[testScenarios.length % predefinedColors.length],
+        name: "",
+        contextGeneral: ""
+    });
+
+    saveTestScenarios();
+    renderTestScenariosListTable();
+
+    const lastScenario = document.querySelector("#test-scenarios-table-body tr:last-child .editable");
+    if (lastScenario) lastScenario.focus();
+}
+
+function initTestsScenarioPage() {
+    const listBody = document.getElementById("test-scenarios-table-body");
+    if (!listBody) return;
+
+    testScenarios = loadTestScenarios();
+    testContextSteps = loadTestContextSteps();
+
+    renderColorMenu();
+    renderTestScenariosListTable();
+
+    document.getElementById("add-test-scenario-btn")?.addEventListener("click", addTestScenario);
+
+    document.getElementById("delete-selected-test-scenarios-btn")?.addEventListener("click", () => {
+        if (selectedTestScenarios.size === 0) return;
+
+        const confirmation = confirm("Tu veux vraiment supprimer les scénarios cochés ? Leur contexte et leurs étapes de déroulé seront aussi supprimés.");
+        if (!confirmation) return;
+
+        const deletedIds = testScenarios
+            .filter((_, index) => selectedTestScenarios.has(index))
+            .map((scenario) => scenario.id);
+
+        testScenarios = testScenarios.filter((_, index) => !selectedTestScenarios.has(index));
+        testContextSteps = testContextSteps.filter((step) => !deletedIds.includes(step.scenarioId));
+        // .test_deroule_steps appartient à l'autre page (Déroulé) : on recharge
+        // depuis le stockage plutôt que de faire confiance à la variable globale
+        // (qui vaut [] tant que la page Déroulé n'a jamais été visitée dans cette
+        // session), pour ne pas l'écraser par erreur en sauvegardant un tableau vide.
+        testDerouleSteps = loadTestDerouleSteps().filter((step) => !deletedIds.includes(step.scenarioId));
+
+        selectedTestScenarios.clear();
+        saveTestScenarios();
+        saveTestContextSteps();
+        saveTestDerouleSteps();
+        hideColorMenu();
+        renderTestScenariosListTable();
+    });
+
+    document.getElementById("select-all-test-scenarios")?.addEventListener("change", (event) => {
+        selectedTestScenarios.clear();
+
+        if (event.target.checked) {
+            testScenarios.forEach((_, index) => selectedTestScenarios.add(index));
+        }
+
+        renderTestScenariosListTable();
+    });
+
+    document.getElementById("reset-test-scenarios-btn")?.addEventListener("click", () => {
+        const existingDerouleSteps = loadTestDerouleSteps();
+        if (testScenarios.length === 0 && testContextSteps.length === 0 && existingDerouleSteps.length === 0) return;
+
+        const confirmation = confirm("Tu veux vraiment réinitialiser tous les scénarios (contexte ET déroulé compris) ?");
+        if (!confirmation) return;
+
+        testScenarios = [];
+        testContextSteps = [];
+        testDerouleSteps = [];
+        selectedTestScenarios.clear();
+
+        saveTestScenarios();
+        saveTestContextSteps();
+        saveTestDerouleSteps();
+        hideColorMenu();
+        renderTestScenariosListTable();
+    });
+
+    document.addEventListener("click", closeColorMenuOnOutsideClick);
+}
+
+function renderTestDerouleCards() {
+    const container = document.getElementById("test-deroule-container");
+    if (!container) return;
+
+    if (testScenarios.length === 0) {
+        container.innerHTML = `<p class="empty-state tests-scenario-empty">Crée d'abord un scénario dans l'onglet Scénario pour pouvoir y ajouter un déroulé.</p>`;
+        return;
+    }
+
+    const stepGroups = groupTestStepsByScenario(testDerouleSteps);
+    const stepGroupByScenarioId = new Map(stepGroups.map((group) => [group.scenario.id, group]));
+
+    container.innerHTML = testScenarios.map((scenario, index) => {
+        const color = normalizeColor(scenario.color, index);
+        const group = stepGroupByScenarioId.get(scenario.id) || { items: [] };
+
+        const stepsHtml = group.items.length === 0
+            ? `<tr><td colspan="3" class="empty-state">Aucune étape pour le moment.</td></tr>`
+            : group.items.map(({ step }, localIndex) => `
+                <tr>
+                    <td class="tests-step-number-cell">${localIndex + 1}</td>
+                    <td class="editable tests-step-cell" contenteditable="true" data-step-id="${escapeHtml(step.id)}" spellcheck="true">${sanitizeRichText(step.text)}</td>
+                    <td class="select-col">
+                        <button class="row-delete-btn" type="button" data-remove-deroule-step="${escapeHtml(step.id)}" title="Supprimer l'étape" aria-label="Supprimer l'étape">&times;</button>
+                    </td>
+                </tr>
+            `).join("");
+
+        return `
+            <div class="card tests-scenario-card">
+                <div class="card-header">
+                    <h2><span class="tests-scenario-color-dot" style="background-color: ${escapeHtml(color)};"></span>${escapeHtml(scenario.name || "Scénario sans nom")}</h2>
+                </div>
+
+                <div class="tests-context-steps">
+                    <table class="tests-steps-table">
+                        <thead>
+                            <tr>
+                                <th class="tests-step-number-cell">N°</th>
+                                <th>Étape du déroulé</th>
+                                <th class="select-col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>${stepsHtml}</tbody>
+                    </table>
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn tests-add-deroule-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    bindTestDerouleEvents();
+}
+
+function bindTestDerouleEvents() {
+    const container = document.getElementById("test-deroule-container");
+    if (!container) return;
+
+    container.querySelectorAll(".tests-step-cell").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const stepId = event.target.dataset.stepId;
+            const step = testDerouleSteps.find((item) => item.id === stepId);
+            if (!step) return;
+
+            step.text = sanitizeRichText(event.target.innerHTML);
+            saveTestDerouleSteps();
+        });
+    });
+
+    container.querySelectorAll("[data-remove-deroule-step]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const stepId = event.currentTarget.dataset.removeDerouleStep;
+            testDerouleSteps = testDerouleSteps.filter((step) => step.id !== stepId);
+            saveTestDerouleSteps();
+            renderTestDerouleCards();
+        });
+    });
+
+    container.querySelectorAll(".tests-add-deroule-step-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const scenarioId = event.currentTarget.dataset.scenarioId;
+            const step = { id: createId(), scenarioId, text: "" };
+            testDerouleSteps.push(step);
+            saveTestDerouleSteps();
+            renderTestDerouleCards();
+
+            document.querySelector(`.tests-step-cell[data-step-id="${step.id}"]`)?.focus();
+        });
+    });
+}
+
+function initTestsDeroulePage() {
+    const container = document.getElementById("test-deroule-container");
+    if (!container) return;
+
+    testScenarios = loadTestScenarios();
+    testDerouleSteps = loadTestDerouleSteps();
+
+    renderTestDerouleCards();
+}
+
+if (typeof helpTexts !== "undefined") {
+    helpTexts["tests-scenario"] = `
+        <p>Cette page sert à préparer les scénarios de test du projet.</p>
+        <ul>
+            <li>Le tableau de gauche liste les scénarios : clique sur le numéro d’un scénario pour changer sa couleur, clique dans son nom pour le renommer.</li>
+            <li>Chaque scénario a sa propre carte à droite : un champ “Contexte général” en texte libre, puis des étapes de “Contexte détaillé” ajoutées une à une avec le “+”.</li>
+            <li>Coche des scénarios puis clique sur “Supprimer la sélection” pour les retirer — leur contexte et leurs étapes de déroulé (page Déroulé) sont supprimés avec.</li>
+            <li>Les scénarios créés ici apparaissent automatiquement dans l’onglet Déroulé.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+            <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
+        </ul>
+    `;
+
+    helpTexts["tests-deroule"] = `
+        <p>Cette page sert à détailler le déroulé (les étapes à exécuter) de chaque scénario de test.</p>
+        <ul>
+            <li>Chaque scénario créé dans l’onglet Scénario a automatiquement sa propre carte ici.</li>
+            <li>Utilise le “+” d’une carte pour ajouter une étape de déroulé, et le “×” d’une étape pour la retirer.</li>
+            <li>Chaque carte a son propre bouton de capture (📸) pour la copier en image.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
             <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
         </ul>

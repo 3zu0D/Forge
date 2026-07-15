@@ -5,7 +5,7 @@
 
 const { gotoPage } = require("./helpers");
 
-const EXPECTED_TOTAL_LINKS = 25; // 1 + 7 + 4 + 8 + 1 + 4, voir FORGE_NAV_GROUPS dans script.js
+const EXPECTED_TOTAL_LINKS = 27; // 1 + 7 + 4 + 8 + 1 + 4 + 2, voir FORGE_NAV_GROUPS dans script.js
 
 const PAGES = [
     { path: "dashboard.html", expectedActive: "Tableau de bord" },

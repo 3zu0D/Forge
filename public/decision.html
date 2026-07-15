@@ -17,12 +17,13 @@
             </label>
         </div>
 
+        <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
+
         <div class="project-switcher" aria-label="Sélection du projet">
             <label class="project-switcher-field">
                 <span>Projet actif</span>
                 <select id="project-selector"></select>
             </label>
-            <button class="project-new-btn" id="new-project-btn" type="button" aria-label="Créer un nouveau projet">+</button>
         </div>
 
         <div class="theme-switcher" aria-label="Sélection du thème">
@@ -48,34 +49,57 @@
 
     <main class="container decision-container">
         <section class="decision-layout">
-            <aside class="card decision-criteria-card">
+            <aside class="card decision-categories-card">
                 <div class="card-header">
-                    <h2>Critères</h2>
+                    <h2>Catégorie</h2>
                 </div>
 
                 <div class="table-wrapper">
-                    <table class="decision-criteria-table">
-                        <colgroup>
-                            <col class="phase-col-number" />
-                            <col class="phase-col-name" />
-                            <col class="decision-col-weight" />
-                            <col class="select-col" />
-                        </colgroup>
+                    <table class="decision-categories-table">
                         <thead>
                             <tr>
-                                <th>N°</th>
-                                <th>Critère</th>
-                                <th>Poids %</th>
-                                <th class="select-col"></th>
+                                <th class="select-col">
+                                    <input id="select-all-decision-categories" class="row-checkbox" type="checkbox" aria-label="Tout sélectionner" />
+                                </th>
+                                <th class="decision-category-col-number">N°</th>
+                                <th>Catégorie</th>
                             </tr>
                         </thead>
-                        <tbody id="decision-criteria-table-body"></tbody>
+                        <tbody id="decision-categories-table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="decision-rating-scale-wrapper">
+                    <table class="decision-rating-scale-table">
+                        <tbody>
+                            <tr>
+                                <td class="decision-rating-scale-value decision-rating-scale-1">1-2</td>
+                                <td class="decision-rating-scale-label">Très faible</td>
+                            </tr>
+                            <tr>
+                                <td class="decision-rating-scale-value decision-rating-scale-2">3-4</td>
+                                <td class="decision-rating-scale-label">Faible</td>
+                            </tr>
+                            <tr>
+                                <td class="decision-rating-scale-value decision-rating-scale-3">5-6</td>
+                                <td class="decision-rating-scale-label">Moyen</td>
+                            </tr>
+                            <tr>
+                                <td class="decision-rating-scale-value decision-rating-scale-4">7-8</td>
+                                <td class="decision-rating-scale-label">Bon</td>
+                            </tr>
+                            <tr>
+                                <td class="decision-rating-scale-value decision-rating-scale-5">9-10</td>
+                                <td class="decision-rating-scale-label">Excellent</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
 
                 <div class="table-actions">
                     <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="add-decision-criterion-btn" type="button" title="Ajouter un critère" aria-label="Ajouter un critère">+</button>
+                        <button class="btn icon-action-btn icon-add-btn" id="add-decision-category-btn" type="button" title="Ajouter une catégorie" aria-label="Ajouter une catégorie">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-decision-categories-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
                     </div>
                     <button class="btn btn-danger btn-reset" id="reset-decision-btn" type="button">Réinitialiser</button>
                 </div>
@@ -119,6 +143,8 @@
             <div class="modal-body" id="help-content"></div>
         </div>
     </div>
+
+    <div class="color-menu hidden" id="color-menu" aria-label="Choix de couleur"></div>
 
     <script src="script.js"></script>
 </body>

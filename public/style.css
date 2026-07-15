@@ -116,7 +116,7 @@ h2 {
     width: 100%;
     height: 34px;
     border: 1px solid rgba(148, 163, 184, 0.18);
-    border-radius: 6px;
+    border-radius: 10px;
     background: rgba(15, 23, 42, 0.78);
     color: #f8fafc;
     padding: 7px 9px;
@@ -145,6 +145,72 @@ h2 {
     padding: 14px 28px;
     background: rgba(7, 10, 18, 0.58);
     border-bottom: 1px solid var(--border);
+}
+
+/* V90 — Barre d'outils de mise en forme, injectée sous la nav sur toutes les
+   pages (JS : renderFormattingToolbar). top calculé en JS (syncFormattingToolbarOffset)
+   plutôt qu'une 4e table de breakpoints synchronisée à la main (.page-nav en a
+   déjà 3, plus bas dans ce fichier, à cause des reflows de .topbar). */
+.formatting-toolbar {
+    position: sticky;
+    top: var(--formatting-toolbar-top, 132px);
+    z-index: 40;
+    width: min(1800px, calc(100% - 18px));
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+}
+
+.formatting-toolbar-sep {
+    width: 1px;
+    height: 20px;
+    margin: 0 4px;
+    background: var(--border);
+}
+
+.formatting-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.formatting-btn-text {
+    font-size: 0.68rem;
+}
+
+.formatting-btn .nav-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.formatting-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+}
+
+.formatting-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+.formatting-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .nav-link {
@@ -554,7 +620,7 @@ footer {
     width: 100%;
     height: 34px;
     border: 1px solid rgba(148, 163, 184, 0.18);
-    border-radius: 6px;
+    border-radius: 10px;
     background: rgba(15, 23, 42, 0.78);
     color: #f8fafc;
     padding: 7px 9px;
@@ -3278,7 +3344,7 @@ footer {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
-.kpi-main-card {
+.kpi-groups-section {
     min-width: 0;
 }
 
@@ -3295,8 +3361,49 @@ footer {
     font-weight: 780;
 }
 
-.kpi-table {
-    min-width: 1540px;
+/* V89 — Un tableau KPI par objectif SMART */
+.kpi-groups-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(56, 189, 248, 0.10);
+    background: linear-gradient(180deg, rgba(5, 10, 18, 0.78), rgba(6, 11, 21, 0.62));
+}
+
+.kpi-groups-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 780;
+}
+
+.kpi-groups-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.kpi-group-card {
+    min-width: 0;
+}
+
+.kpi-group-color-dot {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    vertical-align: middle;
+}
+
+.kpi-groups-empty {
+    padding: 24px;
+    text-align: center;
 }
 
 .kpi-table th,
@@ -3315,26 +3422,14 @@ footer {
 }
 
 .kpi-name-cell {
-    min-width: 190px;
     text-align: left !important;
 }
 
 .kpi-objective-cell {
-    min-width: 230px;
     text-align: left !important;
 }
 
-.kpi-unit-cell {
-    min-width: 70px;
-}
-
-.kpi-number-cell {
-    min-width: 82px;
-    text-align: center;
-}
-
 .kpi-gap-cell {
-    min-width: 80px;
     color: #bae6fd;
     font-weight: 900;
     text-align: center;
@@ -3342,14 +3437,10 @@ footer {
 }
 
 .kpi-comment-cell {
-    min-width: 230px;
     text-align: left !important;
 }
 
-.kpi-type-select,
-.kpi-status-select,
-.kpi-frequency-select,
-.kpi-responsable-select {
+.kpi-type-select {
     width: 100%;
     height: 26px;
     border: 1px solid rgba(56, 189, 248, 0.16);
@@ -3361,37 +3452,6 @@ footer {
     font-size: 0.68rem;
     font-weight: 780;
     outline: 1px solid transparent;
-}
-
-.kpi-type-select {
-    min-width: 140px;
-}
-
-.kpi-status-select {
-    min-width: 110px;
-}
-
-.kpi-frequency-select {
-    min-width: 110px;
-}
-
-.kpi-responsable-select {
-    min-width: 150px;
-}
-
-.kpi-status-ok {
-    color: #bbf7d0;
-    background: rgba(0, 230, 118, 0.16);
-}
-
-.kpi-status-watch {
-    color: #fde68a;
-    background: rgba(255, 196, 0, 0.16);
-}
-
-.kpi-status-alert {
-    color: #fecdd3;
-    background: rgba(251, 59, 95, 0.16);
 }
 
 @media (max-width: 1050px) {
@@ -3477,9 +3537,6 @@ body[data-theme="light"] .wbs-responsable-select,
 body[data-theme="light"] .wbs-progress-input,
 body[data-theme="light"] .wbs-date-input,
 body[data-theme="light"] .kpi-type-select,
-body[data-theme="light"] .kpi-status-select,
-body[data-theme="light"] .kpi-frequency-select,
-body[data-theme="light"] .kpi-responsable-select,
 body[data-theme="light"] .gantt-phase-tab {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.98));
     color: #102033;
@@ -3548,6 +3605,7 @@ body[data-theme="light"] .gantt-toolbar,
 body[data-theme="light"] .gantt-phase-tabs,
 body[data-theme="light"] .wbs-planning-toolbar,
 body[data-theme="light"] .kpi-toolbar,
+body[data-theme="light"] .kpi-groups-header,
 body[data-theme="light"] .gantt-note {
     background: rgba(241, 247, 255, 0.72);
     border-color: rgba(15, 23, 42, 0.10);
@@ -3557,6 +3615,7 @@ body[data-theme="light"] .gantt-summary,
 body[data-theme="light"] .gantt-note,
 body[data-theme="light"] .wbs-planning-toolbar p,
 body[data-theme="light"] .kpi-toolbar p,
+body[data-theme="light"] .kpi-groups-header p,
 body[data-theme="light"] .empty-state,
 body[data-theme="light"] .swot-empty-state,
 body[data-theme="light"] .empty-page-content p,
@@ -3641,7 +3700,7 @@ body[data-theme="light"] select option:checked {
     gap: 12px;
 }
 
-.kpi-main-card .table-wrapper {
+.kpi-group-card .table-wrapper {
     overflow-x: hidden;
 }
 
@@ -3666,76 +3725,72 @@ body[data-theme="light"] select option:checked {
 }
 
 .kpi-table .select-col {
-    width: 28px;
+    width: 20px;
 }
 
-.kpi-table th:nth-child(2),
-.kpi-table td:nth-child(2) {
-    width: 34px;
+/* V87 — Classes dédiées plutôt que :nth-child() : hideStructuralCaptureColumns()
+   retire la case à cocher pendant la capture 📸, ce qui décale les :nth-child()
+   suivants d'un cran (même bug que sur Objectifs/SMART/Analyse des risques, voir
+   hideStructuralCaptureColumns dans script.js). Une classe dédiée reste correcte
+   quel que soit le nombre de colonnes visibles. */
+.kpi-table th.kpi-index-cell,
+.kpi-table td.kpi-index-cell {
+    width: 26px;
+    text-align: center;
 }
 
-.kpi-table th:nth-child(3),
-.kpi-table td:nth-child(3) {
-    width: 9%;
-}
-
-.kpi-table th:nth-child(4),
-.kpi-table td:nth-child(4) {
-    width: 11%;
-}
-
-.kpi-table th:nth-child(5),
-.kpi-table td:nth-child(5) {
-    width: 14%;
-}
-
-.kpi-table th:nth-child(6),
-.kpi-table td:nth-child(6) {
-    width: 5%;
-}
-
-.kpi-table th:nth-child(7),
-.kpi-table td:nth-child(7),
-.kpi-table th:nth-child(8),
-.kpi-table td:nth-child(8),
-.kpi-table th:nth-child(9),
-.kpi-table td:nth-child(9) {
-    width: 5%;
-}
-
-.kpi-table th:nth-child(10),
-.kpi-table td:nth-child(10) {
+.kpi-table th.kpi-type-cell,
+.kpi-table td.kpi-type-cell {
     width: 8%;
 }
 
-.kpi-table th:nth-child(11),
-.kpi-table td:nth-child(11) {
+.kpi-table th.kpi-name-cell,
+.kpi-table td.kpi-name-cell {
+    width: 12%;
+}
+
+.kpi-table th.kpi-objective-cell,
+.kpi-table td.kpi-objective-cell {
+    width: 16%;
+}
+
+.kpi-table th.kpi-unit-cell,
+.kpi-table td.kpi-unit-cell {
+    width: 17%;
+}
+
+.kpi-table th.kpi-target-cell,
+.kpi-table td.kpi-target-cell {
     width: 8%;
 }
 
-.kpi-table th:nth-child(12),
-.kpi-table td:nth-child(12) {
+.kpi-table th.kpi-current-cell,
+.kpi-table td.kpi-current-cell {
     width: 10%;
 }
 
-.kpi-table th:nth-child(13),
-.kpi-table td:nth-child(13) {
-    width: 13%;
+.kpi-table th.kpi-gap-cell,
+.kpi-table td.kpi-gap-cell {
+    width: 8%;
+}
+
+.kpi-table th.kpi-comment-cell,
+.kpi-table td.kpi-comment-cell {
+    width: 21%;
 }
 
 .kpi-table .editable,
+.kpi-index-cell,
 .kpi-name-cell,
 .kpi-objective-cell,
 .kpi-unit-cell,
-.kpi-number-cell,
+.kpi-target-cell,
+.kpi-current-cell,
 .kpi-comment-cell {
     min-width: 0 !important;
 }
 
-.kpi-type-select,
-.kpi-status-select,
-.kpi-frequency-select,
-.kpi-responsable-select {
+.kpi-type-select {
     min-width: 0 !important;
     height: 24px;
     padding: 2px 2px;
@@ -3849,37 +3904,42 @@ body[data-theme="light"] select option:checked {
     width: 28px;
 }
 
-.risks-table th:nth-child(2),
-.risks-table td:nth-child(2) {
+/* V86 — Classes dédiées plutôt que :nth-child() : hideStructuralCaptureColumns()
+   retire la case à cocher pendant la capture 📸, ce qui décale les :nth-child()
+   suivants d'un cran (même bug que sur Objectifs/SMART, voir hideStructuralCaptureColumns
+   dans script.js). Une classe dédiée reste correcte quel que soit le nombre de
+   colonnes visibles. */
+.risks-table th.risk-number-cell,
+.risks-table td.risk-number-cell {
     width: 34px;
 }
 
-.risks-table th:nth-child(3),
-.risks-table td:nth-child(3) {
+.risks-table th.risk-type-cell,
+.risks-table td.risk-type-cell {
     width: 10%;
 }
 
-.risks-table th:nth-child(4),
-.risks-table td:nth-child(4) {
+.risks-table th.risk-name-cell,
+.risks-table td.risk-name-cell {
     width: 18%;
 }
 
-.risks-table th:nth-child(5),
-.risks-table td:nth-child(5) {
+.risks-table th.risk-consequence-cell,
+.risks-table td.risk-consequence-cell {
     width: 16%;
 }
 
-.risks-table th:nth-child(6),
-.risks-table td:nth-child(6),
-.risks-table th:nth-child(7),
-.risks-table td:nth-child(7),
-.risks-table th:nth-child(8),
-.risks-table td:nth-child(8) {
+.risks-table th.risk-prob-cell,
+.risks-table td.risk-prob-cell,
+.risks-table th.risk-grav-cell,
+.risks-table td.risk-grav-cell,
+.risks-table th.risk-criticality-cell,
+.risks-table td.risk-criticality-cell {
     width: 6%;
 }
 
-.risks-table th:nth-child(9),
-.risks-table td:nth-child(9) {
+.risks-table th.risk-mitigation-cell,
+.risks-table td.risk-mitigation-cell {
     width: 36%;
 }
 
@@ -3908,24 +3968,32 @@ body[data-theme="light"] select option:checked {
     background: rgba(15, 23, 42, 0.34);
 }
 
+/* V85 — Couleurs alignées sur celles de la matrice du risque (.risk-matrix-cell.low/medium/high/critical).
+   !important nécessaire : body[data-theme="light"] .risk-criticality-cell (0,2,0) a une spécificité
+   égale à .risk-criticality-cell.risk-criticality-low et arrive plus tard dans la feuille de style,
+   donc sans !important les thèmes clairs écrasaient silencieusement ces couleurs. */
 .risk-criticality-low {
-    color: #bbf7d0;
-    background: rgba(0, 230, 118, 0.16);
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.92), rgba(21, 128, 61, 0.88)) !important;
 }
 
 .risk-criticality-medium {
-    color: #fde68a;
-    background: rgba(255, 196, 0, 0.18);
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.96), rgba(217, 119, 6, 0.92)) !important;
 }
 
 .risk-criticality-high {
-    color: #fecdd3;
-    background: rgba(251, 59, 95, 0.18);
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.98), rgba(234, 88, 12, 0.94)) !important;
 }
 
 .risk-criticality-critical {
-    color: #ffffff;
-    background: rgba(225, 29, 72, 0.42);
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.98), rgba(159, 18, 57, 0.96)) !important;
 }
 
 /* RACI : légende et valeurs colorées */
@@ -4287,6 +4355,105 @@ body[data-theme="light"] .risk-matrix-severity-label {
     font-weight: 800;
     line-height: 1.25;
     text-align: center;
+}
+
+/* V88 — Échelles de probabilité / gravité : carte séparée de la matrice du
+   risque (comme "Types de risques" et "Matrice du risque" le sont déjà). */
+.risk-scale-panel {
+    padding: 14px;
+}
+
+.risk-scale-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+    table-layout: fixed;
+}
+
+.risk-scale-table thead th {
+    padding: 0 4px 4px;
+    color: #a5f3fc;
+    font-size: 0.56rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+}
+
+/* Largeurs explicites sur les 3 colonnes : avec table-layout:fixed, une colonne
+   sans largeur déclarée se redimensionne selon le contenu, et html2canvas peut
+   mesurer ce contenu différemment de la page live (même classe de bug que sur
+   risk-types-table), donnant des proportions Probabilité/Gravité très
+   différentes entre l'écran et la capture 📸. */
+.risk-scale-col-value {
+    width: 30px;
+    text-align: center !important;
+}
+
+.risk-scale-table th.risk-scale-prob,
+.risk-scale-table td.risk-scale-prob {
+    width: 47%;
+}
+
+.risk-scale-table th.risk-scale-sev,
+.risk-scale-table td.risk-scale-sev {
+    width: 47%;
+}
+
+.risk-scale-value {
+    border-radius: 6px;
+    text-align: center;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    font-weight: 950;
+    font-size: 0.74rem;
+}
+
+.risk-scale-cell {
+    border-radius: 6px;
+    padding: 4px 6px;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.risk-scale-cell strong {
+    display: block;
+    font-size: 0.60rem;
+    font-weight: 950;
+    line-height: 1.15;
+}
+
+.risk-scale-cell span {
+    display: block;
+    margin-top: 1px;
+    font-size: 0.50rem;
+    font-weight: 700;
+    line-height: 1.2;
+    opacity: 0.92;
+}
+
+.risk-scale-1 {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.92), rgba(21, 128, 61, 0.88));
+}
+
+.risk-scale-2 {
+    background: linear-gradient(135deg, rgba(101, 163, 13, 0.92), rgba(77, 124, 15, 0.88));
+}
+
+.risk-scale-3 {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.96), rgba(217, 119, 6, 0.92));
+}
+
+.risk-scale-4 {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.98), rgba(234, 88, 12, 0.94));
+}
+
+.risk-scale-5 {
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.98), rgba(159, 18, 57, 0.96));
+}
+
+body[data-theme="light"] .risk-scale-table thead th {
+    color: #0369a1;
 }
 
 body[data-theme="light"] .risk-matrix-probability-label,
@@ -5062,51 +5229,9 @@ body[data-theme="light"] .risk-matrix-layout .risk-axis-dot span {
 .smart-achievable-cell,
 .smart-realistic-cell,
 .smart-timebound-cell,
-.smart-note-cell {
+.smart-duedate-cell {
     min-width: 0 !important;
     text-align: left !important;
-}
-
-.smart-date-input,
-.smart-responsable-select,
-.smart-status-select,
-.kpi-smart-select {
-    width: 100%;
-    min-width: 0 !important;
-    height: 24px;
-    border: 1px solid rgba(56, 189, 248, 0.16);
-    border-radius: 5px;
-    background: linear-gradient(180deg, rgba(8, 18, 34, 0.96), rgba(6, 12, 24, 0.96));
-    color: #e6faff;
-    padding: 2px 2px;
-    font: inherit;
-    font-size: 0.58rem;
-    font-weight: 780;
-    outline: 1px solid transparent;
-}
-
-.smart-date-input {
-    color-scheme: dark;
-}
-
-.smart-status-draft {
-    color: #cbd5e1;
-    background: rgba(148, 163, 184, 0.14);
-}
-
-.smart-status-active {
-    color: #bbf7d0;
-    background: rgba(0, 230, 118, 0.16);
-}
-
-.smart-status-watch {
-    color: #fde68a;
-    background: rgba(255, 196, 0, 0.16);
-}
-
-.smart-status-done {
-    color: #bae6fd;
-    background: rgba(34, 211, 238, 0.16);
 }
 
 .kpi-table th,
@@ -5118,55 +5243,6 @@ body[data-theme="light"] .risk-matrix-layout .risk-axis-dot span {
     font-size: 0.52rem;
 }
 
-.kpi-table th:nth-child(3),
-.kpi-table td:nth-child(3) {
-    width: 11%;
-}
-
-.kpi-table th:nth-child(4),
-.kpi-table td:nth-child(4) {
-    width: 8%;
-}
-
-.kpi-table th:nth-child(5),
-.kpi-table td:nth-child(5) {
-    width: 10%;
-}
-
-.kpi-table th:nth-child(6),
-.kpi-table td:nth-child(6) {
-    width: 12%;
-}
-
-.kpi-table th:nth-child(7),
-.kpi-table td:nth-child(7) {
-    width: 5%;
-}
-
-.kpi-table th:nth-child(8),
-.kpi-table td:nth-child(8),
-.kpi-table th:nth-child(9),
-.kpi-table td:nth-child(9),
-.kpi-table th:nth-child(10),
-.kpi-table td:nth-child(10) {
-    width: 5%;
-}
-
-.kpi-table th:nth-child(11),
-.kpi-table td:nth-child(11) {
-    width: 8%;
-}
-
-.kpi-table th:nth-child(12),
-.kpi-table td:nth-child(12) {
-    width: 8%;
-}
-
-.kpi-table th:nth-child(13),
-.kpi-table td:nth-child(13) {
-    width: 10%;
-}
-
 body[data-theme="light"] .smart-toolbar {
     background: rgba(241, 247, 255, 0.72);
     border-color: rgba(15, 23, 42, 0.10);
@@ -5175,16 +5251,6 @@ body[data-theme="light"] .smart-toolbar {
 body[data-theme="light"] .smart-toolbar p {
     color: #526477;
 }
-
-body[data-theme="light"] .smart-date-input,
-body[data-theme="light"] .smart-responsable-select,
-body[data-theme="light"] .smart-status-select,
-body[data-theme="light"] .kpi-smart-select {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.98));
-    color: #102033;
-    border-color: rgba(15, 23, 42, 0.16);
-}
-
 
 /* V42 — Matrice de compétences */
 .competences-container {
@@ -5617,9 +5683,17 @@ body[data-theme="light"] .context-textarea::placeholder {
 }
 
 .redaction-table {
+    /* table-layout: auto (pas fixed) : avec une largeur de colonne fixée à
+       l'avance, html2canvas mesure le texte de la capture 📸 sur une largeur
+       différente de la largeur réellement rendue et casse les mots au milieu
+       (même bug déjà vu sur .risk-types-table). En layout auto, la largeur de
+       colonne suit le contenu réel des deux côtés (page live et capture), donc
+       plus de décalage de mesure. Partagée par 7 pages (Objectifs, Contexte,
+       Enjeux, Périmètre, Contraintes, Hypothèses, Succès), toutes de petites
+       listes : aucun souci de perf. */
     width: 100%;
     min-width: 0;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
 .redaction-table th,
@@ -5649,7 +5723,7 @@ body[data-theme="light"] .context-textarea::placeholder {
 }
 
 .redaction-title-cell {
-    width: 28%;
+    width: 230px;
     min-width: 0 !important;
     text-align: left !important;
 }
@@ -5657,6 +5731,23 @@ body[data-theme="light"] .context-textarea::placeholder {
 .redaction-description-cell {
     min-width: 0 !important;
     text-align: left !important;
+}
+
+/* V89 — Couleurs distinctes par objectif (badge cliquable, même patron que
+   .risk-type-number-btn / .kpi-type-number-btn) */
+.objective-number-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow:
+        0 0 10px var(--row-glow),
+        0 4px 10px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .redaction-type-select,
@@ -5885,12 +5976,6 @@ body[data-theme="light"] .grouped-page-nav .nav-link.active {
         rgba(5, 10, 18, 0.52);
 }
 
-.scope-clarify-card .scope-column-header {
-    background:
-        radial-gradient(circle at top left, rgba(255, 196, 0, 0.18), transparent 14rem),
-        rgba(5, 10, 18, 0.52);
-}
-
 .scope-table-wrapper {
     max-height: none;
     overflow-x: hidden;
@@ -5919,18 +6004,19 @@ body[data-theme="light"] .grouped-page-nav .nav-link.active {
     width: 32px;
 }
 
-.scope-table th:nth-child(2),
-.scope-table td:nth-child(2) {
+/* Classe dédiée plutôt que :nth-child(2) : hideStructuralCaptureColumns() retire
+   la case à cocher pendant la capture 📸, ce qui décale les :nth-child() suivants
+   d'un cran (même bug que sur Objectifs/SMART/Analyse des risques/KPIs). */
+.scope-table th.scope-index-cell,
+.scope-table td.scope-index-cell {
     width: 34px;
 }
 
 .scope-title-cell {
-    width: 30%;
-    min-width: 0 !important;
-    text-align: left !important;
-}
-
-.scope-description-cell {
+    /* Largeur explicite (pas juste "le reste") : sinon html2canvas peut
+       mesurer cette colonne différemment de la page live (même bug que sur
+       risk-scale-table) et décaler le texte visuellement pendant la capture 📸. */
+    width: 95%;
     min-width: 0 !important;
     text-align: left !important;
 }
@@ -5959,12 +6045,6 @@ body[data-theme="light"] .scope-in-card .scope-column-header {
 body[data-theme="light"] .scope-out-card .scope-column-header {
     background:
         radial-gradient(circle at top left, rgba(220, 38, 38, 0.14), transparent 14rem),
-        rgba(241, 247, 255, 0.76);
-}
-
-body[data-theme="light"] .scope-clarify-card .scope-column-header {
-    background:
-        radial-gradient(circle at top left, rgba(217, 119, 6, 0.14), transparent 14rem),
         rgba(241, 247, 255, 0.76);
 }
 
@@ -6049,25 +6129,15 @@ body[data-theme="light"] .scope-clarify-card .scope-column-header {
     width: 42px !important;
 }
 
-.scope-table th:nth-child(2),
-.scope-table td:nth-child(2) {
+.scope-table th.scope-index-cell,
+.scope-table td.scope-index-cell {
     width: 52px !important;
 }
 
 .scope-title-cell {
-    width: 28% !important;
+    width: 95% !important;
     min-height: 46px !important;
     vertical-align: top !important;
-}
-
-.scope-description-cell {
-    width: auto !important;
-    min-height: 46px !important;
-    vertical-align: top !important;
-}
-
-.scope-title-cell,
-.scope-description-cell {
     text-align: left !important;
     white-space: pre-wrap !important;
 }
@@ -6543,19 +6613,12 @@ body[data-theme="orange"] .wbs-responsable-select,
 body[data-theme="orange"] .wbs-progress-input,
 body[data-theme="orange"] .wbs-date-input,
 body[data-theme="orange"] .kpi-type-select,
-body[data-theme="orange"] .kpi-status-select,
-body[data-theme="orange"] .kpi-frequency-select,
-body[data-theme="orange"] .kpi-responsable-select,
-body[data-theme="orange"] .kpi-smart-select,
 body[data-theme="orange"] .risk-type-select,
 body[data-theme="orange"] .risk-probability-select,
 body[data-theme="orange"] .risk-severity-select,
 body[data-theme="orange"] .risk-response-select,
 body[data-theme="orange"] .risk-status-select,
 body[data-theme="orange"] .risk-responsable-select,
-body[data-theme="orange"] .smart-date-input,
-body[data-theme="orange"] .smart-responsable-select,
-body[data-theme="orange"] .smart-status-select,
 body[data-theme="orange"] .smart-objective-link-select,
 body[data-theme="orange"] .competence-level-select,
 body[data-theme="orange"] .redaction-type-select,
@@ -6637,6 +6700,7 @@ body[data-theme="orange"] .gantt-toolbar,
 body[data-theme="orange"] .gantt-phase-tabs,
 body[data-theme="orange"] .wbs-planning-toolbar,
 body[data-theme="orange"] .kpi-toolbar,
+body[data-theme="orange"] .kpi-groups-header,
 body[data-theme="orange"] .smart-toolbar,
 body[data-theme="orange"] .risks-toolbar,
 body[data-theme="orange"] .gantt-note,
@@ -6654,6 +6718,7 @@ body[data-theme="orange"] .gantt-summary,
 body[data-theme="orange"] .gantt-note,
 body[data-theme="orange"] .wbs-planning-toolbar p,
 body[data-theme="orange"] .kpi-toolbar p,
+body[data-theme="orange"] .kpi-groups-header p,
 body[data-theme="orange"] .smart-toolbar p,
 body[data-theme="orange"] .risks-toolbar p,
 body[data-theme="orange"] .empty-state,
@@ -7111,7 +7176,7 @@ body {
     margin: 10px auto 0 !important;
     padding: 8px 16px !important;
     display: grid !important;
-    grid-template-columns: auto auto minmax(160px, 260px) auto auto auto !important;
+    grid-template-columns: auto auto minmax(160px, 260px) auto auto auto auto !important;
     justify-content: flex-start !important;
     align-items: end !important;
     gap: 14px !important;
@@ -7245,7 +7310,6 @@ td.editable,
 .redaction-title-cell,
 .redaction-description-cell,
 .scope-title-cell,
-.scope-description-cell,
 .competence-skill-cell {
     line-height: 1.35 !important;
 }
@@ -7254,7 +7318,6 @@ td.editable,
 .redaction-title-cell,
 .redaction-description-cell,
 .scope-title-cell,
-.scope-description-cell,
 .competence-skill-cell {
     min-height: 34px !important;
     vertical-align: top !important;
@@ -8021,20 +8084,32 @@ body[data-theme="orange"] .capture-toast {
     text-align: center !important;
 }
 
-.redaction-table th:nth-child(2),
-.redaction-table td:nth-child(2),
-.scope-table th:nth-child(2),
-.scope-table td:nth-child(2),
 .smart-table th:nth-child(2),
 .smart-table td:nth-child(2),
 .kpi-table th:nth-child(2),
 .kpi-table td:nth-child(2),
 .risk-table th:nth-child(2),
-.risk-table td:nth-child(2),
-.wbs-table th:nth-child(2),
-.wbs-table td:nth-child(2),
-.phases-table th:nth-child(2),
-.phases-table td:nth-child(2) {
+.risk-table td:nth-child(2) {
+    text-align: center !important;
+}
+
+/* .scope-table, .redaction-table, .wbs-table et .phases-table exclus de la
+   liste ci-dessus : hideStructuralCaptureColumns() retire la case à cocher
+   (et, pour .wbs-table/.phases-table, la colonne flèches monter/descendre
+   .wbs-move-header/.wbs-move-cell) pendant la capture 📸, ce qui décale
+   :nth-child(2) vers la colonne de contenu suivante — elle se retrouvait
+   donc centrée au lieu d'alignée à gauche. .wbs-table/.phases-table sont en
+   plus partagées entre deux pages (wbs.html et decoupage.html) dont l'ordre
+   des colonnes diffère, donc une position fixe n'est de toute façon jamais
+   fiable ici. Classes dédiées à la place. */
+.scope-table th.scope-index-cell,
+.scope-table td.scope-index-cell,
+.redaction-table th.redaction-number-cell,
+.redaction-table td.redaction-number-cell,
+.wbs-table th.wbs-number-cell,
+.wbs-table td.wbs-number-cell,
+.phases-table th.phase-number-cell,
+.phases-table td.phase-number-cell {
     text-align: center !important;
 }
 
@@ -8525,19 +8600,12 @@ body[data-theme="executive"] .wbs-responsable-select,
 body[data-theme="executive"] .wbs-progress-input,
 body[data-theme="executive"] .wbs-date-input,
 body[data-theme="executive"] .kpi-type-select,
-body[data-theme="executive"] .kpi-status-select,
-body[data-theme="executive"] .kpi-frequency-select,
-body[data-theme="executive"] .kpi-responsable-select,
-body[data-theme="executive"] .kpi-smart-select,
 body[data-theme="executive"] .risk-type-select,
 body[data-theme="executive"] .risk-probability-select,
 body[data-theme="executive"] .risk-severity-select,
 body[data-theme="executive"] .risk-response-select,
 body[data-theme="executive"] .risk-status-select,
 body[data-theme="executive"] .risk-responsable-select,
-body[data-theme="executive"] .smart-date-input,
-body[data-theme="executive"] .smart-responsable-select,
-body[data-theme="executive"] .smart-status-select,
 body[data-theme="executive"] .smart-objective-link-select,
 body[data-theme="executive"] .competence-level-select,
 body[data-theme="executive"] .redaction-type-select {
@@ -8670,6 +8738,7 @@ body[data-theme="executive"] .gantt-toolbar,
 body[data-theme="executive"] .gantt-phase-tabs,
 body[data-theme="executive"] .wbs-planning-toolbar,
 body[data-theme="executive"] .kpi-toolbar,
+body[data-theme="executive"] .kpi-groups-header,
 body[data-theme="executive"] .smart-toolbar,
 body[data-theme="executive"] .risks-toolbar,
 body[data-theme="executive"] .context-intro,
@@ -10278,29 +10347,89 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 /* V83 — Matrice de décision pondérée */
 .decision-layout {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 360px minmax(0, 1fr);
     gap: 14px;
     align-items: start;
 }
 
-.decision-criteria-card {
+.decision-categories-card {
     position: sticky;
     top: 114px;
 }
 
-.decision-criteria-table {
-    table-layout: fixed;
+.decision-categories-table {
+    /* table-layout: auto (pas fixed) : avec une largeur de colonne fixée à
+       l'avance, html2canvas mesure le texte de la capture 📸 sur une largeur
+       différente de la largeur réellement rendue et casse les mots au milieu
+       (même bug que sur .risk-types-table). En layout auto, la largeur de
+       colonne suit le contenu réel des deux côtés (page live et capture). */
+    table-layout: auto;
     width: 100%;
+}
+
+.decision-category-col-number {
+    width: 48px;
+}
+
+.decision-categories-table th,
+.decision-categories-table td {
+    padding: 5px 7px;
+    font-size: 0.76rem;
+}
+
+.decision-rating-scale-wrapper {
+    padding: 10px 12px 2px;
+}
+
+.decision-rating-scale-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+}
+
+.decision-rating-scale-table td {
+    padding: 5px 8px;
+}
+
+.decision-rating-scale-value {
+    width: 56px;
+    border-radius: 6px;
+    text-align: center;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    font-weight: 950;
+    font-size: 0.76rem;
+    white-space: nowrap;
+}
+
+.decision-rating-scale-label {
+    color: var(--text);
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.decision-rating-scale-1 {
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.98), rgba(159, 18, 57, 0.96));
+}
+
+.decision-rating-scale-2 {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.98), rgba(234, 88, 12, 0.94));
+}
+
+.decision-rating-scale-3 {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.96), rgba(202, 138, 4, 0.92));
+}
+
+.decision-rating-scale-4 {
+    background: linear-gradient(135deg, rgba(132, 204, 22, 0.94), rgba(101, 163, 13, 0.90));
+}
+
+.decision-rating-scale-5 {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.94), rgba(21, 128, 61, 0.90));
 }
 
 .decision-col-weight {
     width: 68px;
-}
-
-.decision-criteria-table th,
-.decision-criteria-table td {
-    padding: 5px 7px;
-    font-size: 0.76rem;
 }
 
 .decision-weight-cell {
@@ -10338,13 +10467,100 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     line-height: 1.4;
 }
 
+.decision-category-number-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow:
+        0 0 10px var(--row-glow),
+        0 4px 10px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* Lignes d'en-tête de type groupé, miroir de .budget-type-row / .wbs-phase-row */
+.decision-category-row td {
+    padding: 8px 12px !important;
+    border-top: 2px solid rgba(255, 255, 255, 0.14) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+.decision-category-row-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+
+.decision-category-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.decision-category-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+}
+
+.decision-category-title {
+    font-size: 0.82rem;
+    font-weight: 1000;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.decision-category-count {
+    margin-left: 4px;
+    padding: 3px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.16);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.62rem;
+    font-weight: 900;
+}
+
+.decision-category-add-btn {
+    border: 1px solid rgba(0, 230, 118, 0.34);
+    border-radius: 6px;
+    background: rgba(0, 230, 118, 0.14);
+    color: #bbf7d0;
+    padding: 4px 10px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.decision-category-add-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.16);
+}
+
+.decision-category-unassigned td {
+    opacity: 0.92;
+}
+
+.decision-category-empty-row td {
+    padding: 10px 14px !important;
+    font-size: 0.78rem;
+}
+
 .decision-options-card .table-wrapper {
     overflow-x: auto;
 }
 
 .decision-options-table {
     width: 100%;
-    min-width: 640px;
+    min-width: 720px;
     border-collapse: separate;
     border-spacing: 0;
 }
@@ -10362,22 +10578,11 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 }
 
 .decision-row-header-col,
-.decision-criterion-row-header,
+.decision-criterion-cell,
 .decision-score-row-label {
     min-width: 170px;
     text-align: left !important;
     font-weight: 800;
-}
-
-.decision-criterion-weight {
-    display: inline-block;
-    margin-top: 2px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: rgba(34, 211, 238, 0.14);
-    color: #a5f3fc;
-    font-size: 0.6rem;
-    font-weight: 900;
 }
 
 .decision-option-header {
@@ -10429,6 +10634,18 @@ body[data-theme="light"] .decision-hint {
     color: #475569;
 }
 
+body[data-theme="light"] .decision-category-title,
+body[data-theme="executive"] .decision-category-title {
+    color: #102033 !important;
+}
+
+body[data-theme="light"] .decision-category-count,
+body[data-theme="executive"] .decision-category-count {
+    background: rgba(255, 255, 255, 0.62);
+    border-color: rgba(30, 58, 95, 0.18);
+    color: #334155;
+}
+
 body[data-theme="light"] .decision-weighted-cell {
     color: #0369a1;
 }
@@ -10476,7 +10693,7 @@ body[data-theme="executive"] .decision-weighted-cell.decision-best-cell {
         grid-template-columns: 1fr;
     }
 
-    .decision-criteria-card {
+    .decision-categories-card {
         position: static;
         max-width: none;
     }
@@ -11236,4 +11453,254 @@ body[data-theme="executive"] .forge-logo-head {
 
 .dashboard-mini-row {
     min-height: 34px !important;
+}
+
+
+/* ===== V82 — Alignement de la cellule "objectif" avec le N° ===== */
+/* .redaction-title-cell hérite vertical-align:top d'une règle partagée avec
+   .redaction-description-cell (pensée pour du texte long qui doit rester
+   ancré en haut). Correct pour la description, pas pour le titre court, qui
+   doit visuellement s'aligner avec le N° (vertical-align:middle). On ne
+   touche qu'au titre, pas à la description. Sélecteur "td.redaction-title-cell"
+   (pas juste ".redaction-title-cell") : la règle à contourner matche aussi via
+   "td.editable", plus spécifique (tag + classe) qu'une simple classe — il
+   faut au moins la même spécificité pour gagner via l'ordre d'apparition. */
+td.redaction-title-cell {
+    vertical-align: middle !important;
+}
+
+/* ===== V83 — Vraie cause de la colonne Objectif écrasée en capture ===== */
+/* Ce n'est pas un bug de mesure de texte par html2canvas (comme sur les
+   risques) : hideStructuralCaptureColumns() RETIRE la case à cocher
+   (.select-col) de la carte avant la capture 📸, ce qui décale tous les
+   :nth-child() suivants d'un cran. La règle ".redaction-table td:nth-child(2)
+   { width: 48px }" cible le N° normalement (2e enfant), mais une fois la
+   checkbox retirée, elle matche accidentellement Objectif (devenu le 2e
+   enfant) et l'écrase à 48px — d'où les mots coupés lettre par lettre.
+   Spécificité (.redaction-table + .redaction-title-cell + td = 2 classes +
+   1 type) égale à la règle nth-child fautive, donc l'ordre d'apparition
+   (celle-ci vient après) + !important tranchent en sa faveur. */
+.redaction-table td.redaction-title-cell {
+    width: 230px !important;
+}
+
+
+/* ===== V84 — SMART : colonnes Responsable/Statut/Note supprimées, largeurs
+   revues (case à cocher et N° trop larges, plus de place aux critères) ===== */
+.smart-table th.select-col,
+.smart-table td.select-col {
+    width: 20px !important;
+}
+
+/* Classe dédiée plutôt que :nth-child(2) : la case à cocher retirée pendant
+   la capture 📸 décale ce qui suivait déjà (voir Objectif lié juste en
+   dessous) — même bug ici sur la colonne N° elle-même. */
+.smart-table th.smart-index-cell,
+.smart-table td.smart-index-cell {
+    width: 26px !important;
+}
+
+/* Classe dédiée plutôt que :nth-child(3) : hideStructuralCaptureColumns()
+   retire la case à cocher pendant la capture 📸, ce qui décale les :nth-child()
+   suivants d'un cran (Objectif lié devient le 2e enfant au lieu du 3e) — même
+   bug que sur Objectifs. Une classe dédiée reste correcte quel que soit le
+   nombre de colonnes visibles. */
+.smart-table th.smart-objective-link-cell,
+.smart-table td.smart-objective-link-cell {
+    width: 16% !important;
+}
+
+.smart-table th:nth-child(4),
+.smart-table td:nth-child(4),
+.smart-table th:nth-child(5),
+.smart-table td:nth-child(5),
+.smart-table th:nth-child(6),
+.smart-table td:nth-child(6),
+.smart-table th:nth-child(7),
+.smart-table td:nth-child(7),
+.smart-table th:nth-child(8),
+.smart-table td:nth-child(8) {
+    width: 14% !important;
+}
+
+.smart-table th:nth-child(9),
+.smart-table td:nth-child(9) {
+    width: 14% !important;
+}
+
+/* V91 — Module Tests (Scénario + Déroulé) */
+.tests-scenario-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.tests-scenario-list-card {
+    position: sticky;
+    top: 114px;
+}
+
+.tests-scenario-list-table {
+    /* table-layout: auto (pas fixed) : avec une largeur de colonne fixée à
+       l'avance, html2canvas mesure le texte de la capture 📸 sur une largeur
+       différente de la largeur réellement rendue et casse les mots au milieu
+       (même bug que sur .risk-types-table). En layout auto, la largeur de
+       colonne suit le contenu réel des deux côtés (page live et capture). */
+    table-layout: auto;
+    width: 100%;
+}
+
+.tests-scenario-col-number {
+    width: 48px;
+}
+
+.tests-scenario-list-table th,
+.tests-scenario-list-table td {
+    padding: 5px 7px;
+    font-size: 0.76rem;
+}
+
+.tests-scenario-number-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow:
+        0 0 10px var(--row-glow),
+        0 4px 10px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.tests-scenario-detail-container,
+.tests-deroule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.tests-scenario-empty {
+    padding: 24px;
+    text-align: center;
+}
+
+.tests-scenario-color-dot {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    margin-right: 8px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    vertical-align: middle;
+}
+
+.tests-context-general {
+    padding: 12px 14px 4px;
+}
+
+.tests-context-general-label,
+.tests-section-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.tests-section-label {
+    padding: 10px 14px 0;
+}
+
+.tests-context-general-field {
+    min-height: 100px;
+    padding: 10px 12px;
+    border: 1px solid rgba(56, 189, 248, 0.14);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(5, 10, 18, 0.72), rgba(6, 11, 21, 0.52));
+    color: #e6faff;
+    font-size: 0.84rem;
+    font-weight: 680;
+    line-height: 1.45;
+}
+
+.tests-context-general-field:focus {
+    outline: none;
+    border-color: rgba(34, 211, 238, 0.42);
+    box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.16);
+}
+
+.tests-context-general-field:empty::before {
+    content: attr(data-placeholder);
+    color: rgba(148, 163, 184, 0.68);
+}
+
+.tests-context-steps {
+    padding-bottom: 6px;
+}
+
+.tests-steps-table {
+    table-layout: auto;
+    width: 100%;
+}
+
+.tests-steps-table th,
+.tests-steps-table td {
+    padding: 6px 8px;
+    font-size: 0.78rem;
+}
+
+.tests-step-number-cell {
+    width: 42px;
+    text-align: center;
+}
+
+body[data-theme="light"] .tests-context-general-field {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.92));
+    color: #102033;
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+body[data-theme="light"] .tests-context-general-field:empty::before {
+    color: rgba(82, 100, 119, 0.72);
+}
+
+body[data-theme="executive"] .tests-context-general-field {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.92));
+    color: #102033;
+    border-color: rgba(15, 23, 42, 0.12);
+}
+
+body[data-theme="executive"] .tests-context-general-field:empty::before {
+    color: rgba(82, 100, 119, 0.72);
+}
+
+@media (max-width: 900px) {
+    .tests-scenario-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .tests-scenario-list-card {
+        position: static;
+        max-width: none;
+    }
+}
+
+/* V92 — Sélection multi-cellules par glissement (barre de mise en forme) */
+[contenteditable="true"].multi-cell-selected {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+    background: var(--glow);
+}
+
+/* Neutralise la sélection de texte native pendant un glissement multi-cellules
+   (sinon le navigateur continue de sélectionner du texte en parallèle,
+   rendant le résultat imprévisible — voir handleEditableMouseOver). */
+body.multi-cell-selecting {
+    user-select: none;
 }

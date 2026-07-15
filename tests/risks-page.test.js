@@ -22,10 +22,14 @@ module.exports = async function ({ page, baseUrl, assert }) {
     await page.waitForTimeout(300); // laisse le temps au MutationObserver d'attacher les boutons de capture
 
     const cardTitles = await page.locator(".risks-sidebar-stack .card-header h2").allTextContents();
-    assert.deepEqual(cardTitles, ["Types de risques", "Matrice du risque"], "les 2 cartes de la colonne de gauche doivent être distinctes");
+    assert.deepEqual(
+        cardTitles,
+        ["Types de risques", "Matrice du risque", "Échelles de probabilité et de gravité"],
+        "les 3 cartes de la colonne de gauche doivent être distinctes"
+    );
 
     const captureButtonCount = await page.locator(".risks-sidebar-stack .capture-card-btn").count();
-    assert.equal(captureButtonCount, 2, "chaque carte doit avoir son propre bouton de capture 📸");
+    assert.equal(captureButtonCount, 3, "chaque carte doit avoir son propre bouton de capture 📸");
 
     const headers = (await page.locator(".risks-table thead th").allTextContents()).map((text) => text.trim());
     assert.deepEqual(
@@ -37,11 +41,16 @@ module.exports = async function ({ page, baseUrl, assert }) {
     await page.click("#add-risk-btn");
     await page.waitForTimeout(100);
 
-    await page.locator(".risk-name-cell").first().click();
+    // Scopé à #risks-table-body : les <th> partagent désormais les mêmes classes
+    // que les <td> (risk-name-cell, risk-consequence-cell, risk-criticality-cell),
+    // nécessaire pour que les largeurs de colonnes restent correctes pendant la
+    // capture 📸 (voir hideStructuralCaptureColumns dans script.js). Un simple
+    // .first() sur la classe seule attraperait le <th> au lieu du <td>.
+    await page.locator("#risks-table-body .risk-name-cell").first().click();
     await page.keyboard.type("Panne serveur");
     await page.keyboard.press("Tab");
 
-    await page.locator(".risk-consequence-cell").first().click();
+    await page.locator("#risks-table-body .risk-consequence-cell").first().click();
     await page.keyboard.type("Indisponibilité du service");
     await page.keyboard.press("Tab");
 
@@ -49,7 +58,7 @@ module.exports = async function ({ page, baseUrl, assert }) {
     await page.locator(".risk-severity-select").first().selectOption("5");
     await page.waitForTimeout(100);
 
-    const criticality = await page.locator(".risk-criticality-cell").first().textContent();
+    const criticality = await page.locator("#risks-table-body .risk-criticality-cell").first().textContent();
     assert.equal(criticality, "20", "criticité = probabilité × gravité = 4 × 5 = 20");
 
     // Le badge numéroté doit rester un vrai <button> sur la page live (interactif,
