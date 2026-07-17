@@ -48,7 +48,19 @@ async function resetStorage() {
 function startServer() {
     const serverProcess = spawn(process.execPath, ["server.js"], {
         cwd: ROOT_DIR,
-        env: { ...process.env, PORT: String(PORT), FORGE_DATA_DIR: DATA_DIR },
+        env: {
+            ...process.env,
+            PORT: String(PORT),
+            FORGE_DATA_DIR: DATA_DIR,
+            // La suite complète enchaîne beaucoup d'appels /api/* sur le même
+            // process serveur en peu de temps (bien plus qu'un usage normal),
+            // ce qui peut déclencher le rate-limiter anti-abus (server/security.js)
+            // et faire échouer un test sans rapport avec ce qu'il vérifie. Ce
+            // serveur de test est isolé (port et dossier de données dédiés,
+            // jamais exposé) : pas besoin d'y appliquer une limite pensée pour
+            // du trafic de production.
+            FORGE_API_RATE_LIMIT_PER_MINUTE: "0"
+        },
         stdio: ["ignore", "pipe", "pipe"]
     });
 

@@ -79,96 +79,68 @@
             </aside>
 
             <div class="vmsizing-main-zone">
-                <div class="vmsizing-top-row">
-                    <section class="card">
-                        <div class="card-header">
-                            <h2>Caractéristiques du serveur</h2>
-                        </div>
-                        <div class="vmsizing-field-grid vmsizing-field-grid-compact" id="vmsizing-server-form">
-                            <label class="vmsizing-field vmsizing-field-wide">
-                                <span>Nom du serveur</span>
-                                <input type="text" data-field="name" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Sockets CPU</span>
-                                <input type="number" min="1" data-field="cpuSockets" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Cœurs / socket</span>
-                                <input type="number" min="1" data-field="cpuCoresPerSocket" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Threads / cœur</span>
-                                <input type="number" min="1" data-field="cpuThreadsPerCore" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>RAM totale (Go)</span>
-                                <input type="number" min="1" data-field="ramGB" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Stockage total (Go)</span>
-                                <input type="number" min="1" data-field="storageGB" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Overcommit CPU</span>
-                                <input type="number" min="0.1" step="0.1" data-field="cpuOvercommitRatio" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Overcommit RAM</span>
-                                <input type="number" min="0.1" step="0.1" data-field="ramOvercommitRatio" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Réserve CPU (%)</span>
-                                <input type="number" min="0" max="90" data-field="reservedCpuPercent" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Réserve RAM (%)</span>
-                                <input type="number" min="0" max="90" data-field="reservedRamPercent" />
-                            </label>
-                            <label class="vmsizing-field">
-                                <span>Réserve stockage (%)</span>
-                                <input type="number" min="0" max="90" data-field="reservedStoragePercent" />
-                            </label>
-                        </div>
-                    </section>
-
-                    <section class="card">
-                        <div class="card-header">
-                            <h2>Utilisation actuelle</h2>
-                            <span class="vmsizing-status-pill vmsizing-status-ok" id="vmsizing-overall-status-pill">OK</span>
-                        </div>
-                        <div class="vmsizing-gauge-grid">
-                            <div class="vmsizing-gauge">
-                                <div class="vmsizing-gauge-top">
-                                    <span class="vmsizing-gauge-label">CPU</span>
-                                    <span class="vmsizing-gauge-value" id="vmsizing-cpu-value">0%</span>
-                                </div>
-                                <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-cpu-fill" style="width: 0%"></div></div>
-                                <div class="vmsizing-gauge-bottom"><span id="vmsizing-cpu-detail">0 / 0 vCPU</span></div>
-                            </div>
-                            <div class="vmsizing-gauge">
-                                <div class="vmsizing-gauge-top">
-                                    <span class="vmsizing-gauge-label">RAM</span>
-                                    <span class="vmsizing-gauge-value" id="vmsizing-ram-value">0%</span>
-                                </div>
-                                <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-ram-fill" style="width: 0%"></div></div>
-                                <div class="vmsizing-gauge-bottom"><span id="vmsizing-ram-detail">0 / 0 Go</span></div>
-                            </div>
-                            <div class="vmsizing-gauge">
-                                <div class="vmsizing-gauge-top">
-                                    <span class="vmsizing-gauge-label">Stockage</span>
-                                    <span class="vmsizing-gauge-value" id="vmsizing-storage-value">0%</span>
-                                </div>
-                                <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-storage-fill" style="width: 0%"></div></div>
-                                <div class="vmsizing-gauge-bottom"><span id="vmsizing-storage-detail">0 / 0 Go</span></div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <section class="card">
+                <section class="card vmsizing-server-card">
                     <div class="card-header">
-                        <h2>Machines virtuelles</h2>
+                        <h2>Caractéristiques du serveur</h2>
+                        <span class="vmsizing-status-pill vmsizing-status-ok" id="vmsizing-overall-status-pill">OK</span>
+                    </div>
+
+                    <div class="vmsizing-field-grid" id="vmsizing-server-form">
+                        <label class="vmsizing-field vmsizing-field-wide">
+                            <span>Nom du serveur</span>
+                            <input type="text" data-field="name" />
+                        </label>
+                        <label class="vmsizing-field">
+                            <span>Sockets CPU</span>
+                            <input type="number" min="1" data-field="cpuSockets" />
+                        </label>
+                        <label class="vmsizing-field">
+                            <span>Cœurs / socket</span>
+                            <input type="number" min="1" data-field="cpuCoresPerSocket" />
+                        </label>
+                        <label class="vmsizing-field">
+                            <span>Threads / cœur</span>
+                            <input type="number" min="1" data-field="cpuThreadsPerCore" />
+                        </label>
+                        <label class="vmsizing-field">
+                            <span>RAM totale (Go)</span>
+                            <input type="number" min="1" data-field="ramGB" />
+                        </label>
+                        <label class="vmsizing-field">
+                            <span>Stockage total (Go)</span>
+                            <input type="number" min="1" data-field="storageGB" />
+                        </label>
+                    </div>
+
+                    <div class="vmsizing-gauge-grid">
+                        <div class="vmsizing-gauge">
+                            <div class="vmsizing-gauge-top">
+                                <span class="vmsizing-gauge-label">CPU</span>
+                                <span class="vmsizing-gauge-value" id="vmsizing-cpu-value">0%</span>
+                            </div>
+                            <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-cpu-fill" style="width: 0%"></div></div>
+                            <div class="vmsizing-gauge-bottom"><span id="vmsizing-cpu-detail">0 / 0 vCPU</span></div>
+                        </div>
+                        <div class="vmsizing-gauge">
+                            <div class="vmsizing-gauge-top">
+                                <span class="vmsizing-gauge-label">RAM</span>
+                                <span class="vmsizing-gauge-value" id="vmsizing-ram-value">0%</span>
+                            </div>
+                            <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-ram-fill" style="width: 0%"></div></div>
+                            <div class="vmsizing-gauge-bottom"><span id="vmsizing-ram-detail">0 / 0 Go</span></div>
+                        </div>
+                        <div class="vmsizing-gauge">
+                            <div class="vmsizing-gauge-top">
+                                <span class="vmsizing-gauge-label">Stockage</span>
+                                <span class="vmsizing-gauge-value" id="vmsizing-storage-value">0%</span>
+                            </div>
+                            <div class="vmsizing-gauge-track"><div class="vmsizing-gauge-fill vmsizing-status-ok" id="vmsizing-storage-fill" style="width: 0%"></div></div>
+                            <div class="vmsizing-gauge-bottom"><span id="vmsizing-storage-detail">0 / 0 Go</span></div>
+                        </div>
+                    </div>
+
+                    <div class="vmsizing-subsection-header">
+                        <h3>Machines virtuelles</h3>
                         <span id="vmsizing-vm-count">0 VM</span>
                     </div>
                     <div class="table-wrapper">

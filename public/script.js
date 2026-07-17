@@ -126,6 +126,9 @@ let testScenarios = [];
 let selectedTestScenarios = new Set();
 let testContextSteps = [];
 let testDerouleSteps = [];
+let freeTables = [];
+let migrationPlans = [];
+let migrationPlanningByRow = {};
 let selectedSwotItems = { strengths: new Set(), weaknesses: new Set(), opportunities: new Set(), threats: new Set() };
 
 const currentPage = document.body.dataset.page;
@@ -166,6 +169,10 @@ const FORGE_NAV_ICON_SHAPES = {
     "budget-carbone": '<path d="M4.5 18.5C3.8 9.8 11 4 18.5 4.5c.7 8.7-6.5 14.5-14 14Z"/><path d="M5.5 17.5c3-3.5 6.5-6.5 11-11"/>',
     "budget-comparatifs": '<line x1="6" y1="18.5" x2="6" y2="10" stroke-width="3"/><line x1="11" y1="18.5" x2="11" y2="4" stroke-width="3"/><line x1="16" y1="18.5" x2="16" y2="12.5" stroke-width="3"/>',
     tests: '<path d="M8.5 2.5h5v3.2l3.6 7.8a2 2 0 0 1-1.8 2.8H6.7a2 2 0 0 1-1.8-2.8l3.6-7.8z"/><line x1="7" y1="2.5" x2="15" y2="2.5"/><line x1="7.2" y1="12" x2="14.8" y2="12"/>',
+    "free-tables": '<rect x="2.5" y="3.5" width="17" height="15" rx="1.5"/><line x1="2.5" y1="8.5" x2="19.5" y2="8.5"/><line x1="8" y1="8.5" x2="8" y2="18.5"/><line x1="14" y1="8.5" x2="14" y2="18.5"/>',
+    migration: '<rect x="2" y="7" width="6" height="8" rx="1.2"/><rect x="14" y="7" width="6" height="8" rx="1.2"/><line x1="9" y1="11" x2="13" y2="11"/><polyline points="11.5,9 13.5,11 11.5,13"/>',
+    "migration-rollback": '<path d="M5.5 11a6.5 6.5 0 1 1 1.8 4.5"/><polyline points="5,15.2 5,11 9.2,11"/>',
+    "migration-planning": '<rect x="2.5" y="3.5" width="10" height="3.2" rx="1"/><rect x="2.5" y="9.4" width="16" height="3.2" rx="1"/><rect x="2.5" y="15.3" width="6.5" height="3.2" rx="1"/>',
     "tests-scenario": '<rect x="4" y="2.5" width="14" height="17" rx="1.5"/><line x1="7" y1="7" x2="15" y2="7"/><line x1="7" y1="10.5" x2="15" y2="10.5"/><line x1="7" y1="14" x2="12" y2="14"/>',
     "tests-deroule": '<circle cx="6" cy="5.5" r="1.6" fill="currentColor" stroke="none"/><circle cx="6" cy="11" r="1.6" fill="currentColor" stroke="none"/><circle cx="6" cy="16.5" r="1.6" fill="currentColor" stroke="none"/><line x1="10" y1="5.5" x2="18" y2="5.5"/><line x1="10" y1="11" x2="18" y2="11"/><line x1="10" y1="16.5" x2="18" y2="16.5"/>',
     "align-left": '<line x1="3" y1="5.5" x2="19" y2="5.5"/><line x1="3" y1="9.5" x2="14" y2="9.5"/><line x1="3" y1="13.5" x2="19" y2="13.5"/><line x1="3" y1="17.5" x2="11" y2="17.5"/>',
@@ -229,7 +236,11 @@ const FORGE_NAV_GROUPS = [
     {
         label: "Infrastructure",
         icon: "infrastructure",
-        links: [{ page: "vmsizing", href: "vm-sizing.html", label: "Dimensionnement VM", icon: "vmsizing" }]
+        links: [
+            { page: "vmsizing", href: "vm-sizing.html", label: "Dimensionnement VM", icon: "vmsizing" },
+            { page: "migration", href: "migration.html", label: "Migration", icon: "migration" },
+            { page: "migration-planning", href: "planning.html", label: "Planning", icon: "migration-planning" }
+        ]
     },
     {
         label: "Budget",
@@ -248,6 +259,11 @@ const FORGE_NAV_GROUPS = [
             { page: "tests-scenario", href: "tests-scenario.html", label: "Scénario", icon: "tests-scenario" },
             { page: "tests-deroule", href: "tests-deroule.html", label: "Déroulé", icon: "tests-deroule" }
         ]
+    },
+    {
+        label: "Tableaux libres",
+        icon: "free-tables",
+        links: [{ page: "free-tables", href: "tableaux-libres.html", label: "Tableaux libres", icon: "free-tables" }]
     }
 ];
 
@@ -4335,6 +4351,133 @@ function cssEscape(value) {
     return String(value).replaceAll('"', '\\"');
 }
 
+// Registre unique des "listes colorées" de l'app (types de risques, KPIs,
+// budget, catégories de décision, scénarios de test...) : une seule entrée
+// par type suffit pour brancher le sélecteur de couleur ET la capture 📸,
+// au lieu de toucher 4 endroits séparés (les deux chaînes if ci-dessous +
+// closeColorMenuOnOutsideClick + CAPTURE_NUMBER_BADGE_SELECTOR) à chaque
+// nouvelle liste. `getItems` est un getter (pas une référence directe au
+// tableau) : pour vmServer/budgetElementType, la variable n'existe que sur
+// les pages qui chargent vm-sizing.js/budget.js — un getter appelé
+// seulement quand ce type est vraiment actif évite un ReferenceError sur
+// les autres pages, sans avoir besoin de garde typeof ici.
+const COLOR_TARGET_REGISTRY = {
+    stakeholder: {
+        badgeClass: "row-number-btn",
+        getItems: () => stakeholders,
+        save: saveStakeholders,
+        render: renderStakeholdersTable
+    },
+    competenceCategory: {
+        badgeClass: "competence-category-number-btn",
+        getItems: () => competenceCategories,
+        save: saveCompetenceCategories,
+        render: () => {
+            renderCompetenceCategoriesTable();
+            renderCompetenceMatrices();
+        }
+    },
+    phase: {
+        badgeClass: "phase-number-btn",
+        getItems: () => phases,
+        save: savePhases,
+        render: () => {
+            renderPhasesTable();
+            renderWbsTable();
+        }
+    },
+    kpiType: {
+        badgeClass: "kpi-type-number-btn",
+        getItems: () => kpiTypes,
+        save: saveKpiTypes,
+        render: () => {
+            renderKpiTypesTable();
+            renderKpiGroups();
+        }
+    },
+    riskType: {
+        badgeClass: "risk-type-number-btn",
+        getItems: () => riskTypes,
+        save: saveRiskTypes,
+        render: () => {
+            renderRiskTypesTable();
+            renderRisksTable();
+        }
+    },
+    objective: {
+        badgeClass: "objective-number-btn",
+        getItems: () => redactionRows,
+        save: () => saveRedactionRows("objectives", redactionRows),
+        render: () => renderRedactionTable("objectives")
+    },
+    vmServer: {
+        badgeClass: "vmsizing-server-number-btn",
+        getItems: () => vmSizingProfiles,
+        save: () => vmSizingSaveProfiles(),
+        render: () => vmSizingRenderServerTable()
+    },
+    budgetElementType: {
+        badgeClass: "budget-type-number-btn",
+        getItems: () => budgetElementTypes,
+        save: () => saveBudgetElementTypes(),
+        render: () => {
+            renderBudgetTypesTable();
+            renderBudgetElementsTable();
+        }
+    },
+    decisionCategory: {
+        badgeClass: "decision-category-number-btn",
+        getItems: () => decisionCategories,
+        save: saveDecisionCategories,
+        render: renderDecisionCategoriesTable
+    },
+    testScenario: {
+        badgeClass: "test-scenario-number-btn",
+        getItems: () => testScenarios,
+        save: saveTestScenarios,
+        render: renderTestScenariosListTable
+    },
+    migrationPlan: {
+        badgeClass: "migration-plan-color-btn",
+        getItems: () => migrationPlans,
+        save: saveMigrationPlans,
+        render: renderMigrationPlans
+    },
+    // Les deux entrées ci-dessous sont imbriquées dans UN tableau parmi
+    // plusieurs (freeTables) : getItems reçoit activeColorTarget en entier
+    // (pas juste l'index) pour retrouver d'abord le bon tableau via
+    // target.tableId, avant d'indexer dans ses colonnes/lignes.
+    freeTableRow: {
+        badgeClass: "free-table-row-number-btn",
+        getItems: (target) => freeTables.find((table) => table.id === target.tableId)?.rows,
+        save: saveFreeTables,
+        render: renderFreeTables
+    },
+    freeTableColumn: {
+        badgeClass: "free-table-column-color-btn",
+        getItems: (target) => freeTables.find((table) => table.id === target.tableId)?.columns,
+        save: saveFreeTables,
+        render: renderFreeTables
+    }
+};
+
+const COLOR_TARGET_BADGE_SELECTOR = Object.values(COLOR_TARGET_REGISTRY)
+    .map((target) => `.${target.badgeClass}`)
+    .join(", ");
+
+function getActiveColorTargetEntry() {
+    if (!activeColorTarget) return null;
+
+    const config = COLOR_TARGET_REGISTRY[activeColorTarget.type];
+    if (!config) return null;
+
+    const items = config.getItems(activeColorTarget);
+    const item = items?.[activeColorTarget.index];
+    if (!item) return null;
+
+    return { config, item };
+}
+
 function renderColorMenu() {
     if (!colorMenu) return;
 
@@ -4351,91 +4494,13 @@ function renderColorMenu() {
         button.setAttribute("aria-label", `Choisir la couleur ${color}`);
 
         button.addEventListener("click", () => {
-            if (!activeColorTarget) return;
+            const entry = getActiveColorTargetEntry();
+            if (!entry) return;
 
-            if (activeColorTarget.type === "stakeholder") {
-                stakeholders[activeColorTarget.index].color = color;
-                saveStakeholders();
-                hideColorMenu();
-                renderStakeholdersTable();
-                return;
-            }
-
-            if (activeColorTarget.type === "competenceCategory") {
-                competenceCategories[activeColorTarget.index].color = color;
-                saveCompetenceCategories();
-                hideColorMenu();
-                renderCompetenceCategoriesTable();
-                renderCompetenceMatrices();
-                return;
-            }
-
-            if (activeColorTarget.type === "phase") {
-                phases[activeColorTarget.index].color = color;
-                savePhases();
-                hideColorMenu();
-                renderPhasesTable();
-                renderWbsTable();
-                return;
-            }
-
-            if (activeColorTarget.type === "kpiType") {
-                kpiTypes[activeColorTarget.index].color = color;
-                saveKpiTypes();
-                hideColorMenu();
-                renderKpiTypesTable();
-                renderKpiGroups();
-                return;
-            }
-
-            if (activeColorTarget.type === "riskType") {
-                riskTypes[activeColorTarget.index].color = color;
-                saveRiskTypes();
-                hideColorMenu();
-                renderRiskTypesTable();
-                renderRisksTable();
-                return;
-            }
-
-            if (activeColorTarget.type === "objective") {
-                redactionRows[activeColorTarget.index].color = color;
-                saveRedactionRows("objectives", redactionRows);
-                hideColorMenu();
-                renderRedactionTable("objectives");
-                return;
-            }
-
-            if (activeColorTarget.type === "vmServer" && typeof vmSizingProfiles !== "undefined") {
-                vmSizingProfiles[activeColorTarget.index].color = color;
-                vmSizingSaveProfiles();
-                hideColorMenu();
-                vmSizingRenderServerTable();
-                return;
-            }
-
-            if (activeColorTarget.type === "budgetElementType" && typeof budgetElementTypes !== "undefined") {
-                budgetElementTypes[activeColorTarget.index].color = color;
-                saveBudgetElementTypes();
-                hideColorMenu();
-                renderBudgetTypesTable();
-                renderBudgetElementsTable();
-                return;
-            }
-
-            if (activeColorTarget.type === "decisionCategory") {
-                decisionCategories[activeColorTarget.index].color = color;
-                saveDecisionCategories();
-                hideColorMenu();
-                renderDecisionCategoriesTable();
-                return;
-            }
-
-            if (activeColorTarget.type === "testScenario") {
-                testScenarios[activeColorTarget.index].color = color;
-                saveTestScenarios();
-                hideColorMenu();
-                renderTestScenariosListTable();
-            }
+            entry.item.color = color;
+            entry.config.save();
+            hideColorMenu();
+            entry.config.render();
         });
 
         colorMenu.appendChild(button);
@@ -4449,51 +4514,16 @@ function showColorMenu(anchor) {
     colorMenu.style.top = `${rect.bottom + 8}px`;
     colorMenu.style.left = `${Math.min(rect.left, window.innerWidth - 235)}px`;
 
+    const entry = getActiveColorTargetEntry();
+    const activeColor = entry?.item.color;
+
     document.querySelectorAll(".color-choice").forEach((choice) => {
-        let activeColor = "";
-
-        if (activeColorTarget?.type === "stakeholder") {
-            activeColor = stakeholders[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "competenceCategory") {
-            activeColor = competenceCategories[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "phase") {
-            activeColor = phases[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "kpiType") {
-            activeColor = kpiTypes[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "riskType") {
-            activeColor = riskTypes[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "objective") {
-            activeColor = redactionRows[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "budgetElementType" && typeof budgetElementTypes !== "undefined") {
-            activeColor = budgetElementTypes[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "decisionCategory") {
-            activeColor = decisionCategories[activeColorTarget.index]?.color;
-        }
-
-        if (activeColorTarget?.type === "testScenario") {
-            activeColor = testScenarios[activeColorTarget.index]?.color;
-        }
-
         choice.classList.toggle("active", choice.dataset.color === activeColor);
     });
 }
 
 function closeColorMenuOnOutsideClick(event) {
-    const clickedNumber = event.target.closest(".row-number-btn, .competence-category-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .budget-type-number-btn, .objective-number-btn, .decision-category-number-btn, .test-scenario-number-btn");
+    const clickedNumber = event.target.closest(COLOR_TARGET_BADGE_SELECTOR);
     const clickedMenu = event.target.closest("#color-menu");
 
     if (!clickedNumber && !clickedMenu) {
@@ -7324,8 +7354,12 @@ function hideStructuralCaptureColumns(card) {
     const colspanFixes = [];
 
     card.querySelectorAll("table").forEach((table) => {
+        // thead tr:last-child : pour un thead à 2 lignes (bandeau à colspan +
+        // vraies colonnes, ex. .migration-table), la 1ère ligne n'a que 2-3
+        // cellules — c'est la dernière ligne qui porte le vrai nombre de
+        // colonnes. Pour un thead à une seule ligne, last-child == cette ligne.
         const columnCount = table.querySelectorAll(":scope > colgroup > col").length
-            || table.querySelector("thead tr")?.children.length
+            || table.querySelector("thead tr:last-child")?.children.length
             || 0;
 
         if (!columnCount) return;
@@ -7366,13 +7400,18 @@ function hideStructuralCaptureColumns(card) {
 // classe (measureAutoLayoutTableColumnWidths, tout en haut de
 // prepareCardForExactCapture), puis seulement les figer une fois la classe et
 // hideStructuralCaptureColumns appliquées (lockAutoLayoutTableColumnWidths).
-const CAPTURE_COLUMN_LOCK_SELECTOR = ".decision-options-table";
+// .migration-table a en plus un bandeau Migration/Rollback à colspan au-dessus
+// de sa vraie ligne d'en-têtes (thead à 2 lignes) : on mesure toujours la
+// DERNIÈRE ligne du thead (tr:last-child), qui porte les vraies colonnes —
+// pour un thead à une seule ligne (matrice de décision, tableaux libres),
+// c'est cette même ligne, donc aucun changement de comportement là-bas.
+const CAPTURE_COLUMN_LOCK_SELECTOR = ".decision-options-table, .migration-table, .free-table";
 
 function measureAutoLayoutTableColumnWidths(card) {
     const tables = Array.from(card.querySelectorAll(CAPTURE_COLUMN_LOCK_SELECTOR));
 
     return tables.map((table) => {
-        const headerCells = Array.from(table.querySelectorAll(":scope > thead > tr > th"))
+        const headerCells = Array.from(table.querySelectorAll(":scope > thead > tr:last-child > th"))
             .filter((th) => !th.classList.contains("select-col"));
 
         return { table, widths: headerCells.map((th) => th.getBoundingClientRect().width) };
@@ -7525,9 +7564,10 @@ function prepareCardForExactCapture(card) {
 // Ces badges numérotés colorés sont techniquement des <button> (pour ouvrir le
 // sélecteur de couleur au clic), mais ils affichent une donnée réelle (le n° de
 // ligne) et doivent rester visibles dans la capture — contrairement aux vrais
-// boutons d'action (+/-/reset/etc.) exclus par ailleurs.
-const CAPTURE_NUMBER_BADGE_SELECTOR =
-    ".row-number-btn, .phase-number-btn, .kpi-type-number-btn, .risk-type-number-btn, .competence-category-number-btn, .budget-type-number-btn, .vmsizing-server-number-btn, .objective-number-btn, .decision-category-number-btn, .test-scenario-number-btn";
+// boutons d'action (+/-/reset/etc.) exclus par ailleurs. Dérivé de
+// COLOR_TARGET_REGISTRY (voir plus haut) plutôt qu'une liste séparée à
+// resynchroniser à la main à chaque nouvelle liste colorée.
+const CAPTURE_NUMBER_BADGE_SELECTOR = COLOR_TARGET_BADGE_SELECTOR;
 
 // html2canvas (et le rendu SVG/foreignObject) ne dessine pas correctement le
 // contenu des <button> natifs, même quand on ne les exclut pas de la capture
@@ -9871,6 +9911,9 @@ async function bootstrapForgeAsync() {
     if (currentPage === "budget-comparatifs" && typeof initBudgetComparatifsPage === "function") initBudgetComparatifsPage();
     if (currentPage === "tests-scenario") initTestsScenarioPage();
     if (currentPage === "tests-deroule") initTestsDeroulePage();
+    if (currentPage === "free-tables") initFreeTablesPage();
+    if (currentPage === "migration") initMigrationPage();
+    if (currentPage === "migration-planning") initMigrationPlanningPage();
 
     initCaptureButtons();
     initForgeDbNavigationSync();
@@ -11494,7 +11537,7 @@ function loadTestContextSteps() {
             text: step.text || ""
         }));
     } catch (error) {
-        console.error("Impossible de charger les étapes de contexte :", error);
+        console.error("Impossible de charger les éléments de contexte :", error);
         return [];
     }
 }
@@ -11626,6 +11669,16 @@ function renderTestScenariosListTable() {
 
                 testScenarios[index][field] = sanitizeRichText(event.target.innerHTML);
                 saveTestScenarios();
+            });
+
+            // Rafraîchit le titre de la carte à droite seulement en sortant du
+            // champ, pas à chaque frappe : renderTestScenarioDetailCards()
+            // reconstruit la carte ENTIÈRE (en-tête compris), ce qui fait
+            // disparaître puis réapparaître le bouton de capture 📸 (ajouté par
+            // un MutationObserver avec un léger délai, voir initCaptureButtons)
+            // à chaque caractère tapé — visible comme un petit "saut" de mise
+            // en page. Même patron que le "target"/"current" des KPIs.
+            cell.addEventListener("blur", () => {
                 renderTestScenarioDetailCards();
             });
         });
@@ -11657,13 +11710,13 @@ function renderTestScenarioDetailCards() {
         const group = stepGroupByScenarioId.get(scenario.id) || { items: [] };
 
         const stepsHtml = group.items.length === 0
-            ? `<tr><td colspan="3" class="empty-state">Aucune étape pour le moment.</td></tr>`
+            ? `<tr><td colspan="3" class="empty-state">Aucun élément pour le moment.</td></tr>`
             : group.items.map(({ step }, localIndex) => `
                 <tr>
                     <td class="tests-step-number-cell">${localIndex + 1}</td>
                     <td class="editable tests-step-cell" contenteditable="true" data-step-id="${escapeHtml(step.id)}" spellcheck="true">${sanitizeRichText(step.text)}</td>
                     <td class="select-col">
-                        <button class="row-delete-btn" type="button" data-remove-context-step="${escapeHtml(step.id)}" title="Supprimer l'étape" aria-label="Supprimer l'étape">&times;</button>
+                        <button class="row-delete-btn" type="button" data-remove-context-step="${escapeHtml(step.id)}" title="Supprimer l'élément" aria-label="Supprimer l'élément">&times;</button>
                     </td>
                 </tr>
             `).join("");
@@ -11691,7 +11744,7 @@ function renderTestScenarioDetailCards() {
                         <thead>
                             <tr>
                                 <th class="tests-step-number-cell">N°</th>
-                                <th>Étape</th>
+                                <th>Élément</th>
                                 <th class="select-col"></th>
                             </tr>
                         </thead>
@@ -11699,13 +11752,19 @@ function renderTestScenarioDetailCards() {
                     </table>
                     <div class="table-actions">
                         <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn tests-add-context-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+                            <button class="btn icon-action-btn icon-add-btn tests-add-context-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter un élément" aria-label="Ajouter un élément">+</button>
                         </div>
                     </div>
                 </div>
             </div>
         `;
     }).join("");
+
+    // Ajoute le bouton de capture 📸 tout de suite, sans attendre le
+    // MutationObserver débouncé (initCaptureButtons) — sinon chaque carte
+    // reconstruite ci-dessus s'affiche brièvement sans son bouton, ce qui se
+    // voit comme un petit saut de mise en page une fois le bouton rajouté.
+    if (typeof addCaptureButtonsToCards === "function") addCaptureButtonsToCards();
 
     bindTestScenarioDetailEvents();
 }
@@ -11898,6 +11957,9 @@ function renderTestDerouleCards() {
         `;
     }).join("");
 
+    // Voir le commentaire équivalent dans renderTestScenarioDetailCards().
+    if (typeof addCaptureButtonsToCards === "function") addCaptureButtonsToCards();
+
     bindTestDerouleEvents();
 }
 
@@ -11953,7 +12015,7 @@ if (typeof helpTexts !== "undefined") {
         <p>Cette page sert à préparer les scénarios de test du projet.</p>
         <ul>
             <li>Le tableau de gauche liste les scénarios : clique sur le numéro d’un scénario pour changer sa couleur, clique dans son nom pour le renommer.</li>
-            <li>Chaque scénario a sa propre carte à droite : un champ “Contexte général” en texte libre, puis des étapes de “Contexte détaillé” ajoutées une à une avec le “+”.</li>
+            <li>Chaque scénario a sa propre carte à droite : un champ “Contexte général” en texte libre, puis des éléments de “Contexte détaillé” ajoutés un à un avec le “+”.</li>
             <li>Coche des scénarios puis clique sur “Supprimer la sélection” pour les retirer — leur contexte et leurs étapes de déroulé (page Déroulé) sont supprimés avec.</li>
             <li>Les scénarios créés ici apparaissent automatiquement dans l’onglet Déroulé.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
@@ -11967,6 +12029,907 @@ if (typeof helpTexts !== "undefined") {
             <li>Chaque scénario créé dans l’onglet Scénario a automatiquement sa propre carte ici.</li>
             <li>Utilise le “+” d’une carte pour ajouter une étape de déroulé, et le “×” d’une étape pour la retirer.</li>
             <li>Chaque carte a son propre bouton de capture (📸) pour la copier en image.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+            <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
+        </ul>
+    `;
+}
+
+/* V93 — Tableaux libres (colonnes et lignes entièrement dynamiques) */
+
+function createFreeTableColumn(name, colorIndex) {
+    return { id: createId(), name: name || "", color: predefinedColors[(colorIndex || 0) % predefinedColors.length] };
+}
+
+function createFreeTableRow(colorIndex) {
+    return { id: createId(), name: "", cells: {}, color: predefinedColors[(colorIndex || 0) % predefinedColors.length] };
+}
+
+function createFreeTable(name) {
+    return {
+        id: createId(),
+        name: name || "",
+        columns: [createFreeTableColumn("Colonne 1", 0), createFreeTableColumn("Colonne 2", 1)],
+        rows: [createFreeTableRow(0)]
+    };
+}
+
+function loadFreeTables() {
+    let parsed = [];
+
+    try {
+        parsed = JSON.parse(localStorage.getItem(getProjectKey("free_tables"))) || [];
+    } catch (error) {
+        parsed = [];
+    }
+
+    return Array.isArray(parsed)
+        ? parsed.map((table) => ({
+              id: table.id || createId(),
+              name: table.name || "",
+              columns: Array.isArray(table.columns)
+                  ? table.columns.map((column, index) => ({
+                        id: column.id || createId(),
+                        name: column.name || "",
+                        color: normalizeColor(column.color, index)
+                    }))
+                  : [],
+              rows: Array.isArray(table.rows)
+                  ? table.rows.map((row, index) => ({
+                        id: row.id || createId(),
+                        name: row.name || "",
+                        color: normalizeColor(row.color, index),
+                        cells: row.cells && typeof row.cells === "object" ? row.cells : {}
+                    }))
+                  : []
+          }))
+        : [];
+}
+
+function saveFreeTables() {
+    localStorage.setItem(getProjectKey("free_tables"), JSON.stringify(freeTables));
+}
+
+function renderFreeTables() {
+    const list = document.getElementById("free-tables-list");
+    if (!list) return;
+
+    if (freeTables.length === 0) {
+        list.innerHTML = `<p class="empty-state free-tables-empty-state">Aucun tableau pour le moment. Clique sur “+” pour en créer un.</p>`;
+        return;
+    }
+
+    list.innerHTML = freeTables
+        .map((table) => {
+            // +1 pour la colonne de badge coloré en tête de ligne, +1 pour la
+            // colonne de suppression de ligne en fin de tableau.
+            const totalCols = table.columns.length + 2;
+
+            const headerCellsHtml = table.columns
+                .map((column, columnIndex) => {
+                    const color = normalizeColor(column.color, columnIndex);
+                    return `
+                <th class="free-table-column-header" style="background-color: ${hexToRgba(color, 0.22)}; box-shadow: inset 0 3px 0 ${color};">
+                    <button
+                        class="free-table-column-color-btn"
+                        type="button"
+                        data-table-id="${table.id}"
+                        data-index="${columnIndex}"
+                        style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
+                        aria-label="Changer la couleur de la colonne ${columnIndex + 1}"
+                    ></button>
+                    <span class="editable free-table-column-name" contenteditable="true" data-table-id="${table.id}" data-column-id="${column.id}" spellcheck="true">${sanitizeRichText(column.name)}</span>
+                    <button class="row-delete-btn free-table-delete-column-btn" type="button" data-table-id="${table.id}" data-column-id="${column.id}" title="Supprimer la colonne" aria-label="Supprimer la colonne">&times;</button>
+                </th>
+            `;
+                })
+                .join("");
+
+            const rowsHtml = table.rows.length
+                ? table.rows
+                      .map((row, rowIndex) => {
+                          const rowColor = normalizeColor(row.color, rowIndex);
+                          const cellsHtml = table.columns
+                              .map((column, columnIndex) => {
+                                  const columnColor = normalizeColor(column.color, columnIndex);
+                                  return `
+                        <td class="editable free-table-cell" contenteditable="true" data-table-id="${table.id}" data-row-id="${row.id}" data-column-id="${column.id}" spellcheck="true" style="box-shadow: inset 0 3px 0 ${hexToRgba(columnColor, 0.55)};">${sanitizeRichText(row.cells[column.id] || "")}</td>
+                    `;
+                              })
+                              .join("");
+
+                          return `
+                <tr data-row-id="${row.id}" style="background-color: ${hexToRgba(rowColor, 0.16)}; box-shadow: inset 3px 0 0 ${rowColor};">
+                    <td class="free-table-row-header">
+                        <button
+                            class="free-table-row-number-btn"
+                            type="button"
+                            data-table-id="${table.id}"
+                            data-index="${rowIndex}"
+                            style="background-color: ${escapeHtml(rowColor)}; --row-glow: ${hexToRgba(rowColor, 0.55)}"
+                            aria-label="Changer la couleur de la ligne ${rowIndex + 1}"
+                        >${rowIndex + 1}</button>
+                        <span class="editable free-table-row-name" contenteditable="true" data-table-id="${table.id}" data-row-id="${row.id}" spellcheck="true">${sanitizeRichText(row.name)}</span>
+                    </td>
+                    ${cellsHtml}
+                    <td class="select-col">
+                        <button class="row-delete-btn" type="button" data-table-id="${table.id}" data-row-id="${row.id}" title="Supprimer la ligne" aria-label="Supprimer la ligne">&times;</button>
+                    </td>
+                </tr>
+            `;
+                      })
+                      .join("")
+                : `<tr><td colspan="${totalCols}" class="empty-state">Aucune ligne pour le moment.</td></tr>`;
+
+            return `
+                <section class="card free-table-card" data-table-id="${table.id}">
+                    <div class="card-header">
+                        <h2 class="editable free-table-name-input" contenteditable="true" data-table-id="${table.id}" spellcheck="false">${sanitizeRichText(table.name) || "Tableau sans nom"}</h2>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn free-table-delete-btn" type="button" data-table-id="${table.id}" title="Supprimer ce tableau" aria-label="Supprimer ce tableau">-</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="free-table">
+                            <thead>
+                                <tr>
+                                    <th class="free-table-row-header-col"></th>
+                                    ${headerCellsHtml}
+                                    <th class="select-col">
+                                        <button class="free-table-add-column-btn" type="button" data-table-id="${table.id}" title="Ajouter une colonne" aria-label="Ajouter une colonne">+</button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn free-table-add-row-btn" type="button" data-table-id="${table.id}" title="Ajouter une ligne" aria-label="Ajouter une ligne">+</button>
+                        </div>
+                    </div>
+                </section>
+            `;
+        })
+        .join("");
+
+    bindFreeTablesEvents();
+}
+
+function bindFreeTablesEvents() {
+    const list = document.getElementById("free-tables-list");
+    if (!list) return;
+
+    function getTable(tableId) {
+        return freeTables.find((table) => table.id === tableId);
+    }
+
+    list.querySelectorAll(".free-table-name-input").forEach((titleEl) => {
+        titleEl.addEventListener("input", (event) => {
+            const table = getTable(event.target.dataset.tableId);
+            if (!table) return;
+
+            table.name = sanitizeRichText(event.target.innerHTML);
+            saveFreeTables();
+        });
+    });
+
+    list.querySelectorAll(".free-table-column-name").forEach((nameEl) => {
+        nameEl.addEventListener("input", (event) => {
+            const table = getTable(event.target.dataset.tableId);
+            const column = table?.columns.find((item) => item.id === event.target.dataset.columnId);
+            if (!column) return;
+
+            column.name = sanitizeRichText(event.target.innerHTML);
+            saveFreeTables();
+        });
+    });
+
+    list.querySelectorAll(".free-table-row-name").forEach((nameEl) => {
+        nameEl.addEventListener("input", (event) => {
+            const table = getTable(event.target.dataset.tableId);
+            const row = table?.rows.find((item) => item.id === event.target.dataset.rowId);
+            if (!row) return;
+
+            row.name = sanitizeRichText(event.target.innerHTML);
+            saveFreeTables();
+        });
+    });
+
+    list.querySelectorAll(".free-table-cell").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const table = getTable(event.target.dataset.tableId);
+            const row = table?.rows.find((item) => item.id === event.target.dataset.rowId);
+            if (!row) return;
+
+            row.cells[event.target.dataset.columnId] = sanitizeRichText(event.target.innerHTML);
+            saveFreeTables();
+        });
+    });
+
+    list.querySelectorAll(".free-table-row-number-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const tableId = event.currentTarget.dataset.tableId;
+            const index = Number(event.currentTarget.dataset.index);
+            activeColorTarget = { type: "freeTableRow", tableId, index };
+            showColorMenu(event.currentTarget);
+        });
+    });
+
+    list.querySelectorAll(".free-table-column-color-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const tableId = event.currentTarget.dataset.tableId;
+            const index = Number(event.currentTarget.dataset.index);
+            activeColorTarget = { type: "freeTableColumn", tableId, index };
+            showColorMenu(event.currentTarget);
+        });
+    });
+
+    list.querySelectorAll(".free-table-add-row-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const table = getTable(event.currentTarget.dataset.tableId);
+            if (!table) return;
+
+            const newRow = createFreeTableRow(table.rows.length);
+            table.rows.push(newRow);
+            saveFreeTables();
+            renderFreeTables();
+
+            document.querySelector(`.free-table-cell[data-row-id="${newRow.id}"]`)?.focus();
+        });
+    });
+
+    list.querySelectorAll(".free-table-add-column-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const table = getTable(event.currentTarget.dataset.tableId);
+            if (!table) return;
+
+            const newColumn = createFreeTableColumn(`Colonne ${table.columns.length + 1}`, table.columns.length);
+            table.columns.push(newColumn);
+            saveFreeTables();
+            renderFreeTables();
+
+            document.querySelector(`.free-table-column-name[data-column-id="${newColumn.id}"]`)?.focus();
+        });
+    });
+
+    list.querySelectorAll(".free-table-delete-column-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const table = getTable(event.currentTarget.dataset.tableId);
+            if (!table) return;
+
+            const columnId = event.currentTarget.dataset.columnId;
+            table.columns = table.columns.filter((column) => column.id !== columnId);
+            table.rows.forEach((row) => delete row.cells[columnId]);
+
+            saveFreeTables();
+            renderFreeTables();
+        });
+    });
+
+    list.querySelectorAll(".row-delete-btn[data-row-id]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const table = getTable(event.currentTarget.dataset.tableId);
+            if (!table) return;
+
+            table.rows = table.rows.filter((row) => row.id !== event.currentTarget.dataset.rowId);
+            saveFreeTables();
+            renderFreeTables();
+        });
+    });
+
+    list.querySelectorAll(".free-table-delete-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const tableId = event.currentTarget.dataset.tableId;
+            const table = getTable(tableId);
+            if (!table) return;
+
+            const confirmation = confirm(`Tu veux vraiment supprimer le tableau “${table.name || "Tableau sans nom"}” ?`);
+            if (!confirmation) return;
+
+            freeTables = freeTables.filter((item) => item.id !== tableId);
+            saveFreeTables();
+            renderFreeTables();
+        });
+    });
+}
+
+function initFreeTablesPage() {
+    const list = document.getElementById("free-tables-list");
+    if (!list) return;
+
+    freeTables = loadFreeTables();
+    renderColorMenu();
+    renderFreeTables();
+    document.addEventListener("click", closeColorMenuOnOutsideClick);
+
+    document.getElementById("add-free-table-btn")?.addEventListener("click", () => {
+        const table = createFreeTable(`Tableau ${freeTables.length + 1}`);
+        freeTables.push(table);
+        saveFreeTables();
+        renderFreeTables();
+
+        const titleEl = document.querySelector(`.free-table-name-input[data-table-id="${table.id}"]`);
+        if (titleEl) {
+            titleEl.focus();
+            document.execCommand("selectAll", false, null);
+        }
+    });
+}
+
+if (typeof helpTexts !== "undefined") {
+    helpTexts["free-tables"] = `
+        <p>Cette page sert à créer des tableaux entièrement libres, sans structure imposée : à toi de définir les colonnes et de les remplir.</p>
+        <ul>
+            <li>Utilise le “+” en haut de page pour créer un nouveau tableau.</li>
+            <li>Clique sur le titre d’un tableau pour le renommer.</li>
+            <li>Clique dans l’en-tête d’une colonne pour la renommer, ou sur son “×” pour la supprimer.</li>
+            <li>Le “+” en haut à droite du tableau ajoute une colonne, le “+” en bas ajoute une ligne.</li>
+            <li>Le “×” d’une ligne la retire ; le “-” dans l’en-tête du tableau supprime le tableau entier.</li>
+            <li>Clique sur le numéro d’une ligne, ou sur le petit rond au début du nom d’une colonne, pour changer sa couleur — les deux sont indépendants.</li>
+            <li>Chaque tableau a son propre bouton de capture (📸) pour le copier en image.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+            <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
+        </ul>
+    `;
+}
+
+/* V94 — Plans de migration (Migration / Rollback groupés, criticité colorée) */
+
+const MIGRATION_CRITICALITY_LEVELS = [
+    { value: "1", label: "Négligeable" },
+    { value: "2", label: "Attention modérée" },
+    { value: "3", label: "Vigilance requise" },
+    { value: "4", label: "Impact significatif" },
+    { value: "5", label: "Critique" }
+];
+
+const MIGRATION_ROW_FIELDS = ["step", "timing", "duration", "when", "risk", "possibility", "prevention", "correction"];
+
+function createEmptyMigrationRow() {
+    return {
+        id: createId(),
+        step: "",
+        timing: "",
+        duration: "",
+        when: "",
+        criticality: "",
+        risk: "",
+        possibility: "",
+        prevention: "",
+        correction: ""
+    };
+}
+
+function createMigrationPlan(name, colorIndex) {
+    return { id: createId(), name: name || "", color: predefinedColors[(colorIndex || 0) % predefinedColors.length], rows: [] };
+}
+
+function loadMigrationPlans() {
+    let parsed = [];
+
+    try {
+        parsed = JSON.parse(localStorage.getItem(getProjectKey("migration_plans"))) || [];
+    } catch (error) {
+        parsed = [];
+    }
+
+    return Array.isArray(parsed)
+        ? parsed.map((plan, index) => ({
+              id: plan.id || createId(),
+              name: plan.name || "",
+              color: normalizeColor(plan.color, index),
+              rows: Array.isArray(plan.rows)
+                  ? plan.rows.map((row) => {
+                        const normalized = { id: row.id || createId(), criticality: String(row.criticality || "") };
+                        MIGRATION_ROW_FIELDS.forEach((field) => {
+                            normalized[field] = row[field] || "";
+                        });
+                        return normalized;
+                    })
+                  : []
+          }))
+        : [];
+}
+
+function saveMigrationPlans() {
+    localStorage.setItem(getProjectKey("migration_plans"), JSON.stringify(migrationPlans));
+}
+
+function migrationCriticalityOptions(selected) {
+    const options = MIGRATION_CRITICALITY_LEVELS.map(
+        (level) => `<option value="${level.value}" ${level.value === selected ? "selected" : ""}>${level.value}</option>`
+    ).join("");
+
+    return `<option value="" ${selected ? "" : "selected"}>—</option>${options}`;
+}
+
+function renderMigrationPlans() {
+    const list = document.getElementById("migration-plans-list");
+    if (!list) return;
+
+    if (migrationPlans.length === 0) {
+        list.innerHTML = `<p class="empty-state migration-empty-state">Aucun plan pour le moment. Clique sur “+” pour en créer un.</p>`;
+        return;
+    }
+
+    list.innerHTML = migrationPlans
+        .map((plan, planIndex) => {
+            const color = normalizeColor(plan.color, planIndex);
+            const rowsHtml = plan.rows.length
+                ? plan.rows.map((row) => buildMigrationRowHtml(plan.id, row)).join("")
+                : `<tr><td colspan="10" class="empty-state">Aucune étape pour le moment.</td></tr>`;
+
+            return `
+                <section class="card migration-plan-card" data-plan-id="${plan.id}" style="border-left: 6px solid ${color}; background-image: linear-gradient(${hexToRgba(color, 0.22)}, ${hexToRgba(color, 0.22)});">
+                    <div class="card-header">
+                        <button
+                            class="migration-plan-color-btn"
+                            type="button"
+                            data-index="${planIndex}"
+                            style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
+                            aria-label="Changer la couleur du plan ${planIndex + 1}"
+                        ></button>
+                        <h2 class="editable migration-plan-name-input" contenteditable="true" data-plan-id="${plan.id}" spellcheck="false">${sanitizeRichText(plan.name) || "Plan sans nom"}</h2>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn migration-delete-plan-btn" type="button" data-plan-id="${plan.id}" title="Supprimer ce plan" aria-label="Supprimer ce plan">-</button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="migration-table">
+                            <thead>
+                                <tr>
+                                    <th colspan="5" class="migration-group-header migration-group-migration">${navIcon("migration")}Migration</th>
+                                    <th colspan="4" class="migration-group-header migration-group-rollback">${navIcon("migration-rollback")}Rollback</th>
+                                    <th class="select-col"></th>
+                                </tr>
+                                <tr>
+                                    <th>Étape / Opération</th>
+                                    <th>Temporalité</th>
+                                    <th>Temps estimé</th>
+                                    <th>Quand</th>
+                                    <th>Crit.</th>
+                                    <th>Risque</th>
+                                    <th>Possibilité</th>
+                                    <th>Prévention</th>
+                                    <th>Correction</th>
+                                    <th class="select-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-actions">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn migration-add-row-btn" type="button" data-plan-id="${plan.id}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+                        </div>
+                    </div>
+                </section>
+            `;
+        })
+        .join("");
+
+    bindMigrationEvents();
+}
+
+function buildMigrationRowHtml(planId, row) {
+    const criticalityClass = row.criticality ? ` migration-criticality-${row.criticality}` : "";
+
+    const editableCell = (field) => `
+        <td class="editable migration-cell" contenteditable="true" data-plan-id="${planId}" data-row-id="${row.id}" data-field="${field}" spellcheck="true">${sanitizeRichText(row[field])}</td>
+    `;
+
+    return `
+        <tr data-row-id="${row.id}">
+            ${editableCell("step")}
+            ${editableCell("timing")}
+            ${editableCell("duration")}
+            ${editableCell("when")}
+            <td class="migration-crit-cell${criticalityClass}">
+                <select class="migration-crit-select" data-plan-id="${planId}" data-row-id="${row.id}" aria-label="Criticité">
+                    ${migrationCriticalityOptions(row.criticality)}
+                </select>
+            </td>
+            ${editableCell("risk")}
+            ${editableCell("possibility")}
+            ${editableCell("prevention")}
+            ${editableCell("correction")}
+            <td class="select-col">
+                <button class="row-delete-btn" type="button" data-plan-id="${planId}" data-row-id="${row.id}" title="Supprimer l'étape" aria-label="Supprimer l'étape">&times;</button>
+            </td>
+        </tr>
+    `;
+}
+
+function bindMigrationEvents() {
+    const list = document.getElementById("migration-plans-list");
+    if (!list) return;
+
+    function getPlan(planId) {
+        return migrationPlans.find((plan) => plan.id === planId);
+    }
+
+    list.querySelectorAll(".migration-plan-color-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const index = Number(event.currentTarget.dataset.index);
+            activeColorTarget = { type: "migrationPlan", index };
+            showColorMenu(event.currentTarget);
+        });
+    });
+
+    list.querySelectorAll(".migration-plan-name-input").forEach((titleEl) => {
+        titleEl.addEventListener("input", (event) => {
+            const plan = getPlan(event.target.dataset.planId);
+            if (!plan) return;
+
+            plan.name = sanitizeRichText(event.target.innerHTML);
+            saveMigrationPlans();
+        });
+    });
+
+    list.querySelectorAll(".migration-cell").forEach((cell) => {
+        cell.addEventListener("input", (event) => {
+            const plan = getPlan(event.target.dataset.planId);
+            const row = plan?.rows.find((item) => item.id === event.target.dataset.rowId);
+            if (!row) return;
+
+            row[event.target.dataset.field] = sanitizeRichText(event.target.innerHTML);
+            saveMigrationPlans();
+        });
+    });
+
+    list.querySelectorAll(".migration-crit-select").forEach((select) => {
+        select.addEventListener("change", (event) => {
+            const plan = getPlan(event.target.dataset.planId);
+            const row = plan?.rows.find((item) => item.id === event.target.dataset.rowId);
+            if (!row) return;
+
+            row.criticality = event.target.value;
+            saveMigrationPlans();
+            renderMigrationPlans();
+        });
+    });
+
+    list.querySelectorAll(".migration-add-row-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const plan = getPlan(event.currentTarget.dataset.planId);
+            if (!plan) return;
+
+            const newRow = createEmptyMigrationRow();
+            plan.rows.push(newRow);
+            saveMigrationPlans();
+            renderMigrationPlans();
+
+            document.querySelector(`.migration-cell[data-row-id="${newRow.id}"]`)?.focus();
+        });
+    });
+
+    list.querySelectorAll(".row-delete-btn[data-row-id]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const plan = getPlan(event.currentTarget.dataset.planId);
+            if (!plan) return;
+
+            plan.rows = plan.rows.filter((row) => row.id !== event.currentTarget.dataset.rowId);
+            saveMigrationPlans();
+            renderMigrationPlans();
+        });
+    });
+
+    list.querySelectorAll(".migration-delete-plan-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const planId = event.currentTarget.dataset.planId;
+            const plan = getPlan(planId);
+            if (!plan) return;
+
+            const confirmation = confirm(`Tu veux vraiment supprimer le plan “${plan.name || "Plan sans nom"}” ?`);
+            if (!confirmation) return;
+
+            migrationPlans = migrationPlans.filter((item) => item.id !== planId);
+            saveMigrationPlans();
+            renderMigrationPlans();
+        });
+    });
+}
+
+function initMigrationPage() {
+    const list = document.getElementById("migration-plans-list");
+    if (!list) return;
+
+    migrationPlans = loadMigrationPlans();
+    renderMigrationPlans();
+    renderColorMenu();
+
+    document.getElementById("add-migration-plan-btn")?.addEventListener("click", () => {
+        const plan = createMigrationPlan(`Plan ${migrationPlans.length + 1}`, migrationPlans.length);
+        migrationPlans.push(plan);
+        saveMigrationPlans();
+        renderMigrationPlans();
+
+        const titleEl = document.querySelector(`.migration-plan-name-input[data-plan-id="${plan.id}"]`);
+        if (titleEl) {
+            titleEl.focus();
+            document.execCommand("selectAll", false, null);
+        }
+    });
+}
+
+if (typeof helpTexts !== "undefined") {
+    helpTexts.migration = `
+        <p>Cette page sert à préparer un plan de migration (et son rollback associé) étape par étape.</p>
+        <ul>
+            <li>Utilise le “+” en haut de page pour créer un nouveau plan.</li>
+            <li>Clique sur le titre d’un plan pour le renommer.</li>
+            <li>Chaque ligne couvre à la fois la partie “Migration” (étape, temporalité, temps estimé, quand, criticité) et la partie “Rollback” associée (risque, possibilité, prévention, correction) — les deux bandeaux d’en-tête regroupent les colonnes correspondantes.</li>
+            <li>La colonne “Crit.” se choisit dans une liste de 1 à 5 et colore automatiquement la ligne selon l’échelle de criticité affichée à gauche.</li>
+            <li>Le “+” en bas de tableau ajoute une étape, le “×” d’une étape la retire, et le “-” dans l’en-tête du plan le supprime entièrement.</li>
+            <li>Chaque plan a son propre bouton de capture (📸) pour le copier en image.</li>
+            <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
+            <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
+        </ul>
+    `;
+}
+
+/* V95 — Planning (Gantt automatique par jour/demi-journée, basé sur les étapes de Migration) */
+
+const MIGRATION_DAY_PARTS = [
+    { value: "morning", label: "Matin" },
+    { value: "afternoon", label: "Après-midi" },
+    { value: "evening", label: "Soirée" },
+    { value: "full", label: "Journée entière" },
+    { value: "weekend", label: "Week-end" }
+];
+
+const MIGRATION_PLANNING_MAX_DAYS = 60;
+
+function createDefaultMigrationRowPlanning() {
+    return { startDay: 1, days: ["full"] };
+}
+
+function loadMigrationPlanning() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(getProjectKey("migration_planning")) || "{}");
+        return raw && typeof raw === "object" ? raw : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function saveMigrationPlanning() {
+    localStorage.setItem(getProjectKey("migration_planning"), JSON.stringify(migrationPlanningByRow));
+}
+
+// Renvoie le planning d'une étape sans le créer — utilisé au rendu, pour ne pas
+// polluer le storage tant que l'utilisateur n'a rien modifié pour cette étape
+// (par défaut : jour 1, 1 jour, journée entière). Normalise startDay/days au
+// passage : une entrée créée avant l'ajout de "Jour début" n'a pas ce champ.
+function getMigrationRowPlanning(rowId) {
+    const entry = migrationPlanningByRow[rowId];
+    if (!entry) return createDefaultMigrationRowPlanning();
+
+    return {
+        startDay: parsePositiveInteger(entry.startDay) || 1,
+        days: Array.isArray(entry.days) && entry.days.length ? entry.days : ["full"]
+    };
+}
+
+function getOrCreateMigrationRowPlanning(rowId) {
+    if (!migrationPlanningByRow[rowId]) {
+        migrationPlanningByRow[rowId] = createDefaultMigrationRowPlanning();
+    } else {
+        migrationPlanningByRow[rowId] = getMigrationRowPlanning(rowId);
+    }
+
+    return migrationPlanningByRow[rowId];
+}
+
+// Redimensionne le tableau des jours d'une étape en gardant Jour début fixe
+// (nouveaux jours = journée entière par défaut), utilisé par les 3 champs
+// Jour début / Durée / Jour fin (même logique interdépendante que dans WBS).
+function resizeMigrationPlanningDays(planning, newLength) {
+    const length = Math.max(1, Math.min(MIGRATION_PLANNING_MAX_DAYS, newLength || 1));
+
+    if (length > planning.days.length) {
+        while (planning.days.length < length) planning.days.push("full");
+    } else {
+        planning.days.length = length;
+    }
+}
+
+// Retire les entrées de planning dont l'étape Migration correspondante a été
+// supprimée (ligne ou plan entier) — pas de cascade explicite côté Migration,
+// juste un nettoyage silencieux fait ici à chaque chargement de la page.
+function pruneMigrationPlanning() {
+    const validRowIds = new Set(migrationPlans.flatMap((plan) => plan.rows.map((row) => row.id)));
+    let changed = false;
+
+    Object.keys(migrationPlanningByRow).forEach((rowId) => {
+        if (!validRowIds.has(rowId)) {
+            delete migrationPlanningByRow[rowId];
+            changed = true;
+        }
+    });
+
+    if (changed) saveMigrationPlanning();
+}
+
+function migrationDayPartOptions(selected) {
+    return MIGRATION_DAY_PARTS.map(
+        (part) => `<option value="${part.value}" ${part.value === selected ? "selected" : ""}>${part.label}</option>`
+    ).join("");
+}
+
+function renderMigrationPlanningPlans() {
+    const list = document.getElementById("migration-planning-list");
+    if (!list) return;
+
+    if (migrationPlans.length === 0) {
+        list.innerHTML = `<p class="empty-state migration-planning-empty-state">Crée d’abord un plan dans Migration pour pouvoir le planifier ici.</p>`;
+        return;
+    }
+
+    list.innerHTML = migrationPlans
+        .map((plan, planIndex) => {
+            const color = normalizeColor(plan.color, planIndex);
+            const cardStyle = `border-left: 6px solid ${color}; background-image: linear-gradient(${hexToRgba(color, 0.22)}, ${hexToRgba(color, 0.22)});`;
+            const planTitle = `<h2>${sanitizeRichText(plan.name) || "Plan sans nom"}</h2>`;
+
+            if (plan.rows.length === 0) {
+                return `
+                    <section class="card migration-planning-card" data-plan-id="${plan.id}" style="${cardStyle}">
+                        <div class="card-header">${planTitle}</div>
+                        <p class="empty-state migration-planning-empty-state">Ajoute des étapes à ce plan dans Migration pour les planifier ici.</p>
+                    </section>
+                `;
+            }
+
+            const maxDays = Math.max(1, ...plan.rows.map((row) => {
+                const planning = getMigrationRowPlanning(row.id);
+                return planning.startDay + planning.days.length - 1;
+            }));
+            const dayHeaders = Array.from({ length: maxDays }, (_, i) => `<th class="migration-planning-day-header">Jour ${i + 1}</th>`).join("");
+
+            const rowsHtml = plan.rows
+                .map((row) => {
+                    const planning = getMigrationRowPlanning(row.id);
+                    const endDay = planning.startDay + planning.days.length - 1;
+
+                    const dayCells = Array.from({ length: maxDays }, (_, i) => {
+                        const localIndex = i - (planning.startDay - 1);
+
+                        if (localIndex < 0 || localIndex >= planning.days.length) {
+                            return `<td class="migration-planning-day-cell migration-planning-day-inactive"></td>`;
+                        }
+
+                        const part = planning.days[localIndex];
+                        return `
+                            <td class="migration-planning-day-cell" data-part="${part}">
+                                <select class="migration-planning-day-select" data-row-id="${row.id}" data-day-index="${localIndex}" aria-label="Jour ${i + 1}">
+                                    ${migrationDayPartOptions(part)}
+                                </select>
+                            </td>
+                        `;
+                    }).join("");
+
+                    return `
+                        <tr data-row-id="${row.id}">
+                            <td class="migration-planning-task-cell">${sanitizeRichText(row.step) || `<span class="migration-planning-placeholder">Étape sans nom</span>`}</td>
+                            <td class="migration-planning-short-cell">
+                                <input type="number" class="migration-planning-day-field migration-planning-startday-input" min="1" step="1" value="${planning.startDay}" data-row-id="${row.id}" data-field="startDay" title="Jour de début (modifiable)" aria-label="Jour de début" />
+                            </td>
+                            <td class="migration-planning-short-cell">
+                                <input type="number" class="migration-planning-day-field migration-planning-duration-input" min="1" max="${MIGRATION_PLANNING_MAX_DAYS}" step="1" value="${planning.days.length}" data-row-id="${row.id}" aria-label="Durée en jours" />
+                            </td>
+                            <td class="migration-planning-short-cell">
+                                <input type="number" class="migration-planning-day-field migration-planning-endday-input" min="1" step="1" value="${endDay}" data-row-id="${row.id}" data-field="endDay" title="Jour de fin (modifiable)" aria-label="Jour de fin" />
+                            </td>
+                            ${dayCells}
+                        </tr>
+                    `;
+                })
+                .join("");
+
+            return `
+                <section class="card migration-planning-card" data-plan-id="${plan.id}" style="${cardStyle}">
+                    <div class="card-header">${planTitle}</div>
+
+                    <div class="table-wrapper">
+                        <table class="migration-planning-table">
+                            <thead>
+                                <tr>
+                                    <th class="migration-planning-task-header">Étape</th>
+                                    <th class="migration-planning-short-header">Jour début</th>
+                                    <th class="migration-planning-short-header">Durée (j.)</th>
+                                    <th class="migration-planning-short-header">Jour fin</th>
+                                    ${dayHeaders}
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </section>
+            `;
+        })
+        .join("");
+
+    bindMigrationPlanningEvents();
+}
+
+function bindMigrationPlanningEvents() {
+    const list = document.getElementById("migration-planning-list");
+    if (!list) return;
+
+    list.querySelectorAll(".migration-planning-day-select").forEach((select) => {
+        select.addEventListener("change", (event) => {
+            const rowId = event.target.dataset.rowId;
+            const dayIndex = Number(event.target.dataset.dayIndex);
+            const planning = getOrCreateMigrationRowPlanning(rowId);
+            if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= planning.days.length) return;
+
+            planning.days[dayIndex] = event.target.value;
+            saveMigrationPlanning();
+
+            const cell = event.target.closest(".migration-planning-day-cell");
+            if (cell) cell.dataset.part = event.target.value;
+        });
+    });
+
+    list.querySelectorAll(".migration-planning-duration-input").forEach((input) => {
+        input.addEventListener("change", (event) => {
+            const rowId = event.target.dataset.rowId;
+            const planning = getOrCreateMigrationRowPlanning(rowId);
+
+            resizeMigrationPlanningDays(planning, Math.round(Number(event.target.value)) || 1);
+
+            saveMigrationPlanning();
+            renderMigrationPlanningPlans();
+        });
+    });
+
+    // Jour début / Jour fin : mêmes règles d'interdépendance que dans WBS —
+    // changer le début déplace l'étape (durée conservée), changer la fin la
+    // redimensionne (début conservé).
+    list.querySelectorAll(".migration-planning-startday-input, .migration-planning-endday-input").forEach((input) => {
+        input.addEventListener("change", (event) => {
+            const rowId = event.target.dataset.rowId;
+            const field = event.target.dataset.field;
+            const planning = getOrCreateMigrationRowPlanning(rowId);
+            const value = parsePositiveInteger(event.target.value);
+
+            if (field === "startDay") {
+                planning.startDay = value || 1;
+            } else if (field === "endDay") {
+                const newEnd = Math.max(value || planning.startDay, planning.startDay);
+                resizeMigrationPlanningDays(planning, newEnd - planning.startDay + 1);
+            }
+
+            saveMigrationPlanning();
+            renderMigrationPlanningPlans();
+        });
+    });
+}
+
+function initMigrationPlanningPage() {
+    const list = document.getElementById("migration-planning-list");
+    if (!list) return;
+
+    migrationPlans = loadMigrationPlans();
+    migrationPlanningByRow = loadMigrationPlanning();
+    pruneMigrationPlanning();
+
+    renderMigrationPlanningPlans();
+}
+
+if (typeof helpTexts !== "undefined") {
+    helpTexts["migration-planning"] = `
+        <p>Cette page génère un planning jour par jour à partir des étapes créées dans Migration.</p>
+        <ul>
+            <li>Chaque plan créé dans Migration a automatiquement sa propre carte ici, avec ses étapes en lignes.</li>
+            <li>“Jour début”, “Durée (j.)” et “Jour fin” sont trois façons de régler la même étape (comme dans WBS) : changer le début déplace l’étape, changer la fin ou la durée la redimensionne.</li>
+            <li>Les colonnes “Jour 1”, “Jour 2”... s’ajustent automatiquement à la plus longue étape du plan.</li>
+            <li>Pour chaque jour, choisis Matin, Après-midi, Soirée, Journée entière ou Week-end : la couleur du jour reflète le choix fait.</li>
+            <li>Pas de date précise ici, uniquement une numérotation relative des jours.</li>
+            <li>Le texte des étapes se modifie dans Migration ; seuls la durée et le découpage des jours se modifient ici.</li>
+            <li>Chaque plan a son propre bouton de capture (📸) pour le copier en image.</li>
             <li>Le sélecteur “Projet actif” permet de changer de projet.</li>
             <li>Les changements sont sauvegardés automatiquement pour le projet actif.</li>
         </ul>

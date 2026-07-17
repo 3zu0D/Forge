@@ -10040,11 +10040,29 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
     gap: 14px;
 }
 
-.vmsizing-top-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px;
-    align-items: start;
+.vmsizing-server-card .card-header {
+    justify-content: space-between !important;
+}
+
+.vmsizing-subsection-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+}
+
+.vmsizing-subsection-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.vmsizing-subsection-header span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .vmsizing-field {
@@ -10084,12 +10102,6 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 14px;
     padding: 16px 20px 20px;
-}
-
-.vmsizing-field-grid-compact {
-    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-    gap: 10px;
-    padding: 14px 16px 16px;
 }
 
 .vmsizing-field-wide {
@@ -10225,10 +10237,6 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
     .vmsizing-servers-card {
         position: static;
-    }
-
-    .vmsizing-top-row {
-        grid-template-columns: 1fr;
     }
 }
 
@@ -11703,4 +11711,438 @@ body[data-theme="executive"] .tests-context-general-field:empty::before {
    rendant le résultat imprévisible — voir handleEditableMouseOver). */
 body.multi-cell-selecting {
     user-select: none;
+}
+
+/* V93 — Tableaux libres (colonnes et lignes entièrement dynamiques) */
+.free-tables-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+}
+
+#free-tables-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.free-table-card .card-header {
+    justify-content: space-between !important;
+}
+
+.free-table-card .card-header h2 {
+    text-align: left !important;
+    flex: 1 1 auto;
+}
+
+.free-table {
+    /* width:100% pour occuper toute la carte et s'adapter automatiquement
+       quand une colonne est ajoutée/supprimée (comme .decision-options-table
+       et .migration-table). La capture 📸 est verrouillée via
+       CAPTURE_COLUMN_LOCK_SELECTOR (script.js), qui fige la largeur de
+       chaque colonne juste avant la capture pour que html2canvas réplique
+       fidèlement l'étirement des colonnes. */
+    width: 100%;
+    min-width: 320px;
+}
+
+.free-table-row-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.free-table-row-name {
+    display: inline-block;
+    min-width: 70px;
+}
+
+.free-table-column-header {
+    min-width: 140px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.free-table-column-name {
+    display: inline-block;
+    min-width: 60px;
+}
+
+.free-table-delete-column-btn {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.free-table-cell {
+    min-height: 20px;
+    min-width: 140px;
+}
+
+.free-table-add-column-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(0, 230, 118, 0.34);
+    border-radius: 4px;
+    background: rgba(0, 230, 118, 0.14);
+    color: #bbf7d0;
+    font-size: 0.82rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.free-table-add-column-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.16);
+}
+
+.free-table-row-number-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 0.74rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow:
+        0 0 10px var(--row-glow),
+        0 4px 10px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.free-table-column-color-btn {
+    width: 13px;
+    height: 13px;
+    margin-right: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 50%;
+    cursor: pointer;
+    vertical-align: middle;
+    box-shadow: 0 0 8px var(--row-glow);
+}
+
+/* V94 — Plans de migration (Migration / Rollback groupés, criticité colorée) */
+.migration-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.migration-legend-card {
+    position: sticky;
+    top: 114px;
+}
+
+.migration-criticality-scale {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+}
+
+.migration-criticality-row {
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+/* Même échelle (1=négligeable, vert → 5=critique, rouge) que .risk-scale-1..5
+   (Analyse des risques) — couleurs dupliquées ici volontairement, comme
+   partout ailleurs dans l'app, pour ne pas coupler cette page à une classe
+   propre à une autre page. */
+.migration-criticality-1 {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.92), rgba(21, 128, 61, 0.88));
+}
+
+.migration-criticality-2 {
+    background: linear-gradient(135deg, rgba(101, 163, 13, 0.92), rgba(77, 124, 15, 0.88));
+}
+
+.migration-criticality-3 {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.96), rgba(217, 119, 6, 0.92));
+}
+
+.migration-criticality-4 {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.98), rgba(234, 88, 12, 0.94));
+}
+
+.migration-criticality-5 {
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.98), rgba(159, 18, 57, 0.96));
+}
+
+#migration-plans-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.migration-empty-state {
+    padding: 24px;
+    text-align: center;
+}
+
+.migration-plan-card .card-header {
+    justify-content: space-between !important;
+}
+
+.migration-plan-card .card-header h2 {
+    text-align: left !important;
+    flex: 1 1 auto;
+}
+
+.migration-plan-color-btn {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    margin-right: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--row-glow);
+}
+
+.migration-table {
+    /* width:100% pour occuper toute la carte (comme .decision-options-table).
+       Cette table a un en-tête à deux niveaux (bandeau Migration/Rollback à
+       colspan + colonnes réelles) — même piège capture 📸 que la matrice de
+       décision pondérée (html2canvas ne réplique pas l'étirement des
+       colonnes) si on ne verrouillait pas les largeurs. C'est géré via
+       CAPTURE_COLUMN_LOCK_SELECTOR (script.js), qui mesure la dernière ligne
+       du thead pour ignorer le bandeau à colspan. */
+    width: 100%;
+    min-width: 720px;
+}
+
+.migration-table th,
+.migration-table td {
+    padding: 6px 8px;
+    font-size: 0.74rem;
+    line-height: 1.25;
+}
+
+.migration-group-header {
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.76rem;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    padding: 8px !important;
+    vertical-align: middle;
+}
+
+.migration-group-header .nav-icon {
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    vertical-align: -3px;
+}
+
+.migration-group-migration {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(3, 105, 161, 0.78));
+}
+
+.migration-group-rollback {
+    background: linear-gradient(135deg, rgba(124, 45, 18, 0.88), rgba(194, 65, 12, 0.72));
+}
+
+.migration-cell {
+    min-height: 20px;
+    min-width: 100px;
+}
+
+.migration-crit-cell {
+    width: 60px;
+    text-align: center;
+    padding: 4px !important;
+    transition: background-color 0.15s ease;
+}
+
+.migration-crit-select {
+    width: 100%;
+    height: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 5px;
+    background: rgba(15, 23, 42, 0.55);
+    color: inherit;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-align: center;
+    text-align-last: center;
+}
+
+.migration-criticality-1 .migration-crit-select,
+.migration-criticality-2 .migration-crit-select,
+.migration-criticality-3 .migration-crit-select,
+.migration-criticality-4 .migration-crit-select,
+.migration-criticality-5 .migration-crit-select {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.14);
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+body[data-theme="light"] .migration-crit-select,
+body[data-theme="executive"] .migration-crit-select {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.98));
+    color: #102033;
+    border-color: rgba(15, 23, 42, 0.16);
+}
+
+@media (max-width: 900px) {
+    .migration-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .migration-legend-card {
+        position: static;
+        max-width: none;
+    }
+}
+
+/* V95 — Planning (Gantt automatique par jour/demi-journée, basé sur Migration) */
+.migration-planning-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.migration-planning-empty-state {
+    padding: 24px;
+    text-align: center;
+}
+
+.migration-planning-table {
+    /* table-layout: fixed (pas auto) : les cases de jour contiennent un
+       <select> dont le texte affiché change de longueur selon l'option
+       choisie ("Matin" vs "Journée entière" vs "Week-end"...). En
+       table-layout:auto, le navigateur recalcule la largeur des colonnes en
+       tenant compte de ce contenu, ce qui fait "sauter" tout le tableau à
+       chaque changement. Avec fixed, les largeurs viennent uniquement des
+       <th> de la 1ère ligne (déjà fixées en CSS ci-dessous) et ne bougent
+       plus jamais après le choix d'une option. */
+    table-layout: fixed;
+    width: 100%;
+    min-width: 640px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.migration-planning-table th,
+.migration-planning-table td {
+    padding: 5px 6px;
+    font-size: 0.74rem;
+    line-height: 1.25;
+}
+
+.migration-planning-task-header,
+.migration-planning-task-cell {
+    text-align: left;
+    min-width: 160px;
+}
+
+.migration-planning-short-header,
+.migration-planning-short-cell {
+    width: 74px;
+    text-align: center;
+}
+
+.migration-planning-day-field {
+    width: 56px;
+    height: 26px;
+    text-align: center;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 5px;
+    background: rgba(15, 23, 42, 0.35);
+    color: inherit;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.migration-planning-placeholder {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.migration-planning-day-header {
+    width: 58px;
+    min-width: 58px;
+    text-align: center;
+    border-left: 1px solid var(--border);
+}
+
+.migration-planning-day-cell {
+    width: 58px;
+    min-width: 58px;
+    text-align: center;
+    padding: 3px 4px !important;
+    border-left: 1px solid var(--border);
+}
+
+.migration-planning-day-cell.migration-planning-day-inactive {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(148, 163, 184, 0.06),
+        rgba(148, 163, 184, 0.06) 4px,
+        transparent 4px,
+        transparent 8px
+    );
+}
+
+.migration-planning-day-select {
+    width: 100%;
+    height: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 5px;
+    font: inherit;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-align: center;
+    text-align-last: center;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+}
+
+.migration-planning-day-cell[data-part="full"] .migration-planning-day-select {
+    background: linear-gradient(135deg, rgba(3, 105, 161, 0.95), rgba(8, 47, 73, 0.92));
+}
+
+.migration-planning-day-cell[data-part="morning"] .migration-planning-day-select {
+    background: linear-gradient(to right, rgba(3, 105, 161, 0.95) 0%, rgba(3, 105, 161, 0.95) 33%, rgba(15, 23, 42, 0.35) 33%, rgba(15, 23, 42, 0.35) 100%);
+}
+
+.migration-planning-day-cell[data-part="afternoon"] .migration-planning-day-select {
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.35) 33%, rgba(3, 105, 161, 0.95) 33%, rgba(3, 105, 161, 0.95) 66%, rgba(15, 23, 42, 0.35) 66%, rgba(15, 23, 42, 0.35) 100%);
+}
+
+.migration-planning-day-cell[data-part="evening"] .migration-planning-day-select {
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.35) 66%, rgba(3, 105, 161, 0.95) 66%, rgba(3, 105, 161, 0.95) 100%);
+}
+
+.migration-planning-day-cell[data-part="weekend"] .migration-planning-day-select {
+    background: repeating-linear-gradient(
+        135deg,
+        rgba(100, 116, 139, 0.85),
+        rgba(100, 116, 139, 0.85) 5px,
+        rgba(71, 85, 105, 0.7) 5px,
+        rgba(71, 85, 105, 0.7) 10px
+    );
+    font-size: 0.56rem;
+}
+
+body[data-theme="light"] .migration-planning-day-field,
+body[data-theme="executive"] .migration-planning-day-field {
+    background: rgba(255, 255, 255, 0.9);
+    color: #102033;
+    border-color: rgba(15, 23, 42, 0.16);
 }

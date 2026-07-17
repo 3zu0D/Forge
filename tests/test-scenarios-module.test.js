@@ -1,6 +1,6 @@
 /* Garde-fous pour le nouveau module "Tests" (pages Scénario / Déroulé) :
    - un scénario créé dans Scénario obtient automatiquement sa propre carte,
-     avec un champ "Contexte général" et un tableau d'étapes "Contexte détaillé".
+     avec un champ "Contexte général" et un tableau d'éléments "Contexte détaillé".
    - ce même scénario obtient aussi automatiquement sa propre carte dans
      Déroulé (synchronisation entre les deux pages, sans sélecteur à choisir).
    - supprimer un scénario dans Scénario supprime bien sa carte (et ses
@@ -46,7 +46,7 @@ module.exports = async function ({ page, baseUrl, assert }) {
     await page.waitForTimeout(150);
 
     const contextSteps = await page.locator(".tests-scenario-card").first().locator(".tests-step-cell").allTextContents();
-    assert.deepEqual(contextSteps.map((t) => t.trim()), ["Ouvrir la page de connexion"], "l'étape de contexte détaillé doit apparaître dans la carte du bon scénario");
+    assert.deepEqual(contextSteps.map((t) => t.trim()), ["Ouvrir la page de connexion"], "l'élément de contexte détaillé doit apparaître dans la carte du bon scénario");
 
     // La page Déroulé doit refléter automatiquement les scénarios créés ici.
     await gotoPage(page, baseUrl, "tests-deroule.html", "#test-deroule-container");

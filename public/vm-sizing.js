@@ -9,12 +9,7 @@ const VMSIZING_SPEC_FIELDS = [
     "cpuCoresPerSocket",
     "cpuThreadsPerCore",
     "ramGB",
-    "storageGB",
-    "cpuOvercommitRatio",
-    "ramOvercommitRatio",
-    "reservedCpuPercent",
-    "reservedRamPercent",
-    "reservedStoragePercent"
+    "storageGB"
 ];
 
 const VMSIZING_VM_TEXT_FIELDS = ["name", "role"];
@@ -46,11 +41,6 @@ function vmSizingDefaultProfile(name, colorIndex) {
         cpuThreadsPerCore: 2,
         ramGB: 256,
         storageGB: 4000,
-        cpuOvercommitRatio: 4,
-        ramOvercommitRatio: 1,
-        reservedCpuPercent: 10,
-        reservedRamPercent: 10,
-        reservedStoragePercent: 10,
         vms: []
     };
 }
@@ -195,9 +185,9 @@ function vmSizingVmDiskTotal(vm) {
 function vmSizingCalculate(profile) {
     const totalLogicalCores = profile.cpuSockets * profile.cpuCoresPerSocket * profile.cpuThreadsPerCore;
 
-    const usableCpu = totalLogicalCores * (1 - profile.reservedCpuPercent / 100) * profile.cpuOvercommitRatio;
-    const usableRam = profile.ramGB * (1 - profile.reservedRamPercent / 100) * profile.ramOvercommitRatio;
-    const usableStorage = profile.storageGB * (1 - profile.reservedStoragePercent / 100);
+    const usableCpu = totalLogicalCores;
+    const usableRam = profile.ramGB;
+    const usableStorage = profile.storageGB;
 
     const requiredVcpu = profile.vms.reduce((sum, vm) => sum + vm.vcpu, 0);
     const requiredRam = profile.vms.reduce((sum, vm) => sum + vm.ramGB, 0);
@@ -544,7 +534,7 @@ function initVmSizingPage() {
             <ul>
                 <li>La colonne de gauche liste tes serveurs, comme les catégories de la page Compétences : coche puis "-" pour supprimer, "+" pour ajouter, clique sur le numéro pour changer la couleur.</li>
                 <li>Clique sur un serveur pour l'afficher à droite.</li>
-                <li>Renseigne les caractéristiques du serveur : sockets, cœurs, threads, RAM, stockage, ratios d'overcommit et réserves pour l'hyperviseur.</li>
+                <li>Renseigne les caractéristiques du serveur : sockets, cœurs, threads, RAM et stockage.</li>
                 <li>Ajoute les VM prévues dans le tableau : rôle, vCPU, RAM et jusqu'à 3 disques.</li>
                 <li>Les jauges CPU / RAM / Stockage indiquent le taux d'utilisation (OK &lt; 80&nbsp;%, Attention 80–100&nbsp;%, Critique &gt; 100&nbsp;%).</li>
                 <li>Les changements sont sauvegardés automatiquement (SQLite si Docker, sinon navigateur local).</li>
