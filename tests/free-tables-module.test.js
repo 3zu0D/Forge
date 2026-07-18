@@ -14,6 +14,9 @@
      freeTableColumn identifiés par tableId + index), pas un simple index à
      plat comme les autres listes colorées de l'app.
    - une ligne se nomme comme une colonne, et ça persiste.
+   - une colonne se réorganise par glisser-déposer (poignée dédiée) : la
+     valeur des cellules suit la colonne déplacée (elle vit dans
+     row.cells[columnId], pas par position), et ça persiste.
    - régression capture 📸 : la cellule d'en-tête au-dessus du badge/nom de
      ligne NE DOIT PAS porter la classe .select-col — sinon elle serait
      retirée par hideStructuralCaptureColumns pendant qu'une capture, alors
@@ -99,6 +102,34 @@ module.exports = async function ({ page, baseUrl, assert }) {
     await cells.nth(2).click();
     await page.keyboard.type("À surveiller");
     await page.waitForTimeout(150);
+
+    // Glisse la 1ère colonne (Fournisseur) après la 3e (Colonne 3) : la
+    // valeur des cellules doit suivre la colonne, pas rester sur place.
+    const dragColumn = async (fromIndex, toIndex) => {
+        const handle = page.locator(".free-table-column-header").nth(fromIndex).locator(".column-drag-handle");
+        const targetBox = await page.locator(".free-table-column-header").nth(toIndex).boundingBox();
+        const handleBox = await handle.boundingBox();
+        const targetX = toIndex > fromIndex ? targetBox.x + targetBox.width - 5 : targetBox.x + 5;
+
+        await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(handleBox.x + 10, handleBox.y, { steps: 3 });
+        await page.mouse.move(targetX, targetBox.y + targetBox.height / 2, { steps: 15 });
+        await page.waitForTimeout(100);
+        await page.mouse.up();
+        await page.waitForTimeout(150);
+    };
+
+    await dragColumn(0, 2);
+    const columnsAfterDrag = (await page.locator(".free-table-column-name").allTextContents()).map((t) => t.trim());
+    assert.deepEqual(columnsAfterDrag, ["Statut", "Colonne 3", "Fournisseur"], "glisser une colonne après une autre doit la déplacer");
+    const cellsAfterDrag = (await page.locator(".free-table-cell").allTextContents()).map((t) => t.trim());
+    assert.deepEqual(cellsAfterDrag, ["Actif", "À surveiller", "ACME"], "les valeurs de cellule doivent suivre leur colonne déplacée, pas leur position");
+
+    // Remet "Fournisseur" en premier pour ne pas perturber les assertions suivantes.
+    await dragColumn(2, 0);
+    const columnsRestored = (await page.locator(".free-table-column-name").allTextContents()).map((t) => t.trim());
+    assert.deepEqual(columnsRestored, ["Fournisseur", "Statut", "Colonne 3"], "glisser une colonne avant une autre doit aussi fonctionner (ordre restauré)");
 
     // Persistance après rechargement.
     await page.reload({ waitUntil: "load" });

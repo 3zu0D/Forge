@@ -1047,7 +1047,7 @@ function renderStakeholdersTable() {
 
     if (stakeholders.length === 0) {
         const row = document.createElement("tr");
-        row.innerHTML = `<td colspan="7" class="empty-state">Aucune partie prenante pour le moment.</td>`;
+        row.innerHTML = `<td colspan="8" class="empty-state">Aucune partie prenante pour le moment.</td>`;
         tableBody.appendChild(row);
         updateStakeholdersSelectionControls();
         return;
@@ -1058,6 +1058,7 @@ function renderStakeholdersTable() {
         const color = normalizeColor(person.color, index);
         const isSelected = selectedRows.has(index);
 
+        row.dataset.rowId = person.id;
         row.style.backgroundColor = hexToRgba(color, 0.18);
         row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
@@ -1084,6 +1085,9 @@ function renderStakeholdersTable() {
                     aria-label="Choisir la couleur de la ligne ${index + 1}"
                     title="Choisir la couleur"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la ligne ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             ${createEditableCell(person.nom, index, "nom")}
             ${createEditableCell(person.prenom, index, "prenom")}
@@ -1135,6 +1139,15 @@ function bindStakeholdersTableEvents() {
 
             renderStakeholdersTable();
         });
+    });
+
+    bindRowDragReorder(tableBody, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => stakeholders, () => {
+            saveStakeholders();
+            renderStakeholdersTable();
+        })
     });
 }
 
@@ -1197,7 +1210,7 @@ function renderPhasesTable() {
 
     if (phases.length === 0) {
         const row = document.createElement("tr");
-        row.innerHTML = `<td colspan="3" class="empty-state">Aucune phase pour le moment.</td>`;
+        row.innerHTML = `<td colspan="4" class="empty-state">Aucune phase pour le moment.</td>`;
         phasesTableBody.appendChild(row);
         updatePhasesSelectionControls();
         return;
@@ -1214,6 +1227,8 @@ function renderPhasesTable() {
         if (isSelected) {
             row.classList.add("selected-row");
         }
+
+        row.dataset.rowId = phase.id;
 
         row.innerHTML = `
             <td class="select-col">
@@ -1234,6 +1249,9 @@ function renderPhasesTable() {
                     aria-label="Choisir la couleur de la phase ${index + 1}"
                     title="Choisir la couleur"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la phase ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             ${createEditableCell(phase.name, index, "name", "phase-name-cell")}
         `;
@@ -1286,6 +1304,16 @@ function bindPhasesTableEvents() {
 
             renderPhasesTable();
         });
+    });
+
+    bindRowDragReorder(phasesTableBody, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => phases, () => {
+            savePhases();
+            renderPhasesTable();
+            renderWbsTable();
+        })
     });
 }
 
@@ -1364,7 +1392,7 @@ function initSwotPage() {
     swotAddButtons.forEach((button) => {
         button.addEventListener("click", () => {
             const category = button.dataset.category;
-            swotData[category].push({ text: "" });
+            swotData[category].push({ id: createId(), text: "" });
             saveSwot();
             renderSwot();
 
@@ -1424,8 +1452,10 @@ function renderSwot() {
             const isSelected = selectedSwotItems[category].has(index);
             const row = document.createElement("div");
             row.className = `swot-item ${isSelected ? "selected-row" : ""}`;
+            row.dataset.rowId = item.id;
 
             row.innerHTML = `
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser cet élément">${dragHandleIconSvg()}</button>
                 <input
                     class="swot-item-checkbox"
                     type="checkbox"
@@ -1479,6 +1509,18 @@ function bindSwotEvents(category) {
             renderSwot();
         });
     });
+
+    bindRowDragReorder(list, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: ".swot-item[data-row-id]",
+        onDrop: createFlatRowDropHandler(
+            () => swotData[category],
+            () => {
+                saveSwot();
+                renderSwot();
+            }
+        )
+    });
 }
 
 function updateSwotDeleteButton(category) {
@@ -1498,11 +1540,16 @@ function loadSwot() {
     try {
         const parsedData = JSON.parse(savedData);
 
+        const withIds = (items) => (Array.isArray(items) ? items : []).map((item) => ({
+            id: item.id || createId(),
+            text: item.text || ""
+        }));
+
         return {
-            strengths: Array.isArray(parsedData.strengths) ? parsedData.strengths : [],
-            weaknesses: Array.isArray(parsedData.weaknesses) ? parsedData.weaknesses : [],
-            opportunities: Array.isArray(parsedData.opportunities) ? parsedData.opportunities : [],
-            threats: Array.isArray(parsedData.threats) ? parsedData.threats : []
+            strengths: withIds(parsedData.strengths),
+            weaknesses: withIds(parsedData.weaknesses),
+            opportunities: withIds(parsedData.opportunities),
+            threats: withIds(parsedData.threats)
         };
     } catch (error) {
         console.error("Impossible de charger le SWOT :", error);
@@ -2528,7 +2575,7 @@ function renderKpiTypesTable() {
     body.innerHTML = "";
 
     if (kpiTypes.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun type de KPI pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun type de KPI pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -2543,6 +2590,8 @@ function renderKpiTypesTable() {
         row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
         if (isSelected) row.classList.add("selected-row");
+
+        row.dataset.rowId = type.id;
 
         row.innerHTML = `
             <td class="select-col">
@@ -2562,6 +2611,9 @@ function renderKpiTypesTable() {
                     style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                     aria-label="Changer la couleur du type KPI ${index + 1}"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le type ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             <td
                 class="editable kpi-type-name-cell"
@@ -2609,6 +2661,16 @@ function renderKpiTypesTable() {
             saveKpiTypes();
             renderKpiGroups();
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => kpiTypes, () => {
+            saveKpiTypes();
+            renderKpiTypesTable();
+            renderKpiGroups();
+        })
     });
 
     if (deleteButton) deleteButton.disabled = selectedKpiTypes.size === 0;
@@ -2763,7 +2825,7 @@ function renderRiskTypesTable() {
     body.innerHTML = "";
 
     if (riskTypes.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun type de risque pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun type de risque pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -2778,6 +2840,8 @@ function renderRiskTypesTable() {
         row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
         if (isSelected) row.classList.add("selected-row");
+
+        row.dataset.rowId = type.id;
 
         row.innerHTML = `
             <td class="select-col">
@@ -2797,6 +2861,9 @@ function renderRiskTypesTable() {
                     style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                     aria-label="Changer la couleur du type de risque ${index + 1}"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le type ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             <td
                 class="editable risk-type-name-cell"
@@ -3152,7 +3219,7 @@ function renderRisksTable() {
     body.innerHTML = "";
 
     if (riskRows.length === 0) {
-        body.innerHTML = `<tr><td colspan="9" class="empty-state">Aucun risque pour le moment. Clique sur “Ajouter un risque” pour commencer.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="10" class="empty-state">Aucun risque pour le moment. Clique sur “Ajouter un risque” pour commencer.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -3171,6 +3238,8 @@ function renderRisksTable() {
 
         if (isSelected) row.classList.add("selected-row");
 
+        row.dataset.rowId = risk.id;
+
         row.innerHTML = `
             <td class="select-col">
                 <input
@@ -3182,6 +3251,9 @@ function renderRisksTable() {
                 />
             </td>
             <td class="risk-number-cell">${index + 1}</td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le risque ${index + 1}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="risk-type-cell">
                 <select class="risk-type-select" data-index="${index}" data-field="typeId">
                     <option value="">Sans type</option>
@@ -3252,6 +3324,15 @@ function bindRisksTableEvents() {
 
             renderRisksTable();
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => riskRows, () => {
+            saveRisks();
+            renderRisksTable();
+        })
     });
 }
 
@@ -3598,7 +3679,7 @@ function renderKpiGroupCard(group) {
     const allSelected = groupIndices.length > 0 && selectedInGroup.length === groupIndices.length;
 
     const rowsHtml = group.items.length === 0
-        ? `<tr><td colspan="10" class="empty-state">Aucun KPI pour le moment.</td></tr>`
+        ? `<tr class="kpi-group-empty-row" data-smart-id="${escapeHtml(group.smartId)}"><td colspan="11" class="empty-state">Aucun KPI pour le moment.</td></tr>`
         : group.items.map(({ kpi, index }, localIndex) => renderKpiRowHtml(kpi, index, localIndex + 1, selectedKpiRows.has(index))).join("");
 
     return `
@@ -3615,6 +3696,7 @@ function renderKpiGroupCard(group) {
                                 <input type="checkbox" class="row-checkbox kpi-group-select-all" data-smart-id="${escapeHtml(group.smartId)}" ${allSelected ? "checked" : ""} aria-label="Tout sélectionner" />
                             </th>
                             <th class="kpi-index-cell">N°</th>
+                            <th class="select-col"></th>
                             <th class="kpi-type-cell">Type</th>
                             <th class="kpi-name-cell">KPI</th>
                             <th class="kpi-objective-cell">Objectif</th>
@@ -3645,11 +3727,14 @@ function renderKpiRowHtml(kpi, index, displayNumber, isSelected) {
     const gap = kpi.gap || calculateKpiGap(kpi);
 
     return `
-        <tr style="background-color: ${hexToRgba(color, 0.18)}; box-shadow: inset 3px 0 0 ${color};" class="${isSelected ? "selected-row" : ""}">
+        <tr data-row-id="${escapeHtml(kpi.id)}" data-smart-id="${escapeHtml(kpi.smartId || "")}" style="background-color: ${hexToRgba(color, 0.18)}; box-shadow: inset 3px 0 0 ${color};" class="${isSelected ? "selected-row" : ""}">
             <td class="select-col">
                 <input class="row-checkbox kpi-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le KPI ${displayNumber}" ${isSelected ? "checked" : ""} />
             </td>
             <td class="kpi-index-cell">${displayNumber}</td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le KPI ${displayNumber}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="kpi-type-cell">
                 <select class="kpi-type-select" data-index="${index}" data-field="typeId">
                     <option value="">Sans type</option>
@@ -3671,6 +3756,42 @@ function kpiBelongsToGroup(kpi, smartId) {
     return smartId === ""
         ? !smartRows.some((smart) => smart.id === kpi.smartId)
         : kpi.smartId === smartId;
+}
+
+// Même logique que handleWbsRowDrop : le KPI déplacé adopte le smartId (objectif
+// SMART) du groupe où il est déposé.
+function handleKpiRowDrop(sourceRow, targetRow, position) {
+    const sourceIndex = kpiRows.findIndex((kpi) => kpi.id === sourceRow.dataset.rowId);
+    if (sourceIndex === -1) return;
+
+    const [moved] = kpiRows.splice(sourceIndex, 1);
+    const targetRowId = targetRow.dataset.rowId;
+
+    if (targetRowId) {
+        const targetIndex = kpiRows.findIndex((kpi) => kpi.id === targetRowId);
+
+        if (targetIndex === -1) {
+            kpiRows.push(moved);
+        } else {
+            moved.smartId = kpiRows[targetIndex].smartId;
+            kpiRows.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
+        }
+    } else {
+        moved.smartId = targetRow.dataset.smartId || "";
+
+        let insertIndex = kpiRows.length;
+        for (let index = kpiRows.length - 1; index >= 0; index -= 1) {
+            if ((kpiRows[index].smartId || "") === moved.smartId) {
+                insertIndex = index + 1;
+                break;
+            }
+        }
+
+        kpiRows.splice(insertIndex, 0, moved);
+    }
+
+    saveKpis();
+    renderKpiGroups();
 }
 
 function bindKpiGroupEvents() {
@@ -3731,6 +3852,15 @@ function bindKpiGroupEvents() {
 
             renderKpiGroups();
         });
+    });
+
+    // Conteneur global (pas un <tbody> par groupe) : permet de glisser un KPI
+    // d'un groupe SMART vers un autre, comme les phases dans WBS/Découpage.
+    bindRowDragReorder(container, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        targetSelector: "tr[data-row-id], tr.kpi-group-empty-row",
+        onDrop: handleKpiRowDrop
     });
 
     container.querySelectorAll(".kpi-group-add-btn").forEach((button) => {
@@ -4012,7 +4142,7 @@ function renderCompetenceCategoriesTable() {
     body.innerHTML = "";
 
     if (competenceCategories.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucune catégorie pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucune catégorie pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -4028,6 +4158,8 @@ function renderCompetenceCategoriesTable() {
 
         if (isSelected) row.classList.add("selected-row");
 
+        row.dataset.rowId = category.id;
+
         row.innerHTML = `
             <td class="select-col">
                 <input class="row-checkbox competence-category-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner la catégorie ${index + 1}" ${isSelected ? "checked" : ""} />
@@ -4040,6 +4172,9 @@ function renderCompetenceCategoriesTable() {
                     style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                     aria-label="Changer la couleur de la catégorie ${index + 1}"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la catégorie ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             <td class="editable competence-category-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${sanitizeRichText(category.name)}</td>
         `;
@@ -4083,6 +4218,16 @@ function renderCompetenceCategoriesTable() {
         });
     });
 
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => competenceCategories, () => {
+            saveCompetenceCategories();
+            renderCompetenceCategoriesTable();
+            renderCompetenceMatrices();
+        })
+    });
+
     if (deleteButton) deleteButton.disabled = selectedCompetenceCategories.size === 0;
     if (selectAll) {
         selectAll.checked = competenceCategories.length > 0 && selectedCompetenceCategories.size === competenceCategories.length;
@@ -4122,6 +4267,7 @@ function renderCompetenceMatrices() {
         const card = document.createElement("section");
 
         card.className = "card competence-matrix-card";
+        card.dataset.categoryId = category.id;
         card.style.setProperty("--matrix-color", color);
         card.style.setProperty("--matrix-glow", hexToRgba(color, 0.42));
 
@@ -4161,6 +4307,7 @@ function buildCompetenceMatrixTable(category, skills, color) {
             <table class="competence-matrix-table">
                 <thead>
                     <tr>
+                        <th class="select-col"></th>
                         <th class="select-col">Sel.</th>
                         <th>Compétence</th>
                         ${stakeholders.map((person) => `<th class="competence-person-header">${escapeHtml(getStakeholderLabel(person))}</th>`).join("")}
@@ -4168,7 +4315,7 @@ function buildCompetenceMatrixTable(category, skills, color) {
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="${2 + stakeholders.length}" class="empty-state">Aucune compétence dans cette catégorie pour le moment.</td>
+                        <td colspan="${3 + stakeholders.length}" class="empty-state">Aucune compétence dans cette catégorie pour le moment.</td>
                     </tr>
                 </tbody>
             </table>
@@ -4181,6 +4328,7 @@ function buildCompetenceMatrixTable(category, skills, color) {
         <table class="competence-matrix-table">
             <thead>
                 <tr>
+                    <th class="select-col"></th>
                     <th class="select-col">Sel.</th>
                     <th>Compétence</th>
                     ${stakeholders.map((person) => `<th class="competence-person-header">${escapeHtml(getStakeholderLabel(person))}</th>`).join("")}
@@ -4197,7 +4345,10 @@ function buildCompetenceSkillRow(category, skill, skillIndex, selectedSet) {
     const isSelected = selectedSet.has(skillIndex);
 
     return `
-        <tr class="${isSelected ? "selected-row" : ""}">
+        <tr class="${isSelected ? "selected-row" : ""}" data-row-id="${escapeHtml(skill.id)}">
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser cette compétence">${dragHandleIconSvg()}</button>
+            </td>
             <td class="select-col">
                 <input
                     class="row-checkbox competence-skill-checkbox"
@@ -4331,6 +4482,24 @@ function bindCompetenceMatrixEvents() {
 
             saveCompetenceMatrices();
             renderCompetenceMatrices();
+        });
+    });
+
+    document.querySelectorAll(".competence-matrix-card").forEach((card) => {
+        const categoryId = card.dataset.categoryId;
+        const tbody = card.querySelector("tbody");
+        if (!tbody || !categoryId) return;
+
+        bindRowDragReorder(tbody, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(
+                () => competenceMatrices[categoryId] || [],
+                () => {
+                    saveCompetenceMatrices();
+                    renderCompetenceMatrices();
+                }
+            )
         });
     });
 }
@@ -4529,6 +4698,297 @@ function closeColorMenuOnOutsideClick(event) {
     if (!clickedNumber && !clickedMenu) {
         hideColorMenu();
     }
+}
+
+// Réorganisation par glisser-déposer — mécanisme générique partagé, pas de
+// dépendance externe (pas de librairie drag & drop). Une poignée (bouton)
+// dans chaque ligne/colonne déclenche le suivi de la souris ; la logique
+// "qu'est-ce que ça veut dire déposer ici" (retrouver l'élément dans le
+// tableau de données, mettre à jour son ordre, sauvegarder, re-rendre) reste
+// entièrement du côté de l'appelant (onDrop) — ce module ne connaît que des
+// éléments DOM, jamais le modèle de données d'une page en particulier.
+function dragHandleIconSvg() {
+    return `
+        <svg class="drag-handle-icon" viewBox="0 0 12 20" width="10" height="16" fill="currentColor" aria-hidden="true">
+            <circle cx="3" cy="3" r="1.5"/><circle cx="9" cy="3" r="1.5"/>
+            <circle cx="3" cy="10" r="1.5"/><circle cx="9" cy="10" r="1.5"/>
+            <circle cx="3" cy="17" r="1.5"/><circle cx="9" cy="17" r="1.5"/>
+        </svg>
+    `;
+}
+
+let dragAutoScrollSpeed = 0;
+let dragAutoScrollFrame = null;
+
+function updateDragAutoScrollSpeed(clientY) {
+    const threshold = 70;
+    const maxSpeed = 16;
+
+    if (clientY < threshold) {
+        dragAutoScrollSpeed = -maxSpeed * (1 - clientY / threshold);
+    } else if (clientY > window.innerHeight - threshold) {
+        dragAutoScrollSpeed = maxSpeed * (1 - (window.innerHeight - clientY) / threshold);
+    } else {
+        dragAutoScrollSpeed = 0;
+    }
+}
+
+function startDragAutoScroll() {
+    const step = () => {
+        if (dragAutoScrollSpeed !== 0) window.scrollBy(0, dragAutoScrollSpeed);
+        dragAutoScrollFrame = requestAnimationFrame(step);
+    };
+
+    dragAutoScrollFrame = requestAnimationFrame(step);
+}
+
+function stopDragAutoScroll() {
+    if (dragAutoScrollFrame) cancelAnimationFrame(dragAutoScrollFrame);
+    dragAutoScrollFrame = null;
+    dragAutoScrollSpeed = 0;
+}
+
+// Branche une poignée de glisser-déposer par ligne. `container` est
+// l'élément qui contient toutes les <tr> concernées (un <tbody> en général).
+// `handleSelector` cible les poignées déjà présentes dans le DOM rendu ;
+// chaque poignée doit être à l'intérieur d'une ligne matchant `rowSelector`.
+// `targetSelector` définit ce qui peut être visé comme point de dépose —
+// volontairement plus large que `rowSelector` par défaut (peut inclure des
+// lignes non-déplaçables comme un en-tête de section, pour permettre de
+// déposer "dans" une section même vide). `onDrop(sourceRow, targetRow,
+// position)` reçoit les éléments DOM et "before"/"after" ; à lui de traduire
+// ça en mutation du modèle de données.
+function bindRowDragReorder(container, { handleSelector, rowSelector, targetSelector, onDrop }) {
+    if (!container) return;
+
+    container.querySelectorAll(handleSelector).forEach((handle) => {
+        const row = handle.closest(rowSelector);
+        if (!row) return;
+
+        handle.addEventListener("mousedown", (event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            handle.blur();
+            beginRowDrag(container, row, targetSelector || rowSelector, onDrop);
+        });
+    });
+}
+
+function beginRowDrag(container, sourceRow, targetSelector, onDrop) {
+    let targetRow = null;
+    let position = null;
+
+    // Indicateur d'insertion : une <tr> pour les vraies lignes de tableau
+    // (insertBefore respecte alors les règles de layout <tbody>), un simple
+    // <div> pour les listes non-tableau (ex. cartes SWOT) où sourceRow est
+    // un <div class="swot-item">.
+    const isTableRow = sourceRow.tagName === "TR";
+    const indicator = document.createElement(isTableRow ? "tr" : "div");
+    indicator.className = isTableRow ? "row-drag-indicator" : "row-drag-indicator row-drag-indicator-block";
+    if (isTableRow) {
+        indicator.innerHTML = `<td colspan="${sourceRow.children.length || 20}"></td>`;
+    }
+
+    sourceRow.classList.add("row-drag-source");
+    document.body.style.cursor = "grabbing";
+    sourceRow.parentNode.insertBefore(indicator, sourceRow.nextSibling);
+    startDragAutoScroll();
+
+    function candidateRows() {
+        return Array.from(container.querySelectorAll(targetSelector)).filter(
+            (row) => row !== sourceRow && row !== indicator
+        );
+    }
+
+    function onMouseMove(event) {
+        let closest = null;
+        let closestDistance = Infinity;
+        let closestPosition = "after";
+
+        candidateRows().forEach((row) => {
+            const rect = row.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            const distance = Math.abs(event.clientY - midY);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = row;
+                closestPosition = event.clientY < midY ? "before" : "after";
+            }
+        });
+
+        if (closest) {
+            targetRow = closest;
+            position = closestPosition;
+
+            if (position === "before") {
+                closest.parentNode.insertBefore(indicator, closest);
+            } else {
+                closest.parentNode.insertBefore(indicator, closest.nextSibling);
+            }
+        }
+
+        updateDragAutoScrollSpeed(event.clientY);
+    }
+
+    // onDrop (mutation + re-rendu) tourne AVANT le nettoyage visuel de la
+    // ligne/indicateur : sinon la ligne repasse un instant à sa position et
+    // opacité d'origine (plus rien pour la retenir) pendant que le modèle se
+    // met à jour, ce qui se voit comme un petit temps d'arrêt avant que la
+    // ligne "saute" à sa place définitive. Comme onDrop remplace en général
+    // tout le <tbody> (voir renderWbsTable), sourceRow/indicator sont déjà
+    // détachés du document à ce stade — indicator.remove()/classList.remove()
+    // sur un nœud détaché ne fait rien, sans erreur.
+    function onMouseUp() {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("keydown", onKeyDown);
+        document.body.style.cursor = "";
+        stopDragAutoScroll();
+
+        if (targetRow && targetRow !== sourceRow) onDrop(sourceRow, targetRow, position);
+
+        sourceRow.classList.remove("row-drag-source");
+        indicator.remove();
+    }
+
+    function onKeyDown(event) {
+        if (event.key === "Escape") cleanup();
+    }
+
+    function cleanup() {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("keydown", onKeyDown);
+        sourceRow.classList.remove("row-drag-source");
+        document.body.style.cursor = "";
+        indicator.remove();
+        stopDragAutoScroll();
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("keydown", onKeyDown);
+}
+
+// Même principe que bindRowDragReorder, mais horizontal (colonnes). Pas
+// d'élément inséré dans le tableau pour l'indicateur (ça ferait bouger
+// toutes les colonnes existantes pendant le survol) : une simple barre
+// verticale flottante (position: fixed), positionnée d'après la position
+// réelle de la colonne visée.
+function bindColumnDragReorder(container, { handleSelector, columnSelector, onDrop }) {
+    if (!container) return;
+
+    container.querySelectorAll(handleSelector).forEach((handle) => {
+        const column = handle.closest(columnSelector);
+        if (!column) return;
+
+        handle.addEventListener("mousedown", (event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            handle.blur();
+            beginColumnDrag(container, column, columnSelector, onDrop);
+        });
+    });
+}
+
+function beginColumnDrag(container, sourceColumn, columnSelector, onDrop) {
+    let targetColumn = null;
+    let position = null;
+
+    const indicator = document.createElement("div");
+    indicator.className = "column-drag-indicator";
+    document.body.appendChild(indicator);
+
+    sourceColumn.classList.add("column-drag-source");
+    document.body.style.cursor = "grabbing";
+
+    function candidateColumns() {
+        return Array.from(container.querySelectorAll(columnSelector)).filter((column) => column !== sourceColumn);
+    }
+
+    function onMouseMove(event) {
+        let closest = null;
+        let closestDistance = Infinity;
+        let closestPosition = "after";
+
+        candidateColumns().forEach((column) => {
+            const rect = column.getBoundingClientRect();
+            const midX = rect.left + rect.width / 2;
+            const distance = Math.abs(event.clientX - midX);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closest = column;
+                closestPosition = event.clientX < midX ? "before" : "after";
+            }
+        });
+
+        if (closest) {
+            targetColumn = closest;
+            position = closestPosition;
+
+            const rect = closest.getBoundingClientRect();
+            indicator.style.left = `${position === "before" ? rect.left : rect.right}px`;
+            indicator.style.top = `${rect.top}px`;
+            indicator.style.height = `${rect.height}px`;
+            indicator.classList.add("visible");
+        }
+    }
+
+    // Même raison qu'onMouseUp dans beginRowDrag : onDrop (re-rendu) avant le
+    // nettoyage visuel, pour éviter un aller-retour visible de la colonne
+    // avant qu'elle n'atterrisse à sa place définitive.
+    function onMouseUp() {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("keydown", onKeyDown);
+        document.body.style.cursor = "";
+
+        if (targetColumn && targetColumn !== sourceColumn) onDrop(sourceColumn, targetColumn, position);
+
+        sourceColumn.classList.remove("column-drag-source");
+        indicator.remove();
+    }
+
+    function onKeyDown(event) {
+        if (event.key === "Escape") cleanup();
+    }
+
+    function cleanup() {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.removeEventListener("keydown", onKeyDown);
+        sourceColumn.classList.remove("column-drag-source");
+        document.body.style.cursor = "";
+        indicator.remove();
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("keydown", onKeyDown);
+}
+
+// Fabrique un gestionnaire onDrop pour le cas le plus courant : une liste
+// plate (tableau JS d'objets {id}, pas de regroupement ni de clé étrangère à
+// réassigner en traversant une section). Couvre la majorité des listes
+// "case à cocher + badge coloré + nom" de l'app (parties prenantes, types de
+// risques/KPI, catégories de décision/compétences, scénarios de test...).
+// `getItems()` renvoie le tableau à réordonner ; `afterMove()` sauvegarde et
+// redessine (peut redessiner plusieurs tableaux dépendants si besoin).
+function createFlatRowDropHandler(getItems, afterMove) {
+    return function (sourceRow, targetRow, position) {
+        const items = getItems();
+        const sourceIndex = items.findIndex((item) => item.id === sourceRow.dataset.rowId);
+        if (sourceIndex === -1) return;
+
+        const [moved] = items.splice(sourceIndex, 1);
+        const targetIndex = items.findIndex((item) => item.id === targetRow.dataset.rowId);
+        const insertIndex = targetIndex === -1 ? items.length : targetIndex + (position === "after" ? 1 : 0);
+        items.splice(insertIndex, 0, moved);
+
+        afterMove();
+    };
 }
 
 
@@ -4953,7 +5413,7 @@ function renderRedactionTable(sectionKey) {
 
     body.innerHTML = "";
 
-    const colspan = section.hasType ? 5 : 4;
+    const colspan = (section.hasType ? 5 : 4) + 1;
 
     if (redactionRows.length === 0) {
         body.innerHTML = `<tr><td colspan="${colspan}" class="empty-state">Aucun ${section.singular} pour le moment.</td></tr>`;
@@ -4974,11 +5434,16 @@ function renderRedactionTable(sectionKey) {
 
         if (isSelected) row.classList.add("selected-row");
 
+        row.dataset.rowId = rowData.id;
+
         row.innerHTML = `
             <td class="select-col">
                 <input class="row-checkbox redaction-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner la ligne ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
             ${section.hasColor ? createRedactionNumberCell(rowData, index) : `<td class="redaction-number-cell">${index + 1}</td>`}
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la ligne ${index + 1}">${dragHandleIconSvg()}</button>
+            </td>
             ${section.hasType ? createRedactionTypeCell(rowData, index) : ""}
             <td class="editable redaction-title-cell" contenteditable="true" data-index="${index}" data-field="title" spellcheck="true">${sanitizeRichText(rowData.title)}</td>
             <td class="editable redaction-description-cell" contenteditable="true" data-index="${index}" data-field="description" spellcheck="true">${sanitizeRichText(rowData.description)}</td>
@@ -5075,6 +5540,15 @@ function bindRedactionTableEvents(sectionKey) {
 
             showColorMenu(event.currentTarget);
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => redactionRows, () => {
+            saveRedactionRows(section.storageKey, redactionRows);
+            renderRedactionTable(sectionKey);
+        })
     });
 }
 
@@ -5213,7 +5687,7 @@ function renderSmartTable() {
     body.innerHTML = "";
 
     if (smartRows.length === 0) {
-        body.innerHTML = `<tr><td colspan="9" class="empty-state">Aucune ligne SMART pour le moment. Crée d’abord un objectif dans l’onglet Objectifs, puis ajoute une ligne SMART ici.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="10" class="empty-state">Aucune ligne SMART pour le moment. Crée d’abord un objectif dans l’onglet Objectifs, puis ajoute une ligne SMART ici.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -5231,11 +5705,16 @@ function renderSmartTable() {
 
         if (isSelected) row.classList.add("selected-row");
 
+        row.dataset.rowId = smart.id;
+
         row.innerHTML = `
             <td class="select-col">
                 <input class="row-checkbox smart-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner la ligne SMART ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
             <td class="smart-index-cell">${index + 1}</td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la ligne ${index + 1}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="smart-objective-link-cell">
                 <select class="smart-objective-link-select" data-index="${index}" data-field="objectiveId">
                     <option value="">Sans objectif</option>
@@ -5312,6 +5791,15 @@ function bindSmartTableEvents() {
 
             renderSmartTable();
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => smartRows, () => {
+            saveSmartObjectives();
+            renderSmartTable();
+        })
     });
 }
 
@@ -5612,6 +6100,55 @@ function renderScopeBoard() {
         renderScopeTypeTable(type);
         updateScopeDeleteButton(type);
     });
+
+    // Un seul conteneur partagé (les 2 colonnes Inclus/Hors périmètre) pour
+    // permettre de glisser un élément de l'une vers l'autre — même principe
+    // que le changement de phase dans WBS/Découpage.
+    const board = document.querySelector(".scope-board");
+    if (board) {
+        bindRowDragReorder(board, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            targetSelector: "tr[data-row-id], tr.scope-empty-row",
+            onDrop: handleScopeRowDrop
+        });
+    }
+}
+
+// Même logique que handleWbsRowDrop : l'élément déplacé adopte le type
+// (Inclus / Hors périmètre) de la section où il est déposé.
+function handleScopeRowDrop(sourceRow, targetRow, position) {
+    const sourceIndex = redactionRows.findIndex((row) => row.id === sourceRow.dataset.rowId);
+    if (sourceIndex === -1) return;
+
+    const [moved] = redactionRows.splice(sourceIndex, 1);
+    const targetRowId = targetRow.dataset.rowId;
+
+    if (targetRowId) {
+        const targetIndex = redactionRows.findIndex((row) => row.id === targetRowId);
+
+        if (targetIndex === -1) {
+            redactionRows.push(moved);
+        } else {
+            moved.type = redactionRows[targetIndex].type;
+            redactionRows.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
+        }
+    } else {
+        moved.type = targetRow.dataset.type || "";
+
+        let insertIndex = redactionRows.length;
+        for (let index = redactionRows.length - 1; index >= 0; index -= 1) {
+            if ((redactionRows[index].type || "") === moved.type) {
+                insertIndex = index + 1;
+                break;
+            }
+        }
+
+        redactionRows.splice(insertIndex, 0, moved);
+    }
+
+    saveRedactionRows("scope", redactionRows);
+    renderScopeBoard();
 }
 
 function renderScopeTypeTable(type) {
@@ -5626,13 +6163,16 @@ function renderScopeTypeTable(type) {
     body.innerHTML = "";
 
     if (rowsForType.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun élément pour le moment.</td></tr>`;
+        body.innerHTML = `<tr class="scope-empty-row" data-type="${escapeHtml(type)}"><td colspan="4" class="empty-state">Aucun élément pour le moment.</td></tr>`;
         return;
     }
 
     rowsForType.forEach((item, localIndex) => {
         const tableRow = document.createElement("tr");
         const isSelected = selectedScopeRows[type]?.has(item.globalIndex);
+
+        tableRow.dataset.rowId = item.row.id;
+        tableRow.dataset.type = type;
 
         if (isSelected) tableRow.classList.add("selected-row");
 
@@ -5641,6 +6181,9 @@ function renderScopeTypeTable(type) {
                 <input class="row-checkbox scope-checkbox" type="checkbox" data-index="${item.globalIndex}" data-type="${escapeHtml(type)}" aria-label="Sélectionner l'élément ${localIndex + 1}" ${isSelected ? "checked" : ""} />
             </td>
             <td class="scope-index-cell">${localIndex + 1}</td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'élément ${localIndex + 1}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="editable scope-title-cell" contenteditable="true" data-index="${item.globalIndex}" data-type="${escapeHtml(type)}" data-field="title" spellcheck="true">${sanitizeRichText(item.row.title)}</td>
         `;
 
@@ -8410,20 +8953,45 @@ function applyWbsDurationEdit(index, rawValue) {
 // Déplace la tâche à currentIndex d'un cran (direction -1 = monter, +1 =
 // descendre). Si ce cran fait passer la tâche au-delà du bloc de sa phase,
 // elle rejoint la phase voisine : c'est ce qui remplace la liste déroulante.
-function moveWbsRow(currentIndex, direction) {
-    const targetIndex = currentIndex + direction;
+// Appelé par bindRowDragReorder (voir plus haut) quand une tâche WBS est
+// déposée. targetRow peut être une autre tâche (tr[data-row-id]), un en-tête
+// de phase (tr.wbs-phase-row) ou la ligne "aucune tâche" d'une phase vide
+// (tr.wbs-phase-empty-row) — ces deux derniers cas permettent de déposer une
+// tâche directement dans une section, même vide. Dans tous les cas la tâche
+// déplacée adopte le phaseId de la section où elle atterrit (même logique
+// qu'avant avec les flèches monter/descendre, qui changeaient déjà la phase
+// en franchissant une frontière de section).
+function handleWbsRowDrop(sourceRow, targetRow, position) {
+    const sourceId = sourceRow.dataset.rowId;
+    const sourceIndex = wbsRows.findIndex((row, index) => getWbsRowId(row, index) === sourceId);
+    if (sourceIndex === -1) return;
 
-    if (!wbsRows[currentIndex] || targetIndex < 0 || targetIndex >= wbsRows.length) return;
+    const [movedRow] = wbsRows.splice(sourceIndex, 1);
+    const targetRowId = targetRow.dataset.rowId;
 
-    const current = wbsRows[currentIndex];
-    const neighbor = wbsRows[targetIndex];
+    if (targetRowId) {
+        const targetIndex = wbsRows.findIndex((row, index) => getWbsRowId(row, index) === targetRowId);
 
-    if (current.phaseId !== neighbor.phaseId) {
-        current.phaseId = neighbor.phaseId;
+        if (targetIndex === -1) {
+            wbsRows.push(movedRow);
+        } else {
+            movedRow.phaseId = wbsRows[targetIndex].phaseId;
+            wbsRows.splice(position === "before" ? targetIndex : targetIndex + 1, 0, movedRow);
+        }
+    } else {
+        // En-tête de phase ou section vide : dépose en fin de cette section.
+        movedRow.phaseId = targetRow.dataset.phaseId || "";
+
+        let insertIndex = wbsRows.length;
+        for (let index = wbsRows.length - 1; index >= 0; index -= 1) {
+            if ((wbsRows[index].phaseId || "") === movedRow.phaseId) {
+                insertIndex = index + 1;
+                break;
+            }
+        }
+
+        wbsRows.splice(insertIndex, 0, movedRow);
     }
-
-    wbsRows[currentIndex] = neighbor;
-    wbsRows[targetIndex] = current;
 
     saveWbsRowsWithSchedule();
     reconcileWbsDecoupage("wbs");
@@ -8633,7 +9201,6 @@ function renderWbsTable() {
     syncWbsResponsablesWithStakeholders();
 
     const groups = groupWbsRowsForEditor();
-    const lastIndex = wbsRows.length - 1;
 
     groups.forEach((group) => {
         const phaseColor = group.phase ? normalizeColor(group.phase.color, 0) : "#94a3b8";
@@ -8688,9 +9255,6 @@ function renderWbsTable() {
                 row.classList.add("selected-row");
             }
 
-            const isFirst = originalIndex === 0;
-            const isLast = originalIndex === lastIndex;
-
             row.innerHTML = `
                 <td class="select-col">
                     <input
@@ -8703,8 +9267,7 @@ function renderWbsTable() {
                 </td>
                 <td class="wbs-number-cell">${originalIndex + 1}</td>
                 <td class="wbs-move-cell">
-                    <button class="wbs-move-btn wbs-move-up-btn" type="button" data-index="${originalIndex}" ${isFirst ? "disabled" : ""} title="Monter" aria-label="Monter la tâche">&uarr;</button>
-                    <button class="wbs-move-btn wbs-move-down-btn" type="button" data-index="${originalIndex}" ${isLast ? "disabled" : ""} title="Descendre" aria-label="Descendre la tâche">&darr;</button>
+                    <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la tâche">${dragHandleIconSvg()}</button>
                 </td>
                 ${createWbsEditableCell(wbsRow.task, originalIndex, "task", "wbs-task-cell")}
                 <td>
@@ -8792,20 +9355,11 @@ function bindWbsTableEvents() {
         });
     });
 
-    wbsTableBody.querySelectorAll(".wbs-move-up-btn").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            const index = Number(event.currentTarget.dataset.index);
-            if (!Number.isInteger(index)) return;
-            moveWbsRow(index, -1);
-        });
-    });
-
-    wbsTableBody.querySelectorAll(".wbs-move-down-btn").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            const index = Number(event.currentTarget.dataset.index);
-            if (!Number.isInteger(index)) return;
-            moveWbsRow(index, 1);
-        });
+    bindRowDragReorder(wbsTableBody, {
+        handleSelector: ".wbs-move-cell .row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        targetSelector: "tr[data-row-id], tr.wbs-phase-row, tr.wbs-phase-empty-row",
+        onDrop: handleWbsRowDrop
     });
 
     wbsTableBody.querySelectorAll(".wbs-phase-add-btn").forEach((button) => {
@@ -9523,12 +10077,15 @@ function renderGanttPeriodsTable() {
     }
 
     if (ganttPeriods.length === 0) {
-        body.innerHTML = `<tr><td colspan="5" class="empty-state">Aucune période particulière définie.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="6" class="empty-state">Aucune période particulière définie.</td></tr>`;
         return;
     }
 
     body.innerHTML = ganttPeriods.map((period, index) => `
-        <tr data-index="${index}">
+        <tr data-index="${index}" data-row-id="${period.id}">
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser cette période">${dragHandleIconSvg()}</button>
+            </td>
             <td>
                 <select class="gantt-period-type-select" data-index="${index}">
                     <option value="vacances" ${period.type === "vacances" ? "selected" : ""}>Vacances</option>
@@ -9601,6 +10158,16 @@ function bindGanttPeriodsEvents() {
             renderGanttPeriodsTable();
             refreshGanttView();
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => ganttPeriods, () => {
+            saveGanttPeriods();
+            renderGanttPeriodsTable();
+            refreshGanttView();
+        })
     });
 }
 
@@ -10397,7 +10964,7 @@ function renderDecoupagePhasesTable() {
 
     if (decoupagePhases.length === 0) {
         const row = document.createElement("tr");
-        row.innerHTML = `<td colspan="3" class="empty-state">Aucune phase pour le moment.</td>`;
+        row.innerHTML = `<td colspan="4" class="empty-state">Aucune phase pour le moment.</td>`;
         tbody.appendChild(row);
         return;
     }
@@ -10405,10 +10972,14 @@ function renderDecoupagePhasesTable() {
     decoupagePhases.forEach((phase, index) => {
         const color = predefinedColors[index % predefinedColors.length];
         const row = document.createElement("tr");
+        row.dataset.rowId = phase.id;
         row.style.backgroundColor = hexToRgba(color, 0.20);
         row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
         row.innerHTML = `
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la phase ${index + 1}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="phase-number-cell">${index + 1}</td>
             <td class="editable phase-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(phase.name)}</td>
             <td class="select-col">
@@ -10471,6 +11042,15 @@ function bindDecoupagePhasesEvents() {
             reconcileWbsDecoupage("decoupage");
         });
     });
+
+    bindRowDragReorder(tbody, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => decoupagePhases, () => {
+            saveDecoupagePhases();
+            renderDecoupagePhasesTable();
+        })
+    });
 }
 
 function addDecoupageStepToPhase(phaseId) {
@@ -10485,19 +11065,37 @@ function addDecoupageStepToPhase(phaseId) {
 
 // Même logique que moveWbsRow : un cran qui franchit la frontière de la
 // phase courante fait changer la phase de l'étape déplacée.
-function moveDecoupageStep(currentIndex, direction) {
-    const targetIndex = currentIndex + direction;
-    if (!decoupageSteps[currentIndex] || targetIndex < 0 || targetIndex >= decoupageSteps.length) return;
+// Même logique que handleWbsRowDrop : l'étape déplacée adopte la phase de la
+// section où elle est déposée.
+function handleDecoupageStepDrop(sourceRow, targetRow, position) {
+    const sourceIndex = decoupageSteps.findIndex((step) => step.id === sourceRow.dataset.rowId);
+    if (sourceIndex === -1) return;
 
-    const current = decoupageSteps[currentIndex];
-    const neighbor = decoupageSteps[targetIndex];
+    const [movedStep] = decoupageSteps.splice(sourceIndex, 1);
+    const targetRowId = targetRow.dataset.rowId;
 
-    if (current.phaseId !== neighbor.phaseId) {
-        current.phaseId = neighbor.phaseId;
+    if (targetRowId) {
+        const targetIndex = decoupageSteps.findIndex((step) => step.id === targetRowId);
+
+        if (targetIndex === -1) {
+            decoupageSteps.push(movedStep);
+        } else {
+            movedStep.phaseId = decoupageSteps[targetIndex].phaseId;
+            decoupageSteps.splice(position === "before" ? targetIndex : targetIndex + 1, 0, movedStep);
+        }
+    } else {
+        movedStep.phaseId = targetRow.dataset.phaseId || "";
+
+        let insertIndex = decoupageSteps.length;
+        for (let index = decoupageSteps.length - 1; index >= 0; index -= 1) {
+            if ((decoupageSteps[index].phaseId || "") === movedStep.phaseId) {
+                insertIndex = index + 1;
+                break;
+            }
+        }
+
+        decoupageSteps.splice(insertIndex, 0, movedStep);
     }
-
-    decoupageSteps[currentIndex] = neighbor;
-    decoupageSteps[targetIndex] = current;
 
     saveDecoupageSteps();
     renderDecoupageStepsTable();
@@ -10517,7 +11115,6 @@ function renderDecoupageStepsTable() {
     }
 
     const groups = groupDecoupageStepsForEditor();
-    const lastIndex = decoupageSteps.length - 1;
 
     groups.forEach((group) => {
         const phaseIndex = group.phase ? decoupagePhases.findIndex((phase) => phase.id === group.phaseId) : -1;
@@ -10563,17 +11160,14 @@ function renderDecoupageStepsTable() {
         group.steps.forEach(({ step, originalIndex }) => {
             const row = document.createElement("tr");
             row.dataset.stepId = step.id;
+            row.dataset.rowId = step.id;
             row.dataset.phaseId = group.phaseId;
             row.style.backgroundColor = hexToRgba(phaseColor, 0.12);
-
-            const isFirst = originalIndex === 0;
-            const isLast = originalIndex === lastIndex;
 
             row.innerHTML = `
                 <td class="wbs-number-cell">${originalIndex + 1}</td>
                 <td class="wbs-move-cell">
-                    <button class="wbs-move-btn decoupage-move-up-btn" type="button" data-index="${originalIndex}" ${isFirst ? "disabled" : ""} title="Monter" aria-label="Monter l'étape">&uarr;</button>
-                    <button class="wbs-move-btn decoupage-move-down-btn" type="button" data-index="${originalIndex}" ${isLast ? "disabled" : ""} title="Descendre" aria-label="Descendre l'étape">&darr;</button>
+                    <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'étape ${originalIndex + 1}">${dragHandleIconSvg()}</button>
                 </td>
                 <td class="editable decoupage-step-cell" contenteditable="true" data-index="${originalIndex}" spellcheck="true">${sanitizeRichText(step.label)}</td>
                 <td class="select-col">
@@ -10606,20 +11200,11 @@ function bindDecoupageStepsEvents() {
         });
     });
 
-    tbody.querySelectorAll(".decoupage-move-up-btn").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            const index = Number(event.currentTarget.dataset.index);
-            if (!Number.isInteger(index)) return;
-            moveDecoupageStep(index, -1);
-        });
-    });
-
-    tbody.querySelectorAll(".decoupage-move-down-btn").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            const index = Number(event.currentTarget.dataset.index);
-            if (!Number.isInteger(index)) return;
-            moveDecoupageStep(index, 1);
-        });
+    bindRowDragReorder(tbody, {
+        handleSelector: ".wbs-move-cell .row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        targetSelector: "tr[data-row-id], tr.wbs-phase-row, tr.wbs-phase-empty-row",
+        onDrop: handleDecoupageStepDrop
     });
 
     tbody.querySelectorAll("[data-add-decoupage-phase-id]").forEach((button) => {
@@ -10890,7 +11475,7 @@ function renderDecisionCategoriesTable() {
     body.innerHTML = "";
 
     if (decisionCategories.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucune catégorie pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucune catégorie pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
     } else {
@@ -10903,6 +11488,8 @@ function renderDecisionCategoriesTable() {
             row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
             if (isSelected) row.classList.add("selected-row");
+
+            row.dataset.rowId = category.id;
 
             row.innerHTML = `
                 <td class="select-col">
@@ -10922,6 +11509,9 @@ function renderDecisionCategoriesTable() {
                         style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                         aria-label="Changer la couleur de la catégorie ${index + 1}"
                     >${index + 1}</button>
+                </td>
+                <td class="select-col">
+                    <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la catégorie ${index + 1}">${dragHandleIconSvg()}</button>
                 </td>
                 <td
                     class="editable decision-category-name-cell"
@@ -10969,6 +11559,15 @@ function renderDecisionCategoriesTable() {
             });
         });
 
+        bindRowDragReorder(body, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(() => decisionCategories, () => {
+                saveDecisionCategories();
+                renderDecisionCategoriesTable();
+            })
+        });
+
         if (deleteButton) deleteButton.disabled = selectedDecisionCategories.size === 0;
         if (selectAll) {
             selectAll.checked = decisionCategories.length > 0 && selectedDecisionCategories.size === decisionCategories.length;
@@ -10995,10 +11594,11 @@ function buildDecisionOptionsTable() {
     const weightedScores = decisionOptions.map((option) => calculateDecisionWeightedScore(option, decisionCriteria, totalWeight));
     const bestScore = decisionOptions.length > 0 ? Math.max(...weightedScores) : 0;
     const isBestOption = (index) => decisionOptions.length > 1 && weightedScores[index] > 0 && weightedScores[index] === bestScore;
-    const totalCols = decisionOptions.length + 3;
+    const totalCols = decisionOptions.length + 4;
 
     const optionHeaderCells = decisionOptions.map((option, index) => `
-        <th class="decision-option-header${isBestOption(index) ? " decision-best-cell" : ""}" title="${isBestOption(index) ? "Meilleure option" : ""}">
+        <th class="decision-option-header${isBestOption(index) ? " decision-best-cell" : ""}" data-option-id="${escapeHtml(option.id)}" title="${isBestOption(index) ? "Meilleure option" : ""}">
+            <button class="column-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'option ${index + 1}">${dragHandleIconSvg()}</button>
             <span class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(option.name)}</span>
             <button class="row-delete-btn decision-option-delete-btn" type="button" data-remove-decision-option="${index}" title="Supprimer l'option" aria-label="Supprimer l'option">&times;</button>
         </th>
@@ -11009,7 +11609,7 @@ function buildDecisionOptionsTable() {
         const label = group.isUnassigned ? "Sans catégorie" : (group.category.name || "Catégorie sans nom");
 
         const headerRow = `
-            <tr class="decision-category-row${group.isUnassigned ? " decision-category-unassigned" : ""}" style="background-color: ${hexToRgba(color, group.isUnassigned ? 0.14 : 0.26)}; box-shadow: inset 4px 0 0 ${color};">
+            <tr class="decision-category-row${group.isUnassigned ? " decision-category-unassigned" : ""}" data-category-id="${escapeHtml(group.categoryId)}" style="background-color: ${hexToRgba(color, group.isUnassigned ? 0.14 : 0.26)}; box-shadow: inset 4px 0 0 ${color};">
                 <td colspan="${totalCols}">
                     <div class="decision-category-row-inner">
                         <span class="decision-category-label">
@@ -11024,9 +11624,12 @@ function buildDecisionOptionsTable() {
         `;
 
         const itemsHtml = group.items.length === 0
-            ? `<tr class="decision-category-empty-row"><td colspan="${totalCols}" class="empty-state">Aucun critère dans cette catégorie pour le moment.</td></tr>`
+            ? `<tr class="decision-category-empty-row" data-category-id="${escapeHtml(group.categoryId)}"><td colspan="${totalCols}" class="empty-state">Aucun critère dans cette catégorie pour le moment.</td></tr>`
             : group.items.map(({ criterion, index }) => `
-                <tr>
+                <tr data-row-id="${escapeHtml(criterion.id)}" data-category-id="${escapeHtml(group.categoryId)}">
+                    <td class="select-col">
+                        <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le critère ${index + 1}">${dragHandleIconSvg()}</button>
+                    </td>
                     <td class="decision-weight-cell">
                         <input class="decision-weight-input" type="number" min="0" max="100" step="1" data-index="${index}" value="${escapeHtml(String(criterion.weight || ""))}" aria-label="Poids du critère ${index + 1}" />
                     </td>
@@ -11047,11 +11650,11 @@ function buildDecisionOptionsTable() {
 
     const scoreRow = decisionOptions.length === 0 ? "" : `
         <tr class="decision-score-row">
-            <td class="decision-score-row-label" colspan="2">Score pondéré /10</td>
+            <td class="decision-score-row-label" colspan="3">Score pondéré /10</td>
             ${decisionOptions.map((option, index) => `
                 <td class="decision-weighted-cell${isBestOption(index) ? " decision-best-cell" : ""}" title="${isBestOption(index) ? "Meilleure option" : ""}">${weightedScores[index] ? weightedScores[index].toFixed(1) : "—"}</td>
             `).join("")}
-            <td></td>
+            <td class="select-col"></td>
         </tr>
     `;
 
@@ -11059,6 +11662,7 @@ function buildDecisionOptionsTable() {
         <table class="decision-options-table">
             <thead>
                 <tr>
+                    <th class="select-col"></th>
                     <th class="decision-col-weight">Poids %</th>
                     <th class="decision-row-header-col">Critère</th>
                     ${optionHeaderCells}
@@ -11081,6 +11685,43 @@ function renderDecisionOptionsTable() {
     bindDecisionOptionsEvents();
 }
 
+// Même logique que handleWbsRowDrop : le critère déplacé adopte la catégorie
+// de la section où il est déposé (une autre ligne de critère, l'en-tête
+// d'une catégorie, ou la ligne "Aucun critère" d'une catégorie vide).
+function handleDecisionCriterionDrop(sourceRow, targetRow, position) {
+    const sourceIndex = decisionCriteria.findIndex((criterion) => criterion.id === sourceRow.dataset.rowId);
+    if (sourceIndex === -1) return;
+
+    const [moved] = decisionCriteria.splice(sourceIndex, 1);
+    const targetRowId = targetRow.dataset.rowId;
+
+    if (targetRowId) {
+        const targetIndex = decisionCriteria.findIndex((criterion) => criterion.id === targetRowId);
+
+        if (targetIndex === -1) {
+            decisionCriteria.push(moved);
+        } else {
+            moved.categoryId = decisionCriteria[targetIndex].categoryId;
+            decisionCriteria.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
+        }
+    } else {
+        moved.categoryId = targetRow.dataset.categoryId || "";
+
+        let insertIndex = decisionCriteria.length;
+        for (let index = decisionCriteria.length - 1; index >= 0; index -= 1) {
+            if ((decisionCriteria[index].categoryId || "") === moved.categoryId) {
+                insertIndex = index + 1;
+                break;
+            }
+        }
+
+        decisionCriteria.splice(insertIndex, 0, moved);
+    }
+
+    saveDecisionCriteria();
+    renderDecisionCategoriesTable();
+}
+
 function bindDecisionOptionsEvents() {
     const wrapper = document.getElementById("decision-options-wrapper");
     if (!wrapper) return;
@@ -11090,6 +11731,33 @@ function bindDecisionOptionsEvents() {
             addDecisionCriterion(event.currentTarget.dataset.addDecisionCategoryId);
         });
     });
+
+    bindRowDragReorder(wrapper, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        targetSelector: "tr[data-row-id], tr.decision-category-row, tr.decision-category-empty-row",
+        onDrop: handleDecisionCriterionDrop
+    });
+
+    const optionsHeaderRow = wrapper.querySelector(".decision-options-table thead tr");
+    if (optionsHeaderRow) {
+        bindColumnDragReorder(optionsHeaderRow, {
+            handleSelector: ".column-drag-handle",
+            columnSelector: ".decision-option-header",
+            onDrop: (sourceTh, targetTh, position) => {
+                const sourceIndex = decisionOptions.findIndex((option) => option.id === sourceTh.dataset.optionId);
+                if (sourceIndex === -1) return;
+
+                const [moved] = decisionOptions.splice(sourceIndex, 1);
+                const targetIndex = decisionOptions.findIndex((option) => option.id === targetTh.dataset.optionId);
+                const insertIndex = targetIndex === -1 ? decisionOptions.length : targetIndex + (position === "after" ? 1 : 0);
+                decisionOptions.splice(insertIndex, 0, moved);
+
+                saveDecisionOptions();
+                renderDecisionOptionsTable();
+            }
+        });
+    }
 
     wrapper.querySelectorAll(".decision-weight-input").forEach((input) => {
         input.addEventListener("change", (event) => {
@@ -11337,6 +12005,9 @@ function renderAtoutsLimitesMatrices() {
                       .map(
                           (row) => `
                 <tr data-row-id="${row.id}">
+                    <td class="select-col">
+                        <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la ligne">${dragHandleIconSvg()}</button>
+                    </td>
                     <td class="editable atouts-limites-atout-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${sanitizeRichText(row.atout)}</td>
                     <td class="editable atouts-limites-limite-cell" contenteditable="true" data-matrix-id="${matrix.id}" data-row-id="${row.id}" spellcheck="true">${sanitizeRichText(row.limite)}</td>
                     <td class="select-col">
@@ -11346,7 +12017,7 @@ function renderAtoutsLimitesMatrices() {
             `
                       )
                       .join("")
-                : `<tr><td colspan="3" class="empty-state">Aucune ligne pour le moment.</td></tr>`;
+                : `<tr><td colspan="4" class="empty-state">Aucune ligne pour le moment.</td></tr>`;
 
             return `
                 <section class="card atouts-limites-card" data-matrix-id="${matrix.id}">
@@ -11358,12 +12029,14 @@ function renderAtoutsLimitesMatrices() {
                     <div class="table-wrapper">
                         <table class="atouts-limites-table">
                             <colgroup>
+                                <col class="select-col" />
                                 <col class="atouts-limites-col" />
                                 <col class="atouts-limites-col" />
                                 <col class="select-col" />
                             </colgroup>
                             <thead>
                                 <tr>
+                                    <th class="select-col"></th>
                                     <th>Atouts</th>
                                     <th>Limites</th>
                                     <th class="select-col"></th>
@@ -11457,6 +12130,23 @@ function bindAtoutsLimitesEvents() {
             atoutsLimitesMatrices = atoutsLimitesMatrices.filter((item) => item.id !== matrixId);
             saveAtoutsLimitesMatrices();
             renderAtoutsLimitesMatrices();
+        });
+    });
+
+    // Un tableau à la fois : chaque carte a son propre <tbody>, pas de glisser
+    // d'une ligne d'une matrice vers une autre.
+    list.querySelectorAll(".atouts-limites-card").forEach((card) => {
+        const matrix = getMatrix(card.dataset.matrixId);
+        const tbody = card.querySelector("tbody");
+        if (!matrix || !tbody) return;
+
+        bindRowDragReorder(tbody, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(() => matrix.rows, () => {
+                saveAtoutsLimitesMatrices();
+                renderAtoutsLimitesMatrices();
+            })
         });
     });
 }
@@ -11594,7 +12284,7 @@ function renderTestScenariosListTable() {
     body.innerHTML = "";
 
     if (testScenarios.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun scénario pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun scénario pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
     } else {
@@ -11607,6 +12297,8 @@ function renderTestScenariosListTable() {
             row.style.boxShadow = `inset 3px 0 0 ${color}`;
 
             if (isSelected) row.classList.add("selected-row");
+
+            row.dataset.rowId = scenario.id;
 
             row.innerHTML = `
                 <td class="select-col">
@@ -11626,6 +12318,9 @@ function renderTestScenariosListTable() {
                         style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                         aria-label="Changer la couleur du scénario ${index + 1}"
                     >${index + 1}</button>
+                </td>
+                <td class="select-col">
+                    <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le scénario ${index + 1}">${dragHandleIconSvg()}</button>
                 </td>
                 <td
                     class="editable test-scenario-name-cell"
@@ -11659,6 +12354,15 @@ function renderTestScenariosListTable() {
                 activeColorTarget = { type: "testScenario", index };
                 showColorMenu(event.currentTarget);
             });
+        });
+
+        bindRowDragReorder(body, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(() => testScenarios, () => {
+                saveTestScenarios();
+                renderTestScenariosListTable();
+            })
         });
 
         body.querySelectorAll(".editable").forEach((cell) => {
@@ -11710,10 +12414,13 @@ function renderTestScenarioDetailCards() {
         const group = stepGroupByScenarioId.get(scenario.id) || { items: [] };
 
         const stepsHtml = group.items.length === 0
-            ? `<tr><td colspan="3" class="empty-state">Aucun élément pour le moment.</td></tr>`
+            ? `<tr><td colspan="4" class="empty-state">Aucun élément pour le moment.</td></tr>`
             : group.items.map(({ step }, localIndex) => `
-                <tr>
+                <tr data-row-id="${escapeHtml(step.id)}">
                     <td class="tests-step-number-cell">${localIndex + 1}</td>
+                    <td class="select-col">
+                        <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'élément ${localIndex + 1}">${dragHandleIconSvg()}</button>
+                    </td>
                     <td class="editable tests-step-cell" contenteditable="true" data-step-id="${escapeHtml(step.id)}" spellcheck="true">${sanitizeRichText(step.text)}</td>
                     <td class="select-col">
                         <button class="row-delete-btn" type="button" data-remove-context-step="${escapeHtml(step.id)}" title="Supprimer l'élément" aria-label="Supprimer l'élément">&times;</button>
@@ -11744,6 +12451,7 @@ function renderTestScenarioDetailCards() {
                         <thead>
                             <tr>
                                 <th class="tests-step-number-cell">N°</th>
+                                <th class="select-col"></th>
                                 <th>Élément</th>
                                 <th class="select-col"></th>
                             </tr>
@@ -11813,6 +12521,20 @@ function bindTestScenarioDetailEvents() {
             renderTestScenarioDetailCards();
 
             document.querySelector(`.tests-step-cell[data-step-id="${step.id}"]`)?.focus();
+        });
+    });
+
+    // Un tableau à la fois : conteneur scopé au <tbody> propre à chaque
+    // carte de scénario, aucun glisser d'un élément d'un scénario vers un
+    // autre.
+    container.querySelectorAll(".tests-scenario-card .tests-steps-table tbody").forEach((tbody) => {
+        bindRowDragReorder(tbody, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(() => testContextSteps, () => {
+                saveTestContextSteps();
+                renderTestScenarioDetailCards();
+            })
         });
     });
 }
@@ -11919,10 +12641,13 @@ function renderTestDerouleCards() {
         const group = stepGroupByScenarioId.get(scenario.id) || { items: [] };
 
         const stepsHtml = group.items.length === 0
-            ? `<tr><td colspan="3" class="empty-state">Aucune étape pour le moment.</td></tr>`
+            ? `<tr><td colspan="4" class="empty-state">Aucune étape pour le moment.</td></tr>`
             : group.items.map(({ step }, localIndex) => `
-                <tr>
+                <tr data-row-id="${escapeHtml(step.id)}">
                     <td class="tests-step-number-cell">${localIndex + 1}</td>
+                    <td class="select-col">
+                        <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'étape ${localIndex + 1}">${dragHandleIconSvg()}</button>
+                    </td>
                     <td class="editable tests-step-cell" contenteditable="true" data-step-id="${escapeHtml(step.id)}" spellcheck="true">${sanitizeRichText(step.text)}</td>
                     <td class="select-col">
                         <button class="row-delete-btn" type="button" data-remove-deroule-step="${escapeHtml(step.id)}" title="Supprimer l'étape" aria-label="Supprimer l'étape">&times;</button>
@@ -11941,6 +12666,7 @@ function renderTestDerouleCards() {
                         <thead>
                             <tr>
                                 <th class="tests-step-number-cell">N°</th>
+                                <th class="select-col"></th>
                                 <th>Étape du déroulé</th>
                                 <th class="select-col"></th>
                             </tr>
@@ -11996,6 +12722,17 @@ function bindTestDerouleEvents() {
             renderTestDerouleCards();
 
             document.querySelector(`.tests-step-cell[data-step-id="${step.id}"]`)?.focus();
+        });
+    });
+
+    container.querySelectorAll(".tests-scenario-card .tests-steps-table tbody").forEach((tbody) => {
+        bindRowDragReorder(tbody, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(() => testDerouleSteps, () => {
+                saveTestDerouleSteps();
+                renderTestDerouleCards();
+            })
         });
     });
 }
@@ -12109,7 +12846,8 @@ function renderFreeTables() {
                 .map((column, columnIndex) => {
                     const color = normalizeColor(column.color, columnIndex);
                     return `
-                <th class="free-table-column-header" style="background-color: ${hexToRgba(color, 0.22)}; box-shadow: inset 0 3px 0 ${color};">
+                <th class="free-table-column-header" data-table-id="${table.id}" data-column-id="${column.id}" style="background-color: ${hexToRgba(color, 0.22)}; box-shadow: inset 0 3px 0 ${color};">
+                    <button class="column-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la colonne">${dragHandleIconSvg()}</button>
                     <button
                         class="free-table-column-color-btn"
                         type="button"
@@ -12139,8 +12877,9 @@ function renderFreeTables() {
                               .join("");
 
                           return `
-                <tr data-row-id="${row.id}" style="background-color: ${hexToRgba(rowColor, 0.16)}; box-shadow: inset 3px 0 0 ${rowColor};">
+                <tr data-row-id="${row.id}" data-table-id="${table.id}" style="background-color: ${hexToRgba(rowColor, 0.16)}; box-shadow: inset 3px 0 0 ${rowColor};">
                     <td class="free-table-row-header">
+                        <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la ligne ${rowIndex + 1}">${dragHandleIconSvg()}</button>
                         <button
                             class="free-table-row-number-btn"
                             type="button"
@@ -12194,6 +12933,44 @@ function renderFreeTables() {
         .join("");
 
     bindFreeTablesEvents();
+}
+
+// Appelé par bindColumnDragReorder (voir plus haut) quand une colonne de
+// Tableaux libres est déposée. Les valeurs de cellule vivent dans
+// row.cells[columnId] (pas par position) : réordonner table.columns suffit,
+// aucune valeur à migrer.
+function handleFreeTableColumnDrop(sourceTh, targetTh, position) {
+    const table = freeTables.find((item) => item.id === sourceTh.dataset.tableId);
+    if (!table) return;
+
+    const sourceIndex = table.columns.findIndex((column) => column.id === sourceTh.dataset.columnId);
+    if (sourceIndex === -1) return;
+
+    const [movedColumn] = table.columns.splice(sourceIndex, 1);
+    const targetIndex = table.columns.findIndex((column) => column.id === targetTh.dataset.columnId);
+    const insertIndex = targetIndex === -1 ? table.columns.length : targetIndex + (position === "after" ? 1 : 0);
+
+    table.columns.splice(insertIndex, 0, movedColumn);
+
+    saveFreeTables();
+    renderFreeTables();
+}
+
+function handleFreeTableRowDrop(sourceRow, targetRow, position) {
+    const table = freeTables.find((item) => item.id === sourceRow.dataset.tableId);
+    if (!table) return;
+
+    const sourceIndex = table.rows.findIndex((row) => row.id === sourceRow.dataset.rowId);
+    if (sourceIndex === -1) return;
+
+    const [movedRow] = table.rows.splice(sourceIndex, 1);
+    const targetIndex = table.rows.findIndex((row) => row.id === targetRow.dataset.rowId);
+    const insertIndex = targetIndex === -1 ? table.rows.length : targetIndex + (position === "after" ? 1 : 0);
+
+    table.rows.splice(insertIndex, 0, movedRow);
+
+    saveFreeTables();
+    renderFreeTables();
 }
 
 function bindFreeTablesEvents() {
@@ -12262,6 +13039,32 @@ function bindFreeTablesEvents() {
             const index = Number(event.currentTarget.dataset.index);
             activeColorTarget = { type: "freeTableColumn", tableId, index };
             showColorMenu(event.currentTarget);
+        });
+    });
+
+    // Un tableau à la fois : le conteneur passé à bindColumnDragReorder est la
+    // ligne d'en-tête d'UN SEUL <table>, pas toute la liste des cartes — sinon
+    // on pourrait glisser une colonne d'un tableau libre vers un autre.
+    list.querySelectorAll(".free-table").forEach((tableEl) => {
+        const headerRow = tableEl.querySelector("thead tr");
+        if (!headerRow) return;
+
+        bindColumnDragReorder(headerRow, {
+            handleSelector: ".column-drag-handle",
+            columnSelector: ".free-table-column-header",
+            onDrop: handleFreeTableColumnDrop
+        });
+    });
+
+    // Même principe pour les lignes : un <tbody> à la fois.
+    list.querySelectorAll(".free-table").forEach((tableEl) => {
+        const tbody = tableEl.querySelector("tbody");
+        if (!tbody) return;
+
+        bindRowDragReorder(tbody, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: handleFreeTableRowDrop
         });
     });
 
@@ -12458,7 +13261,7 @@ function renderMigrationPlans() {
             const color = normalizeColor(plan.color, planIndex);
             const rowsHtml = plan.rows.length
                 ? plan.rows.map((row) => buildMigrationRowHtml(plan.id, row)).join("")
-                : `<tr><td colspan="10" class="empty-state">Aucune étape pour le moment.</td></tr>`;
+                : `<tr><td colspan="11" class="empty-state">Aucune étape pour le moment.</td></tr>`;
 
             return `
                 <section class="card migration-plan-card" data-plan-id="${plan.id}" style="border-left: 6px solid ${color}; background-image: linear-gradient(${hexToRgba(color, 0.22)}, ${hexToRgba(color, 0.22)});">
@@ -12478,11 +13281,13 @@ function renderMigrationPlans() {
                         <table class="migration-table">
                             <thead>
                                 <tr>
+                                    <th class="select-col"></th>
                                     <th colspan="5" class="migration-group-header migration-group-migration">${navIcon("migration")}Migration</th>
                                     <th colspan="4" class="migration-group-header migration-group-rollback">${navIcon("migration-rollback")}Rollback</th>
                                     <th class="select-col"></th>
                                 </tr>
                                 <tr>
+                                    <th class="select-col"></th>
                                     <th>Étape / Opération</th>
                                     <th>Temporalité</th>
                                     <th>Temps estimé</th>
@@ -12520,7 +13325,10 @@ function buildMigrationRowHtml(planId, row) {
     `;
 
     return `
-        <tr data-row-id="${row.id}">
+        <tr data-row-id="${row.id}" data-plan-id="${planId}">
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'étape">${dragHandleIconSvg()}</button>
+            </td>
             ${editableCell("step")}
             ${editableCell("timing")}
             ${editableCell("duration")}
@@ -12627,6 +13435,23 @@ function bindMigrationEvents() {
             migrationPlans = migrationPlans.filter((item) => item.id !== planId);
             saveMigrationPlans();
             renderMigrationPlans();
+        });
+    });
+
+    // Un tableau à la fois : chaque plan a son propre <tbody>, pas de glisser
+    // d'une étape d'un plan vers un autre.
+    list.querySelectorAll(".migration-plan-card").forEach((card) => {
+        const plan = getPlan(card.dataset.planId);
+        const tbody = card.querySelector("tbody");
+        if (!plan || !tbody) return;
+
+        bindRowDragReorder(tbody, {
+            handleSelector: ".row-drag-handle",
+            rowSelector: "tr[data-row-id]",
+            onDrop: createFlatRowDropHandler(() => plan.rows, () => {
+                saveMigrationPlans();
+                renderMigrationPlans();
+            })
         });
     });
 }

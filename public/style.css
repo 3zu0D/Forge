@@ -1297,9 +1297,15 @@ body[data-theme="executive"] .row-delete-btn {
 }
 
 .wbs-move-cell {
-    display: flex;
-    gap: 3px;
-    justify-content: center;
+    /* Pas de display:flex ici : ça sortirait la cellule du calcul normal de
+       hauteur des lignes de tableau (une <td> en flex ne s'aligne plus sur
+       la hauteur des autres cellules de sa ligne), ce qui décale visiblement
+       son trait de séparation par rapport au reste de la ligne. Une seule
+       poignée à centrer désormais (avant : 2 flèches, d'où le flex) — un
+       simple centrage texte/vertical suffit et reste une vraie cellule de
+       tableau. */
+    text-align: center;
+    vertical-align: middle;
 }
 
 .wbs-move-btn {
@@ -1496,13 +1502,17 @@ body[data-theme="executive"] .wbs-move-btn {
 
 .swot-item {
     display: grid;
-    grid-template-columns: 28px 1fr;
+    grid-template-columns: 22px 28px 1fr;
     gap: 8px;
     align-items: start;
     padding: 7px 8px;
     border: 1px solid rgba(148, 163, 184, 0.10);
     border-radius: 6px;
     background: rgba(15, 23, 42, 0.64);
+}
+
+.swot-item .row-drag-handle {
+    margin-top: 1px;
 }
 
 .swot-item.selected-row {
@@ -11747,10 +11757,20 @@ body.multi-cell-selecting {
 }
 
 .free-table-row-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    /* Pas de display:flex ici : ça sortirait la cellule du calcul normal de
+       hauteur de ligne d'un tableau (même piège que .wbs-move-cell, corrigé
+       plus tôt). Centrage vertical + inline-block sur les enfants à la place. */
     white-space: nowrap;
+    vertical-align: middle;
+}
+
+.free-table-row-header > * {
+    vertical-align: middle;
+}
+
+.free-table-row-header > .row-drag-handle,
+.free-table-row-header > .free-table-row-number-btn {
+    margin-right: 8px;
 }
 
 .free-table-row-name {
@@ -11821,6 +11841,106 @@ body.multi-cell-selecting {
     cursor: pointer;
     vertical-align: middle;
     box-shadow: 0 0 8px var(--row-glow);
+}
+
+/* V96 — Réorganisation par glisser-déposer (générique : lignes WBS, colonnes
+   de Tableaux libres). Les poignées sont des <button> ordinaires : elles
+   disparaissent déjà automatiquement en capture 📸 via la règle globale
+   ".capture-exact-mode button" (style.css) — aucun CSS de capture dédié
+   nécessaire ici. */
+.row-drag-handle,
+.column-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #94a3b8;
+    cursor: grab;
+    vertical-align: middle;
+    transition: filter 0.16s ease, color 0.16s ease;
+}
+
+.column-drag-handle {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+}
+
+.row-drag-handle:hover,
+.column-drag-handle:hover {
+    filter: brightness(1.3);
+    color: #e2e8f0;
+}
+
+.row-drag-handle:active,
+.column-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Ces poignées ne s'utilisent qu'à la souris (glisser) : l'anneau de focus
+   cyan vif appliqué par défaut à tous les <button> (button:focus-visible,
+   plus haut) n'a pas de sens ici et, sur un si petit bouton, ressort comme
+   un carré bleu criard au lieu d'une poignée discrète. */
+.row-drag-handle:focus-visible,
+.column-drag-handle:focus-visible {
+    outline: none;
+}
+
+.drag-handle-icon {
+    pointer-events: none;
+}
+
+.row-drag-source {
+    opacity: 0.35;
+}
+
+.row-drag-indicator td {
+    height: 3px;
+    padding: 0 !important;
+    border: none !important;
+    background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.85) 12%, rgba(34, 211, 238, 0.85) 88%, transparent);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+}
+
+/* Variante non-tableau de l'indicateur (listes div, ex. cartes SWOT). */
+.row-drag-indicator-block {
+    height: 3px;
+    margin: 4px 0;
+    border-radius: 2px;
+    background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.85) 12%, rgba(34, 211, 238, 0.85) 88%, transparent);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+}
+
+.column-drag-source {
+    opacity: 0.35;
+}
+
+.column-drag-indicator {
+    position: fixed;
+    width: 3px;
+    background: rgba(34, 211, 238, 0.85);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+    border-radius: 2px;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+}
+
+.column-drag-indicator.visible {
+    display: block;
+}
+
+body[data-theme="light"] .row-drag-handle,
+body[data-theme="light"] .column-drag-handle,
+body[data-theme="executive"] .row-drag-handle,
+body[data-theme="executive"] .column-drag-handle {
+    background: rgba(255, 255, 255, 0.85);
+    color: #64748b;
+    border-color: rgba(15, 23, 42, 0.16);
 }
 
 /* V94 — Plans de migration (Migration / Rollback groupés, criticité colorée) */

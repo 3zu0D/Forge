@@ -40,7 +40,7 @@ module.exports = async function ({ page, baseUrl, assert }) {
     assert.equal(captureButtonCount, 2, "chaque matrice doit avoir son propre bouton de capture 📸");
 
     const headers = (await page.locator(".atouts-limites-card").first().locator("thead th").allTextContents()).map((text) => text.trim());
-    assert.deepEqual(headers, ["Atouts", "Limites", ""], "colonnes de la matrice dans le mauvais ordre");
+    assert.deepEqual(headers, ["", "Atouts", "Limites", ""], "colonnes de la matrice dans le mauvais ordre");
 
     // Ajouter une ligne à la 2e matrice ne doit pas toucher aux lignes de la 1ère.
     await page.locator(".atouts-limites-card").nth(1).locator(".atouts-limites-add-row-btn").click();

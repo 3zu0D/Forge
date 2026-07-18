@@ -333,7 +333,7 @@ function renderBudgetTypesTable() {
     body.innerHTML = "";
 
     if (budgetElementTypes.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun type pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun type pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -349,6 +349,8 @@ function renderBudgetTypesTable() {
 
         if (isSelected) row.classList.add("selected-row");
 
+        row.dataset.rowId = type.id;
+
         row.innerHTML = `
             <td class="select-col">
                 <input class="row-checkbox budget-type-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le type ${index + 1}" ${isSelected ? "checked" : ""} />
@@ -361,6 +363,9 @@ function renderBudgetTypesTable() {
                     style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                     aria-label="Changer la couleur du type ${index + 1}"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le type ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             <td class="editable budget-type-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${sanitizeRichText(type.name)}</td>
         `;
@@ -393,6 +398,16 @@ function renderBudgetTypesTable() {
             saveBudgetElementTypes();
             renderBudgetElementsTable();
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => budgetElementTypes, () => {
+            saveBudgetElementTypes();
+            renderBudgetTypesTable();
+            renderBudgetElementsTable();
+        })
     });
 
     if (deleteButton) deleteButton.disabled = selectedBudgetTypes.size === 0;
@@ -480,7 +495,7 @@ function renderBudgetElementsTable() {
     body.innerHTML = "";
 
     if (budgetElements.length === 0 && budgetElementTypes.length === 0) {
-        body.innerHTML = `<tr><td colspan="7" class="empty-state">Aucun élément pour le moment. Commence par ajouter un type, puis des éléments.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="8" class="empty-state">Aucun élément pour le moment. Commence par ajouter un type, puis des éléments.</td></tr>`;
         return;
     }
 
@@ -496,7 +511,7 @@ function renderBudgetElementsTable() {
         typeRow.style.boxShadow = `inset 4px 0 0 ${color}`;
 
         typeRow.innerHTML = `
-            <td colspan="7">
+            <td colspan="8">
                 <div class="budget-type-row-inner">
                     <span class="budget-type-label">
                         <span class="budget-type-dot" style="background-color: ${escapeHtml(color)};"></span>
@@ -512,7 +527,9 @@ function renderBudgetElementsTable() {
 
         if (group.items.length === 0) {
             const emptyRow = document.createElement("tr");
-            emptyRow.innerHTML = `<td colspan="7" class="empty-state">Aucun élément dans ce type pour le moment.</td>`;
+            emptyRow.className = "budget-type-empty-row";
+            emptyRow.dataset.typeId = group.typeId;
+            emptyRow.innerHTML = `<td colspan="8" class="empty-state">Aucun élément dans ce type pour le moment.</td>`;
             body.appendChild(emptyRow);
             return;
         }
@@ -520,9 +537,13 @@ function renderBudgetElementsTable() {
         group.items.forEach(({ element }) => {
             const row = document.createElement("tr");
             row.dataset.elementId = element.id;
+            row.dataset.rowId = element.id;
             row.style.backgroundColor = hexToRgba(color, 0.10);
 
             row.innerHTML = `
+                <td class="select-col">
+                    <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'élément">${dragHandleIconSvg()}</button>
+                </td>
                 <td class="editable budget-element-name-cell" contenteditable="true" data-field="name" spellcheck="true">${sanitizeRichText(element.name)}</td>
                 <td>
                     <select class="budget-nature-select" data-field="nature">
@@ -634,6 +655,49 @@ function bindBudgetElementsTableEvents() {
             if (elementId) removeBudgetElement(elementId);
         });
     });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        targetSelector: "tr[data-row-id], tr.budget-type-row, tr.budget-type-empty-row",
+        onDrop: handleBudgetElementDrop
+    });
+}
+
+// Même logique que handleWbsRowDrop : l'élément déplacé adopte le typeId du
+// type où il est déposé.
+function handleBudgetElementDrop(sourceRow, targetRow, position) {
+    const sourceIndex = budgetElements.findIndex((element) => element.id === sourceRow.dataset.rowId);
+    if (sourceIndex === -1) return;
+
+    const [moved] = budgetElements.splice(sourceIndex, 1);
+    const targetRowId = targetRow.dataset.rowId;
+
+    if (targetRowId) {
+        const targetIndex = budgetElements.findIndex((element) => element.id === targetRowId);
+
+        if (targetIndex === -1) {
+            budgetElements.push(moved);
+        } else {
+            moved.typeId = budgetElements[targetIndex].typeId;
+            budgetElements.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
+        }
+    } else {
+        moved.typeId = targetRow.dataset.typeId || "";
+
+        let insertIndex = budgetElements.length;
+        for (let index = budgetElements.length - 1; index >= 0; index -= 1) {
+            if ((budgetElements[index].typeId || "") === moved.typeId) {
+                insertIndex = index + 1;
+                break;
+            }
+        }
+
+        budgetElements.splice(insertIndex, 0, moved);
+    }
+
+    saveBudgetElements();
+    renderBudgetElementsTable();
 }
 
 function bindBudgetTypesListActions() {
@@ -671,7 +735,7 @@ function renderBudgetInfoTable() {
     body.innerHTML = "";
 
     if (budgetInfoRows.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucune information pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucune information pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -680,11 +744,15 @@ function renderBudgetInfoTable() {
     budgetInfoRows.forEach((row, index) => {
         const isSelected = selectedBudgetInfoRows.has(index);
         const tr = document.createElement("tr");
+        tr.dataset.rowId = row.id;
         if (isSelected) tr.classList.add("selected-row");
 
         tr.innerHTML = `
             <td class="select-col">
                 <input class="row-checkbox budget-info-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner l'information ${index + 1}" ${isSelected ? "checked" : ""} />
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'information ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             <td class="editable budget-info-name-cell" contenteditable="true" data-index="${index}" data-field="name" spellcheck="true">${sanitizeRichText(row.name)}</td>
             <td class="editable budget-info-value-cell" contenteditable="true" data-index="${index}" data-field="value" spellcheck="true">${sanitizeRichText(row.value)}</td>
@@ -710,6 +778,15 @@ function renderBudgetInfoTable() {
             budgetInfoRows[index][field] = sanitizeRichText(event.target.innerHTML);
             saveBudgetInfoRows();
         });
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => budgetInfoRows, () => {
+            saveBudgetInfoRows();
+            renderBudgetInfoTable();
+        })
     });
 
     if (deleteButton) deleteButton.disabled = selectedBudgetInfoRows.size === 0;
@@ -848,6 +925,7 @@ function renderBudgetTcoProfilesTable() {
 
         const row = document.createElement("tr");
         row.dataset.profileId = profile.id;
+        row.dataset.rowId = profile.id;
         row.classList.toggle("selected-row", isSelected);
         row.classList.toggle("budget-tco-profile-active", isActive);
 
@@ -856,6 +934,9 @@ function renderBudgetTcoProfilesTable() {
                 <input class="row-checkbox budget-tco-profile-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le TCO ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
             <td>${index + 1}</td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le TCO ${index + 1}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="editable budget-tco-profile-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(profile.name)}</td>
         `;
 
@@ -889,6 +970,21 @@ function renderBudgetTcoProfilesTable() {
 
     body.querySelectorAll("tr[data-profile-id]").forEach((row) => {
         row.addEventListener("click", () => budgetTcoSelectProfile(row.dataset.profileId));
+    });
+
+    // La ligne entière sélectionne le profil au clic (ci-dessus) : la poignée
+    // doit empêcher ce comportement, comme la case à cocher et le nom.
+    body.querySelectorAll(".row-drag-handle").forEach((handle) => {
+        handle.addEventListener("click", (event) => event.stopPropagation());
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => budgetTcoProfiles, () => {
+            saveBudgetTcoProfiles();
+            renderBudgetTcoProfilesTable();
+        })
     });
 
     if (deleteButton) deleteButton.disabled = selectedBudgetTcoProfiles.size === 0;
@@ -1211,6 +1307,7 @@ function renderBudgetCarbonProfilesTable() {
 
         const row = document.createElement("tr");
         row.dataset.profileId = profile.id;
+        row.dataset.rowId = profile.id;
         row.classList.toggle("selected-row", isSelected);
         row.classList.toggle("budget-tco-profile-active", isActive);
 
@@ -1219,6 +1316,9 @@ function renderBudgetCarbonProfilesTable() {
                 <input class="row-checkbox budget-carbon-profile-checkbox" type="checkbox" data-index="${index}" aria-label="Sélectionner le bilan carbone ${index + 1}" ${isSelected ? "checked" : ""} />
             </td>
             <td>${index + 1}</td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le bilan carbone ${index + 1}">${dragHandleIconSvg()}</button>
+            </td>
             <td class="editable budget-carbon-profile-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(profile.name)}</td>
         `;
 
@@ -1252,6 +1352,19 @@ function renderBudgetCarbonProfilesTable() {
 
     body.querySelectorAll("tr[data-profile-id]").forEach((row) => {
         row.addEventListener("click", () => budgetCarbonSelectProfile(row.dataset.profileId));
+    });
+
+    body.querySelectorAll(".row-drag-handle").forEach((handle) => {
+        handle.addEventListener("click", (event) => event.stopPropagation());
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => budgetCarbonProfiles, () => {
+            saveBudgetCarbonProfiles();
+            renderBudgetCarbonProfilesTable();
+        })
     });
 
     if (deleteButton) deleteButton.disabled = selectedBudgetCarbonProfiles.size === 0;

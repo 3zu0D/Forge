@@ -34,7 +34,7 @@ module.exports = async function ({ page, baseUrl, assert }) {
     const headers = (await page.locator(".risks-table thead th").allTextContents()).map((text) => text.trim());
     assert.deepEqual(
         headers,
-        ["", "N°", "Type", "Risque", "Conséquence", "Prob.", "Grav.", "Crit.", "Mitigation"],
+        ["", "N°", "", "Type", "Risque", "Conséquence", "Prob.", "Grav.", "Crit.", "Mitigation"],
         "colonnes du tableau des risques dans le mauvais ordre"
     );
 

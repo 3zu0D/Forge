@@ -224,7 +224,7 @@ function vmSizingRenderServerTable() {
     body.innerHTML = "";
 
     if (vmSizingProfiles.length === 0) {
-        body.innerHTML = `<tr><td colspan="3" class="empty-state">Aucun serveur pour le moment.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="4" class="empty-state">Aucun serveur pour le moment.</td></tr>`;
         if (deleteButton) deleteButton.disabled = true;
         if (selectAll) selectAll.checked = false;
         return;
@@ -237,6 +237,7 @@ function vmSizingRenderServerTable() {
 
         const row = document.createElement("tr");
         row.dataset.serverId = profile.id;
+        row.dataset.rowId = profile.id;
         row.style.backgroundColor = hexToRgba(color, isActive ? 0.30 : 0.16);
         row.style.boxShadow = `inset 3px 0 0 ${color}`;
         row.style.outline = isActive ? "1px solid rgba(255, 255, 255, 0.55)" : "";
@@ -257,6 +258,9 @@ function vmSizingRenderServerTable() {
                     style="background-color: ${escapeHtml(color)}; --row-glow: ${hexToRgba(color, 0.55)}"
                     aria-label="Changer la couleur du serveur ${index + 1}"
                 >${index + 1}</button>
+            </td>
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser le serveur ${index + 1}">${dragHandleIconSvg()}</button>
             </td>
             <td class="editable vmsizing-server-name-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(profile.name)}</td>
         `;
@@ -307,6 +311,19 @@ function vmSizingRenderServerTable() {
         row.addEventListener("click", () => {
             vmSizingSelectProfile(row.dataset.serverId);
         });
+    });
+
+    body.querySelectorAll(".row-drag-handle").forEach((handle) => {
+        handle.addEventListener("click", (event) => event.stopPropagation());
+    });
+
+    bindRowDragReorder(body, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => vmSizingProfiles, () => {
+            vmSizingSaveProfiles();
+            vmSizingRenderServerTable();
+        })
     });
 
     if (deleteButton) deleteButton.disabled = vmSizingSelectedServers.size === 0;
@@ -420,14 +437,17 @@ function vmSizingRenderVmTable() {
     if (!tbody) return;
 
     if (profile.vms.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">Aucune VM ajoutée pour le moment.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="empty-state">Aucune VM ajoutée pour le moment.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = profile.vms
         .map(
             (vm) => `
-        <tr data-vm-id="${escapeHtml(vm.id)}">
+        <tr data-vm-id="${escapeHtml(vm.id)}" data-row-id="${escapeHtml(vm.id)}">
+            <td class="select-col">
+                <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser cette VM">${dragHandleIconSvg()}</button>
+            </td>
             <td><input type="text" class="vmsizing-input" data-vm-field="name" value="${escapeHtml(vm.name)}" /></td>
             <td><input type="text" class="vmsizing-input" data-vm-field="role" value="${escapeHtml(vm.role)}" /></td>
             <td><input type="number" class="vmsizing-input vmsizing-input-num" min="1" data-vm-field="vcpu" value="${vm.vcpu}" /></td>
@@ -439,6 +459,15 @@ function vmSizingRenderVmTable() {
         </tr>`
         )
         .join("");
+
+    bindRowDragReorder(tbody, {
+        handleSelector: ".row-drag-handle",
+        rowSelector: "tr[data-row-id]",
+        onDrop: createFlatRowDropHandler(() => profile.vms, () => {
+            vmSizingSaveProfiles();
+            vmSizingRenderVmTable();
+        })
+    });
 }
 
 function vmSizingRenderAll() {

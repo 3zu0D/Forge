@@ -48,14 +48,14 @@ module.exports = async function ({ page, baseUrl, assert }) {
     const headers = (await page.locator(".kpi-group-card").first().locator("thead th").allTextContents()).map((text) => text.trim());
     assert.deepEqual(
         headers,
-        ["", "N°", "Type", "KPI", "Objectif", "Mesure", "Cible", "Résultats actuels", "Écart (%)", "Commentaires"],
+        ["", "N°", "", "Type", "KPI", "Objectif", "Mesure", "Cible", "Résultats actuels", "Écart (%)", "Commentaires"],
         "plus de colonne 'Objectif lié' : le lien est implicite au groupe"
     );
 
-    // Groupe C n'a aucun KPI : la ligne d'état vide doit couvrir les 10 colonnes
-    // (case à cocher + les 9 ci-dessus), pas seulement 9.
+    // Groupe C n'a aucun KPI : la ligne d'état vide doit couvrir les 11 colonnes
+    // (case à cocher + poignée de glisser-déposer + les 9 ci-dessus), pas 9.
     const emptyStateCell = page.locator(".kpi-group-card").nth(2).locator("tbody td.empty-state");
-    assert.equal(await emptyStateCell.getAttribute("colspan"), "10", "la ligne 'Aucun KPI' doit couvrir les 10 colonnes du tableau");
+    assert.equal(await emptyStateCell.getAttribute("colspan"), "11", "la ligne 'Aucun KPI' doit couvrir les 11 colonnes du tableau");
 
     // 2 KPIs dans le groupe A.
     for (const name of ["KPI A1", "KPI A2"]) {

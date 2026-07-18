@@ -22,10 +22,10 @@ module.exports = async function ({ page, baseUrl, assert }) {
     assert.equal(captureButtonCount, 2, "Inclus et Hors périmètre doivent chacun avoir leur propre bouton de capture 📸");
 
     const inclusHeaders = (await page.locator(".scope-in-card thead th").allTextContents()).map((text) => text.trim());
-    assert.deepEqual(inclusHeaders, ["Sel.", "N°", "Élément"], "la colonne Description doit avoir disparu du tableau Inclus");
+    assert.deepEqual(inclusHeaders, ["Sel.", "N°", "", "Élément"], "la colonne Description doit avoir disparu du tableau Inclus");
 
     const horsHeaders = (await page.locator(".scope-out-card thead th").allTextContents()).map((text) => text.trim());
-    assert.deepEqual(horsHeaders, ["Sel.", "N°", "Élément"], "la colonne Description doit avoir disparu du tableau Hors périmètre");
+    assert.deepEqual(horsHeaders, ["Sel.", "N°", "", "Élément"], "la colonne Description doit avoir disparu du tableau Hors périmètre");
 
     await page.locator('.scope-add-btn[data-scope-type="Inclus"]').click();
     await page.waitForTimeout(150);
