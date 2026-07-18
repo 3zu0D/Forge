@@ -10,9 +10,12 @@ const VMSIZING_SPEC_FIELDS = [
     "cpuThreadsPerCore",
     "ramGB",
     "volume1GB",
-    "volume2GB"
+    "volume1Type",
+    "volume2GB",
+    "volume2Type"
 ];
 
+const VMSIZING_SERVER_TEXT_FIELDS = ["name", "volume1Type", "volume2Type"];
 const VMSIZING_VM_TEXT_FIELDS = ["name", "role"];
 const VMSIZING_DISK_KEYS = ["disk1", "disk2", "disk3"];
 const VMSIZING_VOLUME_KEYS = ["volume1", "volume2"];
@@ -44,7 +47,9 @@ function vmSizingDefaultProfile(name, colorIndex) {
         cpuThreadsPerCore: 2,
         ramGB: 256,
         volume1GB: 4000,
+        volume1Type: "SSD",
         volume2GB: 0,
+        volume2Type: "SSD",
         vms: []
     };
 }
@@ -152,6 +157,9 @@ function vmSizingLoadProfiles() {
             profile.volume1GB = vmSizingToNumber(profile.volume1GB, 0);
             profile.volume2GB = vmSizingToNumber(profile.volume2GB, 0);
         }
+
+        profile.volume1Type = profile.volume1Type === "HDD" ? "HDD" : "SSD";
+        profile.volume2Type = profile.volume2Type === "HDD" ? "HDD" : "SSD";
     });
 
     vmSizingActiveProfileId = localStorage.getItem(VMSIZING_ACTIVE_PROFILE_KEY) || "";
@@ -240,18 +248,15 @@ function vmSizingWorstStatus(statuses) {
     return "ok";
 }
 
-function vmSizingDiskTotal(disk) {
-    return disk.used + disk.available;
-}
-
-// Somme la taille totale (utilisé + disponible) de tous les disques — de
-// toutes les VM, actives ou non, voir vmSizingCalculate — assignés à un
-// volume donné ("volume1"/"volume2").
+// Seul l'espace utilisé compte pour le volume physique (ce qu'il occupe
+// réellement sur le datastore) — l'espace disponible est l'espace libre
+// restant à l'intérieur du disque virtuel, vu depuis la VM, pas depuis le
+// volume qui l'héberge.
 function vmSizingVolumeRequired(profile, volumeKey) {
     return profile.vms.reduce((sum, vm) => {
         const vmTotal = VMSIZING_DISK_KEYS.reduce((diskSum, diskKey) => {
             const disk = vm[diskKey];
-            return disk && disk.volume === volumeKey ? diskSum + vmSizingDiskTotal(disk) : diskSum;
+            return disk && disk.volume === volumeKey ? diskSum + disk.used : diskSum;
         }, 0);
 
         return sum + vmTotal;
@@ -619,7 +624,7 @@ function vmSizingBindServerForm() {
         const field = event.target.dataset.field;
         if (!field) return;
 
-        const isText = field === "name";
+        const isText = VMSIZING_SERVER_TEXT_FIELDS.includes(field);
         const value = isText ? event.target.value : vmSizingToNumber(event.target.value, 0);
 
         vmSizingUpdateActiveProfile({ [field]: value });

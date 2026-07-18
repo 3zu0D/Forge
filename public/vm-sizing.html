@@ -109,11 +109,23 @@
                         </label>
                         <label class="vmsizing-field">
                             <span>Volume 1 (Go)</span>
-                            <input type="number" min="0" data-field="volume1GB" />
+                            <div class="vmsizing-field-row">
+                                <input type="number" min="0" data-field="volume1GB" />
+                                <select data-field="volume1Type" aria-label="Type de disque du Volume 1">
+                                    <option value="SSD">SSD</option>
+                                    <option value="HDD">HDD</option>
+                                </select>
+                            </div>
                         </label>
                         <label class="vmsizing-field">
                             <span>Volume 2 (Go)</span>
-                            <input type="number" min="0" data-field="volume2GB" />
+                            <div class="vmsizing-field-row">
+                                <input type="number" min="0" data-field="volume2GB" />
+                                <select data-field="volume2Type" aria-label="Type de disque du Volume 2">
+                                    <option value="SSD">SSD</option>
+                                    <option value="HDD">HDD</option>
+                                </select>
+                            </div>
                         </label>
                     </div>
 

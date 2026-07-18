@@ -27,8 +27,8 @@ module.exports = async function ({ page, baseUrl, assert }) {
     const remainingFields = await page.locator("#vmsizing-server-form [data-field]").evaluateAll((els) => els.map((el) => el.dataset.field));
     assert.deepEqual(
         remainingFields,
-        ["name", "cpuSockets", "cpuCoresPerSocket", "cpuThreadsPerCore", "ramGB", "volume1GB", "volume2GB"],
-        "seuls les 7 champs de specs de base doivent rester"
+        ["name", "cpuSockets", "cpuCoresPerSocket", "cpuThreadsPerCore", "ramGB", "volume1GB", "volume1Type", "volume2GB", "volume2Type"],
+        "seuls les 9 champs de specs de base doivent rester"
     );
 
     // Jauges et tableau des VM doivent vivre dans la même carte fusionnée.
