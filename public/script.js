@@ -4507,7 +4507,7 @@ function buildCompetenceMatrixTable(category, skills, color) {
                     <tr>
                         <th class="select-col"></th>
                         <th class="select-col">Sel.</th>
-                        <th>Compétence</th>
+                        <th class="competence-skill-header">Compétence</th>
                         ${stakeholders.map((person) => `<th class="competence-person-header">${escapeHtml(getStakeholderLabel(person))}</th>`).join("")}
                     </tr>
                 </thead>
@@ -4528,7 +4528,7 @@ function buildCompetenceMatrixTable(category, skills, color) {
                 <tr>
                     <th class="select-col"></th>
                     <th class="select-col">Sel.</th>
-                    <th>Compétence</th>
+                    <th class="competence-skill-header">Compétence</th>
                     ${stakeholders.map((person) => `<th class="competence-person-header">${escapeHtml(getStakeholderLabel(person))}</th>`).join("")}
                 </tr>
             </thead>
@@ -8150,22 +8150,47 @@ function hideStructuralCaptureColumns(card) {
     const colspanFixes = [];
 
     card.querySelectorAll("table").forEach((table) => {
-        // thead tr:last-child : pour un thead à 2 lignes (bandeau à colspan +
-        // vraies colonnes, ex. .migration-table), la 1ère ligne n'a que 2-3
-        // cellules — c'est la dernière ligne qui porte le vrai nombre de
-        // colonnes. Pour un thead à une seule ligne, last-child == cette ligne.
+        // thead tr:first-child, somme des colspans (pas juste le nombre de
+        // cellules) : c'est la seule ligne dont on est sûr qu'aucune colonne
+        // n'est "cachée" par une cellule à rowspan héritée d'une ligne
+        // précédente (ex. .gantt-table : N°/Tâche/Début/Fin/Av. en
+        // rowspan="2" sur la 1ère ligne — la 2ème ligne, elle, ne les
+        // recompte pas). Sommer les colspans (au lieu de compter les
+        // éléments) couvre aussi les bandeaux de catégorie à colspan (ex.
+        // .migration-table : 1 + 5 + 4 + 1 = 11 colonnes réelles).
+        const firstHeadRow = table.querySelector("thead tr:first-child");
         const columnCount = table.querySelectorAll(":scope > colgroup > col").length
-            || table.querySelector("thead tr:last-child")?.children.length
-            || 0;
+            || (firstHeadRow
+                ? Array.from(firstHeadRow.children).reduce((sum, cell) => sum + (Number(cell.getAttribute("colspan")) || 1), 0)
+                : 0);
 
         if (!columnCount) return;
 
         table.querySelectorAll("tr").forEach((row) => {
-            if (row.children.length === 1 && row.children[0].hasAttribute("colspan")) {
-                const cell = row.children[0];
-                colspanFixes.push({ cell, previousColspan: cell.getAttribute("colspan") });
-                cell.setAttribute("colspan", String(columnCount));
-            }
+            // Cas général (pas seulement "toute la ligne n'est qu'une seule
+            // cellule à colspan", ex. bandeau de catégorie) : une ligne peut
+            // aussi mélanger UNE cellule à colspan (un libellé qui absorbait
+            // la place de la case à cocher/poignée retirée juste au-dessus)
+            // et des cellules normales à côté (ex. la ligne "Score pondéré"
+            // de la matrice de décision : colspan=3 pour le libellé + une
+            // cellule par option). Si la somme des colspans dépasse le
+            // nombre de colonnes réel une fois les colonnes structurelles
+            // retirées, la 1ère cellule à colspan absorbe la différence —
+            // sinon elle reste trop large et pousse tout le reste de la
+            // ligne (et le total du bas) d'une colonne vers la droite.
+            const cells = Array.from(row.children);
+            if (cells.length === 0) return;
+
+            const spanSum = cells.reduce((sum, cell) => sum + (Number(cell.getAttribute("colspan")) || 1), 0);
+            const overflow = spanSum - columnCount;
+            if (overflow <= 0) return;
+
+            const cell = cells.find((item) => item.hasAttribute("colspan"));
+            if (!cell) return;
+
+            const currentColspan = Number(cell.getAttribute("colspan")) || 1;
+            colspanFixes.push({ cell, previousColspan: cell.getAttribute("colspan") });
+            cell.setAttribute("colspan", String(Math.max(1, currentColspan - overflow)));
         });
     });
 
@@ -11792,9 +11817,11 @@ function buildDecisionOptionsTable() {
 
     const optionHeaderCells = decisionOptions.map((option, index) => `
         <th class="decision-option-header${isBestOption(index) ? " decision-best-cell" : ""}" data-option-id="${escapeHtml(option.id)}" title="${isBestOption(index) ? "Meilleure option" : ""}">
-            <button class="column-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'option ${index + 1}">${dragHandleIconSvg()}</button>
-            <span class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(option.name)}</span>
-            <button class="row-delete-btn decision-option-delete-btn" type="button" data-remove-decision-option="${index}" title="Supprimer l'option" aria-label="Supprimer l'option">&times;</button>
+            <div class="decision-option-header-inner">
+                <button class="column-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'option ${index + 1}">${dragHandleIconSvg()}</button>
+                <span class="editable decision-option-cell" contenteditable="true" data-index="${index}" spellcheck="true">${sanitizeRichText(option.name)}</span>
+                <button class="row-delete-btn decision-option-delete-btn" type="button" data-remove-decision-option="${index}" title="Supprimer l'option" aria-label="Supprimer l'option">&times;</button>
+            </div>
         </th>
     `).join("");
 
@@ -13006,17 +13033,30 @@ function renderFreeTables() {
         return;
     }
 
+    // Largeurs des colonnes fixes (tête de ligne + bouton "+" final), le reste
+    // est réparti à parts égales entre les colonnes de données. Nécessaire en
+    // pourcentage explicite : sous table-layout:fixed, une colonne sans
+    // largeur propre se voit attribuer sa part de l'espace restant selon des
+    // heuristiques liées à son contenu (pas un partage égal), ce qui donnait
+    // des colonnes chaotiquement inégales sur un tableau tout juste créé.
+    const FREE_TABLE_ROW_HEADER_WIDTH_PERCENT = 16;
+    const FREE_TABLE_ACTION_COL_WIDTH_PERCENT = 4;
+
     list.innerHTML = freeTables
         .map((table) => {
             // +1 pour la colonne de badge coloré en tête de ligne, +1 pour la
             // colonne de suppression de ligne en fin de tableau.
             const totalCols = table.columns.length + 2;
 
+            const dataColumnWidthPercent = table.columns.length > 0
+                ? (100 - FREE_TABLE_ROW_HEADER_WIDTH_PERCENT - FREE_TABLE_ACTION_COL_WIDTH_PERCENT) / table.columns.length
+                : 0;
+
             const headerCellsHtml = table.columns
                 .map((column, columnIndex) => {
                     const color = normalizeColor(column.color, columnIndex);
                     return `
-                <th class="free-table-column-header" data-table-id="${table.id}" data-column-id="${column.id}" style="background-color: ${hexToRgba(color, 0.22)}; box-shadow: inset 0 3px 0 ${color};">
+                <th class="free-table-column-header" data-table-id="${table.id}" data-column-id="${column.id}" style="width: ${dataColumnWidthPercent}%; background-color: ${hexToRgba(color, 0.22)}; box-shadow: inset 0 3px 0 ${color};">
                     <button class="column-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser la colonne">${dragHandleIconSvg()}</button>
                     <button
                         class="free-table-column-color-btn"
@@ -13040,8 +13080,14 @@ function renderFreeTables() {
                           const cellsHtml = table.columns
                               .map((column, columnIndex) => {
                                   const columnColor = normalizeColor(column.color, columnIndex);
+                                  // 2 ombres : le liseré du haut (repère net de la couleur de
+                                  // colonne) + un lavis plein sur toute la cellule (léger, pour
+                                  // que la couleur de colonne se voie vraiment dans le corps du
+                                  // tableau, pas seulement dans l'en-tête). Se combine avec le
+                                  // fond de la ligne (background-color sur le <tr>) plutôt que
+                                  // de l'écraser, puisque c'est une propriété différente.
                                   return `
-                        <td class="editable free-table-cell" contenteditable="true" data-table-id="${table.id}" data-row-id="${row.id}" data-column-id="${column.id}" spellcheck="true" style="box-shadow: inset 0 3px 0 ${hexToRgba(columnColor, 0.55)};">${sanitizeRichText(row.cells[column.id] || "")}</td>
+                        <td class="editable free-table-cell" contenteditable="true" data-table-id="${table.id}" data-row-id="${row.id}" data-column-id="${column.id}" spellcheck="true" style="box-shadow: inset 0 3px 0 ${hexToRgba(columnColor, 0.55)}, inset 0 0 0 9999px ${hexToRgba(columnColor, 0.10)};">${sanitizeRichText(row.cells[column.id] || "")}</td>
                     `;
                               })
                               .join("");
@@ -13081,9 +13127,9 @@ function renderFreeTables() {
                         <table class="free-table">
                             <thead>
                                 <tr>
-                                    <th class="free-table-row-header-col"></th>
+                                    <th class="free-table-row-header-col" style="width: ${FREE_TABLE_ROW_HEADER_WIDTH_PERCENT}%;"></th>
                                     ${headerCellsHtml}
-                                    <th class="select-col">
+                                    <th class="select-col" style="width: ${FREE_TABLE_ACTION_COL_WIDTH_PERCENT}%;">
                                         <button class="free-table-add-column-btn" type="button" data-table-id="${table.id}" title="Ajouter une colonne" aria-label="Ajouter une colonne">+</button>
                                     </th>
                                 </tr>

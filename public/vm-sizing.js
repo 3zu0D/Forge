@@ -4,7 +4,7 @@ const VMSIZING_PROFILES_KEY = "forge_vmsizing_profiles_v1";
 const VMSIZING_ACTIVE_PROFILE_KEY = "forge_vmsizing_active_profile_id_v1";
 
 const VMSIZING_SPEC_FIELDS = [
-    "name",
+    "model",
     "cpuSockets",
     "cpuCoresPerSocket",
     "cpuThreadsPerCore",
@@ -15,7 +15,7 @@ const VMSIZING_SPEC_FIELDS = [
     "volume2Type"
 ];
 
-const VMSIZING_SERVER_TEXT_FIELDS = ["name", "volume1Type", "volume2Type"];
+const VMSIZING_SERVER_TEXT_FIELDS = ["model", "volume1Type", "volume2Type"];
 const VMSIZING_VM_TEXT_FIELDS = ["name", "role"];
 const VMSIZING_DISK_KEYS = ["disk1", "disk2", "disk3"];
 const VMSIZING_VOLUME_KEYS = ["volume1", "volume2"];
@@ -41,6 +41,7 @@ function vmSizingDefaultProfile(name, colorIndex) {
     return {
         id: vmSizingCreateId(),
         name: name || "",
+        model: "",
         color: predefinedColors[colorIndex % predefinedColors.length],
         cpuSockets: 2,
         cpuCoresPerSocket: 16,
@@ -160,6 +161,7 @@ function vmSizingLoadProfiles() {
 
         profile.volume1Type = profile.volume1Type === "HDD" ? "HDD" : "SSD";
         profile.volume2Type = profile.volume2Type === "HDD" ? "HDD" : "SSD";
+        profile.model = typeof profile.model === "string" ? profile.model : "";
     });
 
     vmSizingActiveProfileId = localStorage.getItem(VMSIZING_ACTIVE_PROFILE_KEY) || "";
@@ -384,8 +386,8 @@ function vmSizingRenderServerTable() {
             vmSizingSaveProfiles();
 
             if (vmSizingProfiles[index].id === vmSizingActiveProfileId) {
-                const nameField = document.querySelector('#vmsizing-server-form [data-field="name"]');
-                if (nameField) nameField.value = vmSizingProfiles[index].name;
+                const title = document.getElementById("vmsizing-server-title");
+                if (title) title.textContent = vmSizingProfiles[index].name || "Caractéristiques du serveur";
             }
         });
     });
@@ -477,6 +479,11 @@ function vmSizingRenderServerForm() {
         const input = form.querySelector(`[data-field="${field}"]`);
         if (input) input.value = profile[field];
     });
+
+    // Le titre de la carte reprend le nom du serveur (modifiable dans la
+    // liste à gauche) : plus besoin d'un champ "Nom du serveur" dupliqué ici.
+    const title = document.getElementById("vmsizing-server-title");
+    if (title) title.textContent = profile.name || "Caractéristiques du serveur";
 }
 
 function vmSizingSetGauge(prefix, dimension) {
@@ -629,8 +636,6 @@ function vmSizingBindServerForm() {
 
         vmSizingUpdateActiveProfile({ [field]: value });
         vmSizingRenderGauges();
-
-        if (field === "name") vmSizingRenderServerTable();
     });
 }
 

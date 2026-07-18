@@ -2118,7 +2118,7 @@ footer {
     margin-bottom: 20px;
 }
 
-.gantt-periods-col-type {
+.gantt-periods-table .gantt-periods-col-type {
     width: 150px;
 }
 
@@ -3295,7 +3295,7 @@ footer {
     width: 34px;
 }
 
-.kpi-type-col-number {
+.kpi-types-table .kpi-type-col-number {
     width: 48px;
 }
 
@@ -3816,7 +3816,7 @@ body[data-theme="light"] select option:checked {
     width: 34px;
 }
 
-.risk-type-col-number {
+.risk-types-table .risk-type-col-number {
     width: 48px;
 }
 
@@ -5263,7 +5263,7 @@ body[data-theme="light"] .smart-toolbar p {
     width: 34px;
 }
 
-.competence-category-col-number {
+.competence-categories-table .competence-category-col-number {
     width: 48px;
 }
 
@@ -5400,7 +5400,8 @@ body[data-theme="light"] .smart-toolbar p {
     width: 34px;
 }
 
-.competence-skill-cell {
+.competence-skill-cell,
+.competence-skill-header {
     min-width: 210px;
     text-align: left !important;
 }
@@ -7451,7 +7452,7 @@ textarea {
 .competence-matrix-table,
 .smart-table,
 .kpi-table,
-.risk-table,
+.risks-table,
 .wbs-table {
     width: 100% !important;
 }
@@ -8019,7 +8020,7 @@ body[data-theme="orange"] .capture-toast {
 .scope-table th,
 .smart-table th,
 .kpi-table th,
-.risk-table th,
+.risks-table th,
 .wbs-table th,
 .phases-table th,
 .raci-table th,
@@ -8035,7 +8036,7 @@ body[data-theme="orange"] .capture-toast {
 .scope-table td,
 .smart-table td,
 .kpi-table td,
-.risk-table td,
+.risks-table td,
 .wbs-table td,
 .phases-table td,
 .raci-table td,
@@ -8054,8 +8055,8 @@ body[data-theme="orange"] .capture-toast {
 .smart-table td.select-col,
 .kpi-table th.select-col,
 .kpi-table td.select-col,
-.risk-table th.select-col,
-.risk-table td.select-col,
+.risks-table th.select-col,
+.risks-table td.select-col,
 .wbs-table th.select-col,
 .wbs-table td.select-col,
 .phases-table th.select-col,
@@ -8069,24 +8070,21 @@ body[data-theme="orange"] .capture-toast {
     text-align: center !important;
 }
 
-.smart-table th:nth-child(2),
-.smart-table td:nth-child(2),
-.kpi-table th:nth-child(2),
-.kpi-table td:nth-child(2),
-.risk-table th:nth-child(2),
-.risk-table td:nth-child(2) {
-    text-align: center !important;
-}
-
-/* .scope-table, .redaction-table, .wbs-table et .phases-table exclus de la
-   liste ci-dessus : hideStructuralCaptureColumns() retire la case à cocher
+/* .scope-table, .redaction-table, .wbs-table, .phases-table, .smart-table,
+   .kpi-table et .risks-table utilisent tous des classes dédiées plutôt que
+   :nth-child(2) : hideStructuralCaptureColumns() retire la case à cocher
    (et, pour .wbs-table/.phases-table, la colonne flèches monter/descendre
    .wbs-move-header/.wbs-move-cell) pendant la capture 📸, ce qui décale
    :nth-child(2) vers la colonne de contenu suivante — elle se retrouvait
-   donc centrée au lieu d'alignée à gauche. .wbs-table/.phases-table sont en
-   plus partagées entre deux pages (wbs.html et decoupage.html) dont l'ordre
-   des colonnes diffère, donc une position fixe n'est de toute façon jamais
-   fiable ici. Classes dédiées à la place. */
+   donc centrée au lieu d'alignée à gauche. Ce même décalage se produit
+   même hors capture, dès qu'une 2e colonne technique (poignée de
+   glisser-déposer) s'ajoute avant la colonne de contenu, ce qui est le cas
+   pour .smart-table/.kpi-table/.risks-table depuis leur passage au
+   glisser-déposer — :nth-child(2) y ciblait alors la mauvaise colonne
+   (Objectif lié / Type / Type) au lieu du numéro. .wbs-table/.phases-table
+   sont en plus partagées entre deux pages (wbs.html et decoupage.html) dont
+   l'ordre des colonnes diffère, donc une position fixe n'est de toute façon
+   jamais fiable ici. */
 .scope-table th.scope-index-cell,
 .scope-table td.scope-index-cell,
 .redaction-table th.redaction-number-cell,
@@ -8094,7 +8092,13 @@ body[data-theme="orange"] .capture-toast {
 .wbs-table th.wbs-number-cell,
 .wbs-table td.wbs-number-cell,
 .phases-table th.phase-number-cell,
-.phases-table td.phase-number-cell {
+.phases-table td.phase-number-cell,
+.smart-table th.smart-index-cell,
+.smart-table td.smart-index-cell,
+.kpi-table th.kpi-index-cell,
+.kpi-table td.kpi-index-cell,
+.risks-table th.risk-number-cell,
+.risks-table td.risk-number-cell {
     text-align: center !important;
 }
 
@@ -8111,7 +8115,7 @@ body[data-theme="light"] .redaction-table th,
 body[data-theme="light"] .scope-table th,
 body[data-theme="light"] .smart-table th,
 body[data-theme="light"] .kpi-table th,
-body[data-theme="light"] .risk-table th,
+body[data-theme="light"] .risks-table th,
 body[data-theme="light"] .wbs-table th,
 body[data-theme="light"] .phases-table th,
 body[data-theme="light"] .raci-table th,
@@ -8132,7 +8136,7 @@ body[data-theme="light"] .redaction-table td,
 body[data-theme="light"] .scope-table td,
 body[data-theme="light"] .smart-table td,
 body[data-theme="light"] .kpi-table td,
-body[data-theme="light"] .risk-table td,
+body[data-theme="light"] .risks-table td,
 body[data-theme="light"] .wbs-table td,
 body[data-theme="light"] .phases-table td,
 body[data-theme="light"] .raci-table td,
@@ -8147,7 +8151,7 @@ body[data-theme="light"] .redaction-table tbody tr:nth-child(odd),
 body[data-theme="light"] .scope-table tbody tr:nth-child(odd),
 body[data-theme="light"] .smart-table tbody tr:nth-child(odd),
 body[data-theme="light"] .kpi-table tbody tr:nth-child(odd),
-body[data-theme="light"] .risk-table tbody tr:nth-child(odd),
+body[data-theme="light"] .risks-table tbody tr:nth-child(odd),
 body[data-theme="light"] .wbs-table tbody tr:nth-child(odd),
 body[data-theme="light"] .phases-table tbody tr:nth-child(odd),
 body[data-theme="light"] .raci-table tbody tr:nth-child(odd),
@@ -8161,7 +8165,7 @@ body[data-theme="light"] .redaction-table tbody tr:nth-child(even),
 body[data-theme="light"] .scope-table tbody tr:nth-child(even),
 body[data-theme="light"] .smart-table tbody tr:nth-child(even),
 body[data-theme="light"] .kpi-table tbody tr:nth-child(even),
-body[data-theme="light"] .risk-table tbody tr:nth-child(even),
+body[data-theme="light"] .risks-table tbody tr:nth-child(even),
 body[data-theme="light"] .wbs-table tbody tr:nth-child(even),
 body[data-theme="light"] .phases-table tbody tr:nth-child(even),
 body[data-theme="light"] .raci-table tbody tr:nth-child(even),
@@ -8175,7 +8179,7 @@ body[data-theme="light"] .redaction-table tbody tr:hover,
 body[data-theme="light"] .scope-table tbody tr:hover,
 body[data-theme="light"] .smart-table tbody tr:hover,
 body[data-theme="light"] .kpi-table tbody tr:hover,
-body[data-theme="light"] .risk-table tbody tr:hover,
+body[data-theme="light"] .risks-table tbody tr:hover,
 body[data-theme="light"] .wbs-table tbody tr:hover,
 body[data-theme="light"] .phases-table tbody tr:hover,
 body[data-theme="light"] .raci-table tbody tr:hover,
@@ -8278,7 +8282,7 @@ body[data-theme="orange"] .structured-page-nav .nav-group {
 .scope-table th,
 .smart-table th,
 .kpi-table th,
-.risk-table th,
+.risks-table th,
 .wbs-table th,
 .phases-table th,
 .raci-table th,
@@ -8303,7 +8307,7 @@ body[data-theme="orange"] .structured-page-nav .nav-group {
 .scope-table td,
 .smart-table td,
 .kpi-table td,
-.risk-table td,
+.risks-table td,
 .wbs-table td,
 .phases-table td,
 .raci-table td,
@@ -8682,7 +8686,7 @@ body[data-theme="executive"] .redaction-table th,
 body[data-theme="executive"] .scope-table th,
 body[data-theme="executive"] .smart-table th,
 body[data-theme="executive"] .kpi-table th,
-body[data-theme="executive"] .risk-table th,
+body[data-theme="executive"] .risks-table th,
 body[data-theme="executive"] .wbs-table th,
 body[data-theme="executive"] .phases-table th,
 body[data-theme="executive"] .raci-table th,
@@ -8700,7 +8704,7 @@ body[data-theme="executive"] .redaction-table td,
 body[data-theme="executive"] .scope-table td,
 body[data-theme="executive"] .smart-table td,
 body[data-theme="executive"] .kpi-table td,
-body[data-theme="executive"] .risk-table td,
+body[data-theme="executive"] .risks-table td,
 body[data-theme="executive"] .wbs-table td,
 body[data-theme="executive"] .phases-table td,
 body[data-theme="executive"] .raci-table td,
@@ -9986,7 +9990,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
     width: 34px;
 }
 
-.vmsizing-server-col-number {
+.vmsizing-servers-table .vmsizing-server-col-number {
     width: 48px;
 }
 
@@ -10129,6 +10133,16 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
 .vmsizing-field-wide {
     grid-column: 1 / -1;
+}
+
+.vmsizing-field-model span {
+    text-align: center;
+}
+
+.vmsizing-field-model input {
+    height: 38px;
+    text-align: center;
+    font-size: 1.05rem;
 }
 
 .vmsizing-input {
@@ -10500,7 +10514,7 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     width: 100%;
 }
 
-.decision-category-col-number {
+.decision-categories-table .decision-category-col-number {
     width: 48px;
 }
 
@@ -10535,10 +10549,11 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     white-space: nowrap;
 }
 
-.decision-rating-scale-label {
+.decision-rating-scale-table .decision-rating-scale-label {
     color: var(--text);
     font-size: 0.76rem;
     font-weight: 750;
+    text-align: left;
 }
 
 .decision-rating-scale-1 {
@@ -10562,7 +10577,8 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 }
 
 .decision-col-weight {
-    width: 68px;
+    width: 92px;
+    white-space: nowrap;
 }
 
 .decision-weight-cell {
@@ -10719,19 +10735,34 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 }
 
 .decision-option-header {
-    min-width: 100px;
+    /* Assez large pour que poignée + nom + suppression tiennent sur une
+       seule ligne même pour un nom d'option court (voir
+       .decision-option-header-inner) — à 100px, ça retombait sur 2-3 lignes. */
+    min-width: 160px;
     vertical-align: middle;
 }
 
+/* Poignée + nom + suppression regroupés dans un wrapper interne en flex
+   (pas directement sur le <th>, pour ne pas le sortir du calcul normal de
+   hauteur de ligne d'un tableau — même piège que .wbs-move-cell) : les 3
+   éléments restent sur une seule ligne, centrés, au lieu de se répartir en
+   flux inline et retomber sur 2 lignes (icônes au-dessus du texte) dès que
+   la colonne est un peu étroite. */
+.decision-option-header-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
 .decision-option-header .decision-option-cell {
-    display: inline-block;
-    min-width: 60px;
+    min-width: 40px;
     text-align: center;
 }
 
 .decision-option-delete-btn {
-    margin-left: 6px;
-    vertical-align: middle;
+    margin: 0;
 }
 
 .decision-score-cell {
@@ -11074,6 +11105,10 @@ body[data-theme="executive"] .gantt-periods-count {
     padding: 7px 11px;
     text-align: left;
     font-size: 0.8rem;
+}
+
+.budget-col-name {
+    width: 220px;
 }
 
 .budget-col-nature {
@@ -11443,6 +11478,11 @@ body[data-theme="executive"] .budget-horizon-toggle button.active {
     flex: 1 1 auto;
 }
 
+.atouts-limites-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
 .atouts-limites-col {
     width: 50%;
 }
@@ -11684,7 +11724,7 @@ td.redaction-title-cell {
     width: 100%;
 }
 
-.tests-scenario-col-number {
+.tests-scenario-list-table .tests-scenario-col-number {
     width: 48px;
 }
 
@@ -11861,14 +11901,22 @@ body.multi-cell-selecting {
 }
 
 .free-table {
-    /* width:100% pour occuper toute la carte et s'adapter automatiquement
-       quand une colonne est ajoutée/supprimée (comme .decision-options-table
-       et .migration-table). La capture 📸 est verrouillée via
+    /* table-layout:fixed : en auto (comportement d'origine), des colonnes
+       vides (table neuve, pas encore remplie) se répartissaient la largeur
+       de façon chaotique — Chromium distribue l'espace restant des colonnes
+       sans largeur propre selon des heuristiques liées à leur contenu, pas
+       à parts égales. En fixed, seule la première ligne (thead) décide des
+       largeurs, et chaque <th> reçoit désormais un pourcentage explicite
+       calculé en JS (renderFreeTables) : la colonne de gauche et celle du
+       "+" ont une largeur fixe, les colonnes de données se partagent le
+       reste à parts strictement égales — stable même sur un tableau tout
+       juste créé. La capture 📸 reste verrouillée via
        CAPTURE_COLUMN_LOCK_SELECTOR (script.js), qui fige la largeur de
        chaque colonne juste avant la capture pour que html2canvas réplique
-       fidèlement l'étirement des colonnes. */
+       fidèlement le rendu live. */
     width: 100%;
     min-width: 320px;
+    table-layout: fixed;
 }
 
 .free-table-row-header {
@@ -11894,9 +11942,9 @@ body.multi-cell-selecting {
 }
 
 .free-table-column-header {
-    min-width: 140px;
     vertical-align: middle;
     white-space: nowrap;
+    text-align: center;
 }
 
 .free-table-column-name {
@@ -11911,7 +11959,6 @@ body.multi-cell-selecting {
 
 .free-table-cell {
     min-height: 20px;
-    min-width: 140px;
 }
 
 .free-table-add-column-btn {
