@@ -1308,29 +1308,6 @@ body[data-theme="executive"] .row-delete-btn {
     vertical-align: middle;
 }
 
-.wbs-move-btn {
-    width: 22px;
-    height: 22px;
-    border: 1px solid rgba(148, 163, 184, 0.20);
-    border-radius: 4px;
-    background: rgba(15, 23, 42, 0.72);
-    color: #dbeafe;
-    font-size: 0.7rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
-}
-
-.wbs-move-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    filter: brightness(1.2);
-}
-
-.wbs-move-btn:disabled {
-    opacity: 0.30;
-    cursor: not-allowed;
-}
-
 body[data-theme="light"] .wbs-phase-title,
 body[data-theme="executive"] .wbs-phase-title {
     color: #102033 !important;
@@ -1341,13 +1318,6 @@ body[data-theme="executive"] .wbs-phase-count {
     background: rgba(255, 255, 255, 0.62);
     border-color: rgba(30, 58, 95, 0.18);
     color: #334155;
-}
-
-body[data-theme="light"] .wbs-move-btn,
-body[data-theme="executive"] .wbs-move-btn {
-    background: rgba(255, 255, 255, 0.85);
-    color: #102033;
-    border-color: rgba(15, 23, 42, 0.16);
 }
 
 .wbs-progress-input,
@@ -11528,8 +11498,6 @@ td.redaction-title-cell {
     width: 16% !important;
 }
 
-.smart-table th:nth-child(4),
-.smart-table td:nth-child(4),
 .smart-table th:nth-child(5),
 .smart-table td:nth-child(5),
 .smart-table th:nth-child(6),
@@ -11537,12 +11505,14 @@ td.redaction-title-cell {
 .smart-table th:nth-child(7),
 .smart-table td:nth-child(7),
 .smart-table th:nth-child(8),
-.smart-table td:nth-child(8) {
+.smart-table td:nth-child(8),
+.smart-table th:nth-child(9),
+.smart-table td:nth-child(9) {
     width: 14% !important;
 }
 
-.smart-table th:nth-child(9),
-.smart-table td:nth-child(9) {
+.smart-table th:nth-child(10),
+.smart-table td:nth-child(10) {
     width: 14% !important;
 }
 
@@ -11881,13 +11851,16 @@ body.multi-cell-selecting {
     cursor: grabbing;
 }
 
-/* Ces poignées ne s'utilisent qu'à la souris (glisser) : l'anneau de focus
-   cyan vif appliqué par défaut à tous les <button> (button:focus-visible,
-   plus haut) n'a pas de sens ici et, sur un si petit bouton, ressort comme
-   un carré bleu criard au lieu d'une poignée discrète. */
+/* Ces poignées sont aussi utilisables au clavier (flèches, voir
+   moveByKeyboard dans script.js) : il leur faut donc un indicateur de focus
+   visible. L'anneau "outline" par défaut de tous les <button>
+   (button:focus-visible, plus haut) ressort comme un carré bleu criard sur
+   un si petit bouton — remplacé ici par un liseré fin qui suit la forme
+   arrondie de la poignée. */
 .row-drag-handle:focus-visible,
 .column-drag-handle:focus-visible {
     outline: none;
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.75);
 }
 
 .drag-handle-icon {

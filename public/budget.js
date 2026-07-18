@@ -664,40 +664,18 @@ function bindBudgetElementsTableEvents() {
     });
 }
 
-// Même logique que handleWbsRowDrop : l'élément déplacé adopte le typeId du
-// type où il est déposé.
+// L'élément déplacé adopte le typeId du type où il est déposé.
+// Enveloppé dans une vraie fonction (pas un `const` au niveau racine) : ce
+// fichier se charge avant script.js (voir l'ordre des <script> dans les
+// pages budget-*.html), donc createFkRowDropHandler n'existe pas encore au
+// moment où budget.js s'exécute — seul un appel différé (ici, à l'intérieur
+// du corps de la fonction, exécuté après le chargement complet des deux
+// scripts) fonctionne.
 function handleBudgetElementDrop(sourceRow, targetRow, position) {
-    const sourceIndex = budgetElements.findIndex((element) => element.id === sourceRow.dataset.rowId);
-    if (sourceIndex === -1) return;
-
-    const [moved] = budgetElements.splice(sourceIndex, 1);
-    const targetRowId = targetRow.dataset.rowId;
-
-    if (targetRowId) {
-        const targetIndex = budgetElements.findIndex((element) => element.id === targetRowId);
-
-        if (targetIndex === -1) {
-            budgetElements.push(moved);
-        } else {
-            moved.typeId = budgetElements[targetIndex].typeId;
-            budgetElements.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
-        }
-    } else {
-        moved.typeId = targetRow.dataset.typeId || "";
-
-        let insertIndex = budgetElements.length;
-        for (let index = budgetElements.length - 1; index >= 0; index -= 1) {
-            if ((budgetElements[index].typeId || "") === moved.typeId) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-
-        budgetElements.splice(insertIndex, 0, moved);
-    }
-
-    saveBudgetElements();
-    renderBudgetElementsTable();
+    createFkRowDropHandler(() => budgetElements, "typeId", () => {
+        saveBudgetElements();
+        renderBudgetElementsTable();
+    })(sourceRow, targetRow, position);
 }
 
 function bindBudgetTypesListActions() {

@@ -3758,41 +3758,11 @@ function kpiBelongsToGroup(kpi, smartId) {
         : kpi.smartId === smartId;
 }
 
-// Même logique que handleWbsRowDrop : le KPI déplacé adopte le smartId (objectif
-// SMART) du groupe où il est déposé.
-function handleKpiRowDrop(sourceRow, targetRow, position) {
-    const sourceIndex = kpiRows.findIndex((kpi) => kpi.id === sourceRow.dataset.rowId);
-    if (sourceIndex === -1) return;
-
-    const [moved] = kpiRows.splice(sourceIndex, 1);
-    const targetRowId = targetRow.dataset.rowId;
-
-    if (targetRowId) {
-        const targetIndex = kpiRows.findIndex((kpi) => kpi.id === targetRowId);
-
-        if (targetIndex === -1) {
-            kpiRows.push(moved);
-        } else {
-            moved.smartId = kpiRows[targetIndex].smartId;
-            kpiRows.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
-        }
-    } else {
-        moved.smartId = targetRow.dataset.smartId || "";
-
-        let insertIndex = kpiRows.length;
-        for (let index = kpiRows.length - 1; index >= 0; index -= 1) {
-            if ((kpiRows[index].smartId || "") === moved.smartId) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-
-        kpiRows.splice(insertIndex, 0, moved);
-    }
-
+// Le KPI déplacé adopte le smartId (objectif SMART) du groupe où il est déposé.
+const handleKpiRowDrop = createFkRowDropHandler(() => kpiRows, "smartId", () => {
     saveKpis();
     renderKpiGroups();
-}
+});
 
 function bindKpiGroupEvents() {
     const container = document.getElementById("kpi-groups-container");
@@ -4771,7 +4741,37 @@ function bindRowDragReorder(container, { handleSelector, rowSelector, targetSele
             handle.blur();
             beginRowDrag(container, row, targetSelector || rowSelector, onDrop);
         });
+
+        // Le glisser ne se prête pas au clavier : sans ceci, une poignée
+        // focusable mais uniquement réactive à la souris serait un piège pour
+        // qui navigue au clavier (voir moveByKeyboard, juste en dessous).
+        handle.addEventListener("keydown", (event) => {
+            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+            event.preventDefault();
+            moveByKeyboard(container, rowSelector, handleSelector, row, event.key === "ArrowUp" ? -1 : 1, onDrop);
+        });
     });
+}
+
+// Équivalent clavier du glisser-déposer, partagé par les lignes (ArrowUp/
+// ArrowDown) et les colonnes (ArrowLeft/ArrowRight) : déplace l'élément
+// focus d'un cran dans `itemSelector` et repasse par le même `onDrop` que la
+// souris, pour ne jamais dupliquer la logique de mutation du modèle. Après
+// le re-rendu déclenché par onDrop, l'élément déplacé est un tout nouveau
+// nœud DOM : on refocalise sa poignée pour permettre d'enchaîner les
+// déplacements sans perdre le focus à chaque étape.
+function moveByKeyboard(container, itemSelector, handleSelector, item, direction, onDrop) {
+    const items = Array.from(container.querySelectorAll(itemSelector));
+    const currentIndex = items.indexOf(item);
+    if (currentIndex === -1) return;
+
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+
+    onDrop(item, items[targetIndex], direction < 0 ? "before" : "after");
+
+    const refreshedItems = container.querySelectorAll(itemSelector);
+    refreshedItems[targetIndex]?.querySelector(handleSelector)?.focus();
 }
 
 function beginRowDrag(container, sourceRow, targetSelector, onDrop) {
@@ -4794,18 +4794,20 @@ function beginRowDrag(container, sourceRow, targetSelector, onDrop) {
     sourceRow.parentNode.insertBefore(indicator, sourceRow.nextSibling);
     startDragAutoScroll();
 
-    function candidateRows() {
-        return Array.from(container.querySelectorAll(targetSelector)).filter(
-            (row) => row !== sourceRow && row !== indicator
-        );
-    }
+    // Calculé une seule fois : aucune ligne n'est ajoutée/retirée entre le
+    // mousedown et le mouseup (seul l'indicateur bouge), donc pas besoin de
+    // re-parcourir le DOM à chaque mousemove (potentiellement des dizaines
+    // de fois par geste) pour retrouver le même ensemble de lignes.
+    const candidateRows = Array.from(container.querySelectorAll(targetSelector)).filter(
+        (row) => row !== sourceRow && row !== indicator
+    );
 
     function onMouseMove(event) {
         let closest = null;
         let closestDistance = Infinity;
         let closestPosition = "after";
 
-        candidateRows().forEach((row) => {
+        candidateRows.forEach((row) => {
             const rect = row.getBoundingClientRect();
             const midY = rect.top + rect.height / 2;
             const distance = Math.abs(event.clientY - midY);
@@ -4889,6 +4891,12 @@ function bindColumnDragReorder(container, { handleSelector, columnSelector, onDr
             handle.blur();
             beginColumnDrag(container, column, columnSelector, onDrop);
         });
+
+        handle.addEventListener("keydown", (event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            moveByKeyboard(container, columnSelector, handleSelector, column, event.key === "ArrowLeft" ? -1 : 1, onDrop);
+        });
     });
 }
 
@@ -4903,16 +4911,16 @@ function beginColumnDrag(container, sourceColumn, columnSelector, onDrop) {
     sourceColumn.classList.add("column-drag-source");
     document.body.style.cursor = "grabbing";
 
-    function candidateColumns() {
-        return Array.from(container.querySelectorAll(columnSelector)).filter((column) => column !== sourceColumn);
-    }
+    // Calculé une seule fois pour la même raison que dans beginRowDrag :
+    // aucune colonne n'apparaît/disparaît pendant le geste.
+    const candidateColumns = Array.from(container.querySelectorAll(columnSelector)).filter((column) => column !== sourceColumn);
 
     function onMouseMove(event) {
         let closest = null;
         let closestDistance = Infinity;
         let closestPosition = "after";
 
-        candidateColumns().forEach((column) => {
+        candidateColumns.forEach((column) => {
             const rect = column.getBoundingClientRect();
             const midX = rect.left + rect.width / 2;
             const distance = Math.abs(event.clientX - midX);
@@ -4986,6 +4994,52 @@ function createFlatRowDropHandler(getItems, afterMove) {
         const targetIndex = items.findIndex((item) => item.id === targetRow.dataset.rowId);
         const insertIndex = targetIndex === -1 ? items.length : targetIndex + (position === "after" ? 1 : 0);
         items.splice(insertIndex, 0, moved);
+
+        afterMove();
+    };
+}
+
+// Pendant du précédent pour le cas "liste groupée par une clé étrangère"
+// (WBS/tâches, Découpage/étapes, Décision/critères, Périmètre, KPIs,
+// Budget/éléments) : l'élément déplacé adopte le groupe de la ligne cible
+// s'il est déposé à côté d'une vraie ligne, ou celui lu sur le dataset de la
+// cible (`data-${fkField}`) si déposé sur un en-tête/une section vide.
+// `getId` est optionnel : par défaut chaque item est identifié par `.id`,
+// mais WBS a besoin d'un identifiant de repli (voir getWbsRowId) pour les
+// lignes historiques sans `.id` stable.
+function createFkRowDropHandler(getItems, fkField, afterMove, { getId } = {}) {
+    const resolveId = getId || ((item) => item.id);
+
+    return function (sourceRow, targetRow, position) {
+        const items = getItems();
+        const sourceIndex = items.findIndex((item, index) => resolveId(item, index) === sourceRow.dataset.rowId);
+        if (sourceIndex === -1) return;
+
+        const [moved] = items.splice(sourceIndex, 1);
+        const targetRowId = targetRow.dataset.rowId;
+
+        if (targetRowId) {
+            const targetIndex = items.findIndex((item, index) => resolveId(item, index) === targetRowId);
+
+            if (targetIndex === -1) {
+                items.push(moved);
+            } else {
+                moved[fkField] = items[targetIndex][fkField];
+                items.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
+            }
+        } else {
+            moved[fkField] = targetRow.dataset[fkField] || "";
+
+            let insertIndex = items.length;
+            for (let index = items.length - 1; index >= 0; index -= 1) {
+                if ((items[index][fkField] || "") === moved[fkField]) {
+                    insertIndex = index + 1;
+                    break;
+                }
+            }
+
+            items.splice(insertIndex, 0, moved);
+        }
 
         afterMove();
     };
@@ -6115,41 +6169,12 @@ function renderScopeBoard() {
     }
 }
 
-// Même logique que handleWbsRowDrop : l'élément déplacé adopte le type
-// (Inclus / Hors périmètre) de la section où il est déposé.
-function handleScopeRowDrop(sourceRow, targetRow, position) {
-    const sourceIndex = redactionRows.findIndex((row) => row.id === sourceRow.dataset.rowId);
-    if (sourceIndex === -1) return;
-
-    const [moved] = redactionRows.splice(sourceIndex, 1);
-    const targetRowId = targetRow.dataset.rowId;
-
-    if (targetRowId) {
-        const targetIndex = redactionRows.findIndex((row) => row.id === targetRowId);
-
-        if (targetIndex === -1) {
-            redactionRows.push(moved);
-        } else {
-            moved.type = redactionRows[targetIndex].type;
-            redactionRows.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
-        }
-    } else {
-        moved.type = targetRow.dataset.type || "";
-
-        let insertIndex = redactionRows.length;
-        for (let index = redactionRows.length - 1; index >= 0; index -= 1) {
-            if ((redactionRows[index].type || "") === moved.type) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-
-        redactionRows.splice(insertIndex, 0, moved);
-    }
-
+// L'élément déplacé adopte le type (Inclus / Hors périmètre) de la section
+// où il est déposé.
+const handleScopeRowDrop = createFkRowDropHandler(() => redactionRows, "type", () => {
     saveRedactionRows("scope", redactionRows);
     renderScopeBoard();
-}
+});
 
 function renderScopeTypeTable(type) {
     const body = document.getElementById(V45_SCOPE_BODY_IDS[type]);
@@ -8961,42 +8986,13 @@ function applyWbsDurationEdit(index, rawValue) {
 // déplacée adopte le phaseId de la section où elle atterrit (même logique
 // qu'avant avec les flèches monter/descendre, qui changeaient déjà la phase
 // en franchissant une frontière de section).
-function handleWbsRowDrop(sourceRow, targetRow, position) {
-    const sourceId = sourceRow.dataset.rowId;
-    const sourceIndex = wbsRows.findIndex((row, index) => getWbsRowId(row, index) === sourceId);
-    if (sourceIndex === -1) return;
-
-    const [movedRow] = wbsRows.splice(sourceIndex, 1);
-    const targetRowId = targetRow.dataset.rowId;
-
-    if (targetRowId) {
-        const targetIndex = wbsRows.findIndex((row, index) => getWbsRowId(row, index) === targetRowId);
-
-        if (targetIndex === -1) {
-            wbsRows.push(movedRow);
-        } else {
-            movedRow.phaseId = wbsRows[targetIndex].phaseId;
-            wbsRows.splice(position === "before" ? targetIndex : targetIndex + 1, 0, movedRow);
-        }
-    } else {
-        // En-tête de phase ou section vide : dépose en fin de cette section.
-        movedRow.phaseId = targetRow.dataset.phaseId || "";
-
-        let insertIndex = wbsRows.length;
-        for (let index = wbsRows.length - 1; index >= 0; index -= 1) {
-            if ((wbsRows[index].phaseId || "") === movedRow.phaseId) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-
-        wbsRows.splice(insertIndex, 0, movedRow);
-    }
-
+// getId personnalisé : les lignes WBS n'ont pas toujours un `.id` stable
+// (données historiques) — getWbsRowId retombe sur un identifiant composite.
+const handleWbsRowDrop = createFkRowDropHandler(() => wbsRows, "phaseId", () => {
     saveWbsRowsWithSchedule();
     reconcileWbsDecoupage("wbs");
     renderWbsTable();
-}
+}, { getId: getWbsRowId });
 
 // Capture juste une phase du WBS : masque temporairement les lignes des
 // autres phases (sans toucher aux colonnes, donc aucun risque de décalage),
@@ -11063,44 +11059,12 @@ function addDecoupageStepToPhase(phaseId) {
     document.querySelector(`#decoupage-steps-table tr[data-step-id="${newStep.id}"] .decoupage-step-cell`)?.focus();
 }
 
-// Même logique que moveWbsRow : un cran qui franchit la frontière de la
-// phase courante fait changer la phase de l'étape déplacée.
-// Même logique que handleWbsRowDrop : l'étape déplacée adopte la phase de la
-// section où elle est déposée.
-function handleDecoupageStepDrop(sourceRow, targetRow, position) {
-    const sourceIndex = decoupageSteps.findIndex((step) => step.id === sourceRow.dataset.rowId);
-    if (sourceIndex === -1) return;
-
-    const [movedStep] = decoupageSteps.splice(sourceIndex, 1);
-    const targetRowId = targetRow.dataset.rowId;
-
-    if (targetRowId) {
-        const targetIndex = decoupageSteps.findIndex((step) => step.id === targetRowId);
-
-        if (targetIndex === -1) {
-            decoupageSteps.push(movedStep);
-        } else {
-            movedStep.phaseId = decoupageSteps[targetIndex].phaseId;
-            decoupageSteps.splice(position === "before" ? targetIndex : targetIndex + 1, 0, movedStep);
-        }
-    } else {
-        movedStep.phaseId = targetRow.dataset.phaseId || "";
-
-        let insertIndex = decoupageSteps.length;
-        for (let index = decoupageSteps.length - 1; index >= 0; index -= 1) {
-            if ((decoupageSteps[index].phaseId || "") === movedStep.phaseId) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-
-        decoupageSteps.splice(insertIndex, 0, movedStep);
-    }
-
+// L'étape déplacée adopte la phase de la section où elle est déposée.
+const handleDecoupageStepDrop = createFkRowDropHandler(() => decoupageSteps, "phaseId", () => {
     saveDecoupageSteps();
     renderDecoupageStepsTable();
     reconcileWbsDecoupage("decoupage");
-}
+});
 
 function renderDecoupageStepsTable() {
     const tbody = document.getElementById("decoupage-steps-table");
@@ -11685,42 +11649,18 @@ function renderDecisionOptionsTable() {
     bindDecisionOptionsEvents();
 }
 
-// Même logique que handleWbsRowDrop : le critère déplacé adopte la catégorie
-// de la section où il est déposé (une autre ligne de critère, l'en-tête
-// d'une catégorie, ou la ligne "Aucun critère" d'une catégorie vide).
-function handleDecisionCriterionDrop(sourceRow, targetRow, position) {
-    const sourceIndex = decisionCriteria.findIndex((criterion) => criterion.id === sourceRow.dataset.rowId);
-    if (sourceIndex === -1) return;
-
-    const [moved] = decisionCriteria.splice(sourceIndex, 1);
-    const targetRowId = targetRow.dataset.rowId;
-
-    if (targetRowId) {
-        const targetIndex = decisionCriteria.findIndex((criterion) => criterion.id === targetRowId);
-
-        if (targetIndex === -1) {
-            decisionCriteria.push(moved);
-        } else {
-            moved.categoryId = decisionCriteria[targetIndex].categoryId;
-            decisionCriteria.splice(position === "before" ? targetIndex : targetIndex + 1, 0, moved);
-        }
-    } else {
-        moved.categoryId = targetRow.dataset.categoryId || "";
-
-        let insertIndex = decisionCriteria.length;
-        for (let index = decisionCriteria.length - 1; index >= 0; index -= 1) {
-            if ((decisionCriteria[index].categoryId || "") === moved.categoryId) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-
-        decisionCriteria.splice(insertIndex, 0, moved);
-    }
-
+// Le critère déplacé adopte la catégorie de la section où il est déposé
+// (une autre ligne de critère, l'en-tête d'une catégorie, ou la ligne "Aucun
+// critère" d'une catégorie vide).
+// Corrigé au passage : ça redessinait renderDecisionCategoriesTable() (la
+// liste des catégories dans la barre latérale, inchangée par ce drag) au
+// lieu de renderDecisionOptionsTable() (la matrice critères×options où la
+// ligne déplacée est réellement visible) — le tri était bien sauvegardé mais
+// ne s'affichait pas avant un prochain rendu complet de la matrice.
+const handleDecisionCriterionDrop = createFkRowDropHandler(() => decisionCriteria, "categoryId", () => {
     saveDecisionCriteria();
-    renderDecisionCategoriesTable();
-}
+    renderDecisionOptionsTable();
+});
 
 function bindDecisionOptionsEvents() {
     const wrapper = document.getElementById("decision-options-wrapper");
