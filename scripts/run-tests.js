@@ -95,10 +95,26 @@ async function main() {
     const channel = process.env.TEST_BROWSER_CHANNEL || "msedge";
     const browser = await playwright.chromium.launch({ channel, headless: true });
 
-    const testFiles = fs
+    let testFiles = fs
         .readdirSync(TESTS_DIR)
         .filter((file) => file.endsWith(".test.js"))
         .sort();
+
+    // Filtre optionnel (npm test -- <bout-de-nom>) : n'exécute que les
+    // fichiers dont le nom contient un des mots donnés, insensible à la
+    // casse. Sans argument, comportement inchangé (toute la suite).
+    const filters = process.argv.slice(2).filter(Boolean);
+    if (filters.length > 0) {
+        const lowerFilters = filters.map((f) => f.toLowerCase());
+        testFiles = testFiles.filter((file) => lowerFilters.some((f) => file.toLowerCase().includes(f)));
+
+        if (testFiles.length === 0) {
+            console.error(`Aucun fichier de test ne correspond à : ${filters.join(", ")}`);
+            process.exit(1);
+        }
+
+        log(`Filtre actif (${filters.join(", ")}) : ${testFiles.length} fichier(s) sur le total.\n`);
+    }
 
     let passed = 0;
     let failed = 0;
