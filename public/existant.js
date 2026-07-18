@@ -1,7 +1,7 @@
 /* Forge — Dimensionnement VM (intégration de la fonctionnalité Diamond) */
 
-const VMSIZING_PROFILES_KEY = "forge_vmsizing_profiles_v1";
-const VMSIZING_ACTIVE_PROFILE_KEY = "forge_vmsizing_active_profile_id_v1";
+const VMSIZING_PROFILES_KEY = "forge_existant_profiles_v1";
+const VMSIZING_ACTIVE_PROFILE_KEY = "forge_existant_active_profile_id_v1";
 
 const VMSIZING_SPEC_FIELDS = [
     "name",
@@ -696,9 +696,9 @@ function vmSizingBindAddVmButton() {
 
 /* ===== Point d'entrée (appelé depuis forgeBootstrap dans script.js) ===== */
 
-function initVmSizingPage() {
+function initExistantPage() {
     if (typeof helpTexts !== "undefined") {
-        helpTexts.vmsizing = `
+        helpTexts.existant = `
             <p>Cette page sert à dimensionner les machines virtuelles d'un serveur physique.</p>
             <ul>
                 <li>La colonne de gauche liste tes serveurs, comme les catégories de la page Compétences : coche puis "-" pour supprimer, "+" pour ajouter, clique sur le numéro pour changer la couleur.</li>

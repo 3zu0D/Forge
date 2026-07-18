@@ -238,6 +238,7 @@ const FORGE_NAV_GROUPS = [
         icon: "infrastructure",
         links: [
             { page: "vmsizing", href: "vm-sizing.html", label: "Dimensionnement VM", icon: "vmsizing" },
+            { page: "existant", href: "existant.html", label: "Existant", icon: "vmsizing" },
             { page: "migration", href: "migration.html", label: "Migration", icon: "migration" },
             { page: "migration-planning", href: "planning.html", label: "Planning", icon: "migration-planning" }
         ]
@@ -290,10 +291,20 @@ function renderPageNav() {
     const nav = document.getElementById("page-nav");
     if (!nav) return;
 
-    nav.innerHTML = FORGE_NAV_GROUPS.map(
-        (group) => `
+    nav.innerHTML = FORGE_NAV_GROUPS.map((group) => {
+        // Le sous-menu ne s'ouvre qu'au survol : sans indicateur permanent,
+        // rien sur la page ne dit quel sous-menu précis est actif (seul le
+        // groupe parent ressort en surbrillance). Affiché seulement si le
+        // groupe a plus d'un lien — inutile de le répéter quand il n'y a
+        // aucune ambiguïté possible.
+        const activeLink = group.links.find((link) => link.page === currentPage);
+        const currentBadge = activeLink && group.links.length > 1
+            ? `<span class="nav-group-current">${escapeHtml(activeLink.label)}</span>`
+            : "";
+
+        return `
         <div class="nav-group">
-            <span class="nav-group-label">${navIcon(group.icon)}<span class="nav-group-label-text">${escapeHtml(group.label)}</span></span>
+            <span class="nav-group-label">${navIcon(group.icon)}<span class="nav-group-label-text">${escapeHtml(group.label)}</span>${currentBadge}</span>
             <div class="nav-group-links">
                 ${group.links
                     .map(
@@ -303,8 +314,8 @@ function renderPageNav() {
                     .join("")}
             </div>
         </div>
-    `
-    ).join("");
+    `;
+    }).join("");
 }
 
 /* V90 — Barre d'outils de mise en forme, injectée une fois sous la nav sur
@@ -374,18 +385,235 @@ function renderFormattingToolbar() {
     document.addEventListener("mousedown", handleEditableMouseDown);
     document.addEventListener("mouseover", handleEditableMouseOver);
     document.addEventListener("mouseup", handleEditableMouseUp);
-    window.addEventListener("resize", syncFormattingToolbarOffset);
+
+    // ResizeObserver plutôt qu'un simple listener "resize" de la fenêtre :
+    // la hauteur du bandeau (topbar + nav + barre d'outils) peut aussi
+    // changer sans que la fenêtre soit redimensionnée (nom de projet long
+    // qui passe sur 2 lignes, changement de thème, police qui finit de
+    // charger...). Avec un simple "resize", ces cas laissaient les cartes
+    // latérales collantes (position: sticky) calées sur une ancienne
+    // hauteur de bandeau — soit à moitié cachées dessous, soit un vide
+    // entre la barre d'outils et le reste du menu.
+    const topbarEl = document.querySelector(".topbar");
+    const navEl = document.getElementById("page-nav");
+    if (typeof ResizeObserver !== "undefined" && topbarEl && navEl) {
+        const headerResizeObserver = new ResizeObserver(syncFormattingToolbarOffset);
+        headerResizeObserver.observe(topbarEl);
+        headerResizeObserver.observe(navEl);
+        headerResizeObserver.observe(toolbar);
+    } else {
+        window.addEventListener("resize", syncFormattingToolbarOffset);
+    }
 
     syncFormattingToolbarOffset();
     updateFormattingToolbarState();
 }
 
+// Calcule la hauteur totale du bandeau fixe (topbar + nav + barre d'outils)
+// et l'expose comme 2 variables CSS : celle de la barre d'outils elle-même
+// (déjà utilisée pour son propre `position: sticky`), et --sticky-content-top
+// pour tout ce qui doit commencer juste en dessous (cartes latérales
+// collantes des tableaux "Phases", "Types de risques"...).
 function syncFormattingToolbarOffset() {
     const topbar = document.querySelector(".topbar");
     const nav = document.getElementById("page-nav");
+    const toolbar = document.getElementById("formatting-toolbar");
     if (!topbar || !nav) return;
 
-    document.documentElement.style.setProperty("--formatting-toolbar-top", `${topbar.offsetHeight + nav.offsetHeight}px`);
+    const headerTop = topbar.offsetHeight + nav.offsetHeight;
+    document.documentElement.style.setProperty("--formatting-toolbar-top", `${headerTop}px`);
+    document.documentElement.style.setProperty("--sticky-content-top", `${headerTop + (toolbar?.offsetHeight || 0)}px`);
+}
+
+/* V97 — Navigation entre champs aux flèches directionnelles, sur toute
+   l'app : cellules éditables (contenteditable), <input> (texte, nombre...),
+   <select>. Un seul listener délégué, aucun câblage par page/tableau requis
+   — la cible est retrouvée par proximité géométrique à l'écran (même
+   principe que "trouver la ligne la plus proche" dans le glisser-déposer),
+   pas par structure de tableau : marche donc aussi bien dans une grille que
+   pour des champs empilés verticalement hors tableau.
+
+   Exception volontaire : <input type="date"> est exclu. Les flèches y ont
+   déjà un sens natif (jour/mois/année) plus utile que la navigation entre
+   champs ; les écraser dégraderait la saisie de date au lieu de l'améliorer. */
+const FIELD_NAV_SELECTOR = '[contenteditable="true"], select, input:not([type="date"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="file"]):not([type="color"]):not([type="hidden"]):not([readonly])';
+
+function initFieldArrowNavigation() {
+    document.addEventListener("keydown", handleFieldArrowNavigation);
+}
+
+function handleFieldArrowNavigation(event) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
+    const key = event.key;
+    if (key !== "ArrowUp" && key !== "ArrowDown" && key !== "ArrowLeft" && key !== "ArrowRight") return;
+
+    const field = event.target.closest?.(FIELD_NAV_SELECTOR);
+    if (!field) return;
+
+    let direction;
+    let landingEdge = "start";
+
+    if (key === "ArrowDown") {
+        direction = "down";
+    } else if (key === "ArrowUp") {
+        direction = "up";
+    } else if (key === "ArrowRight") {
+        if (!isFieldCaretAtEnd(field)) return;
+        direction = "right";
+    } else {
+        if (!isFieldCaretAtStart(field)) return;
+        direction = "left";
+        landingEdge = "end";
+    }
+
+    // Un contenteditable peut contenir plusieurs lignes (texte long qui
+    // s'enroule, ou saut de ligne inséré) : ArrowUp/ArrowDown ne doit
+    // changer de champ que si le curseur est déjà sur la toute première/
+    // dernière ligne visuelle, sinon ça empêcherait de circuler dans un
+    // texte plus long.
+    if (field.isContentEditable && (direction === "up" || direction === "down")) {
+        const atEdge = isCaretAtVerticalEdge(field, direction === "up" ? "top" : "bottom");
+        if (!atEdge) return;
+    }
+
+    const target = findAdjacentField(field, direction);
+    if (!target) return;
+
+    event.preventDefault();
+    focusFieldAtEdge(target, landingEdge);
+}
+
+// Cherche, parmi tous les champs navigables de la page, le plus proche dans
+// la direction demandée — en pondérant fort l'écart sur l'axe perpendiculaire
+// pour rester sur la même "colonne" (haut/bas) ou la même "ligne" (gauche/
+// droite) autant que possible.
+function findAdjacentField(current, direction) {
+    const currentRect = current.getBoundingClientRect();
+    const currentCenterX = currentRect.left + currentRect.width / 2;
+    const currentCenterY = currentRect.top + currentRect.height / 2;
+    const AXIS_WEIGHT = 4;
+
+    let best = null;
+    let bestScore = Infinity;
+
+    document.querySelectorAll(FIELD_NAV_SELECTOR).forEach((el) => {
+        if (el === current) return;
+
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return;
+        if (el.offsetParent === null && getComputedStyle(el).position !== "fixed") return;
+
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const dx = centerX - currentCenterX;
+        const dy = centerY - currentCenterY;
+
+        let score = null;
+        if (direction === "down" && dy > 2) score = dy + Math.abs(dx) * AXIS_WEIGHT;
+        else if (direction === "up" && dy < -2) score = -dy + Math.abs(dx) * AXIS_WEIGHT;
+        else if (direction === "right" && dx > 2 && Math.abs(dy) < currentRect.height) score = dx + Math.abs(dy) * AXIS_WEIGHT;
+        else if (direction === "left" && dx < -2 && Math.abs(dy) < currentRect.height) score = -dx + Math.abs(dy) * AXIS_WEIGHT;
+
+        if (score !== null && score < bestScore) {
+            bestScore = score;
+            best = el;
+        }
+    });
+
+    return best;
+}
+
+function focusFieldAtEdge(el, edge) {
+    el.focus();
+
+    if (el.tagName === "SELECT") return;
+
+    if (el.tagName === "INPUT") {
+        try {
+            const pos = edge === "start" ? 0 : el.value.length;
+            el.setSelectionRange(pos, pos);
+        } catch (error) {
+            // Certains types (number...) ne supportent pas setSelectionRange :
+            // la position de focus par défaut suffit, rien de plus à faire.
+        }
+        return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(edge === "start");
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function isFieldCaretAtStart(field) {
+    if (field.tagName === "SELECT") return true;
+    if (field.tagName === "INPUT") {
+        try {
+            return field.selectionStart === 0 && field.selectionEnd === 0;
+        } catch (error) {
+            return true;
+        }
+    }
+    return isCaretAtTextEdge(field, "start");
+}
+
+function isFieldCaretAtEnd(field) {
+    if (field.tagName === "SELECT") return true;
+    if (field.tagName === "INPUT") {
+        try {
+            return field.selectionStart === field.value.length && field.selectionEnd === field.value.length;
+        } catch (error) {
+            return true;
+        }
+    }
+    return isCaretAtTextEdge(field, "end");
+}
+
+function isCaretAtTextEdge(el, edge) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return true;
+
+    const range = selection.getRangeAt(0);
+    if (!el.contains(range.startContainer)) return true;
+
+    const testRange = document.createRange();
+    testRange.selectNodeContents(el);
+
+    if (edge === "start") {
+        testRange.setEnd(range.startContainer, range.startOffset);
+    } else {
+        testRange.setStart(range.endContainer, range.endOffset);
+    }
+
+    return testRange.toString().length === 0;
+}
+
+function isCaretAtVerticalEdge(el, edge) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || !el.contains(selection.anchorNode)) return true;
+
+    const caretRange = selection.getRangeAt(0).cloneRange();
+    caretRange.collapse(edge === "top");
+    const caretRect = caretRange.getClientRects()[0];
+    if (!caretRect) return true;
+
+    // Comparé aux lignes de TEXTE réelles (pas à la boîte de l'élément) :
+    // une <td> de tableau peut avoir un padding et être étirée par une autre
+    // cellule plus haute dans la même ligne, ce qui décale sa boîte englobante
+    // très au-delà du texte lui-même — la comparer directement aurait fait
+    // rater la détection "dernière ligne" même pour une seule ligne de texte.
+    const contentRange = document.createRange();
+    contentRange.selectNodeContents(el);
+    const lineRects = Array.from(contentRange.getClientRects());
+    if (lineRects.length === 0) return true;
+
+    const tolerance = 2;
+    return edge === "top"
+        ? caretRect.top <= Math.min(...lineRects.map((r) => r.top)) + tolerance
+        : caretRect.bottom >= Math.max(...lineRects.map((r) => r.bottom)) - tolerance;
 }
 
 function handleEditableFocusIn(event) {
@@ -10437,6 +10665,7 @@ function forgeBootstrap() {
     renderTopbarBrand();
     renderPageNav();
     renderFormattingToolbar();
+    initFieldArrowNavigation();
     bootstrapForgeAsync();
 }
 
@@ -10465,6 +10694,7 @@ async function bootstrapForgeAsync() {
     if (currentPage === "smart") initSmartPage();
     if (currentPage === "kpis") initKpisPage();
     if (currentPage === "vmsizing" && typeof initVmSizingPage === "function") initVmSizingPage();
+    if (currentPage === "existant" && typeof initExistantPage === "function") initExistantPage();
     if (currentPage === "decoupage") initDecoupagePage();
     if (currentPage === "decision") initDecisionPage();
     if (currentPage === "atouts-limites") initAtoutsLimitesPage();

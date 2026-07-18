@@ -1036,7 +1036,7 @@ td.editable,
 
 .wbs-sidebar {
     position: sticky;
-    top: 12px;
+    top: calc(var(--sticky-content-top, 161px) + 12px);
     align-self: start;
 }
 
@@ -3283,7 +3283,7 @@ footer {
 
 .kpi-types-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .kpi-types-table {
@@ -3542,6 +3542,11 @@ body[data-theme="light"] .nav-link.active {
     box-shadow: 0 10px 22px rgba(14, 165, 233, 0.18);
 }
 
+body[data-theme="light"] .nav-group-current {
+    background: rgba(14, 165, 233, 0.14);
+    color: #0369a1;
+}
+
 body[data-theme="light"] th {
     background: linear-gradient(180deg, #e8f3ff, #dcecff);
     border-color: rgba(15, 23, 42, 0.12);
@@ -3793,7 +3798,7 @@ body[data-theme="light"] select option:checked {
     display: grid;
     gap: 12px;
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .risk-types-table {
@@ -5246,7 +5251,7 @@ body[data-theme="light"] .smart-toolbar p {
 
 .competence-categories-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .competence-categories-table {
@@ -8569,6 +8574,11 @@ body[data-theme="executive"] .structured-page-nav .nav-link.active {
         inset 0 1px 0 rgba(255, 255, 255, 0.20);
 }
 
+body[data-theme="executive"] .nav-group-current {
+    background: rgba(30, 58, 95, 0.12);
+    color: #1e3a5f;
+}
+
 body[data-theme="executive"] input,
 body[data-theme="executive"] select,
 body[data-theme="executive"] textarea,
@@ -9964,7 +9974,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
 .vmsizing-servers-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .vmsizing-servers-table {
@@ -10120,7 +10130,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 }
 
 .vmsizing-vm-table .vmsizing-col-name {
-    width: 90px;
+    width: 150px;
 }
 
 .vmsizing-vm-table .vmsizing-col-role {
@@ -10128,12 +10138,98 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 }
 
 .vmsizing-vm-table .vmsizing-col-num {
-    width: 80px;
+    width: 60px;
     text-align: center;
 }
 
-.vmsizing-vm-table td:nth-child(n+3):nth-child(-n+7) {
+.vmsizing-vm-table .vmsizing-col-active {
+    width: 64px;
     text-align: center;
+}
+
+.vmsizing-vm-table .vmsizing-col-disk {
+    width: 130px;
+    text-align: center;
+}
+
+.vmsizing-disk-header-title {
+    display: block;
+}
+
+.vmsizing-disk-header-sub {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 3px;
+    text-transform: none;
+    font-size: 0.58rem;
+    font-weight: 700;
+    opacity: 0.72;
+}
+
+.vmsizing-disk-header-sub span {
+    flex: 1;
+}
+
+/* Chaque disque affiche utilisé + disponible (2 mini-champs) et un volume
+   (voir vmSizingBuildDiskCell dans vm-sizing.js). */
+.vmsizing-disk-cell {
+    text-align: center;
+}
+
+.vmsizing-disk-mini-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.vmsizing-disk-input {
+    min-width: 0;
+    padding: 3px 2px;
+    font-size: 0.70rem;
+}
+
+.vmsizing-disk-volume-select {
+    width: 100%;
+    height: 24px;
+    padding: 2px 4px;
+    font-size: 0.68rem;
+}
+
+/* Même patron que .wbs-weekend-toggle, réduit pour tenir dans une cellule de
+   tableau : case à cocher + badge rouge/vert selon l'état. */
+.vmsizing-active-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.vmsizing-active-toggle input {
+    width: 13px;
+    height: 13px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.vmsizing-active-toggle strong {
+    min-width: 40px;
+    padding: 2px 5px;
+    border-radius: 5px;
+    background: rgba(255, 23, 68, 0.18);
+    color: #fecdd3;
+    text-align: center;
+    font-size: 0.62rem;
+    font-weight: 900;
+}
+
+.vmsizing-active-toggle input:checked ~ strong {
+    background: rgba(0, 230, 118, 0.18);
+    color: #bbf7d0;
+}
+
+.vmsizing-vm-row-inactive {
+    opacity: 0.6;
 }
 
 .vmsizing-gauge-grid {
@@ -10276,6 +10372,21 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     transition: border-color 0.15s ease, filter 0.15s ease;
 }
 
+/* Indique quel sous-menu précis est actif SANS avoir à survoler le groupe
+   pour ouvrir son dropdown (le seul endroit où l'état "active" du lien
+   était visible jusqu'ici). */
+.nav-group-current {
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(34, 211, 238, 0.16);
+    color: #67e8f9;
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
 .structured-page-nav .nav-group:hover .nav-group-label,
 .structured-page-nav .nav-group:focus-within .nav-group-label,
 .structured-page-nav .nav-group:has(.nav-link.active) .nav-group-label {
@@ -10342,7 +10453,7 @@ body[data-theme="light"] .vmsizing-server-name-cell {
 
 .decision-categories-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .decision-categories-table {
@@ -10769,7 +10880,7 @@ body[data-theme="executive"] .gantt-periods-count {
 .budget-tco-profiles-card,
 .budget-comparatifs-checklist-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .budget-sidebar-stack {
@@ -11526,7 +11637,7 @@ td.redaction-title-cell {
 
 .tests-scenario-list-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .tests-scenario-list-table {
@@ -11926,7 +12037,7 @@ body[data-theme="executive"] .column-drag-handle {
 
 .migration-legend-card {
     position: sticky;
-    top: 114px;
+    top: var(--sticky-content-top, 161px);
 }
 
 .migration-criticality-scale {
