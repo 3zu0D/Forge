@@ -13502,6 +13502,14 @@ function renderMigrationPlans() {
                     <div class="table-wrapper">
                         <table class="migration-table">
                             <thead>
+                                <!-- Les colspan=5/4 ci-dessous doivent rester la somme exacte des
+                                     colonnes de chaque groupe sur la ligne du dessous (Étape...Crit. =
+                                     5, Risque...Correction = 4) : hideStructuralCaptureColumns() (voir
+                                     script.js) déduit le nombre réel de colonnes de cette 1ère ligne
+                                     de thead et rééquilibre le 1er colspan en trop si la somme dépasse
+                                     ce total — si on ajoute une colonne à un groupe sans mettre à jour
+                                     son colspan, la capture 📸 rejette silencieusement le décalage sur
+                                     "Migration" plutôt que sur le bon groupe. -->
                                 <tr>
                                     <th class="select-col"></th>
                                     <th colspan="5" class="migration-group-header migration-group-migration">${navIcon("migration")}Migration</th>
