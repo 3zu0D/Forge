@@ -55,6 +55,14 @@
                         <h2>Types d'éléments</h2>
                     </div>
 
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-budget-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
+                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-types-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                        </div>
+                        <button class="btn btn-danger btn-reset" id="reset-budget-types-btn" type="button">Réinitialiser</button>
+                    </div>
+
                     <div class="table-wrapper">
                         <table class="budget-types-table">
                             <colgroup>
@@ -76,19 +84,18 @@
                             <tbody id="budget-types-table-body"></tbody>
                         </table>
                     </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn" id="add-budget-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
-                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-types-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                        </div>
-                        <button class="btn btn-danger btn-reset" id="reset-budget-types-btn" type="button">Réinitialiser</button>
-                    </div>
                 </div>
 
                 <div class="card budget-info-card">
                     <div class="card-header">
                         <h2>Informations</h2>
+                    </div>
+
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-budget-info-btn" type="button" title="Ajouter une information" aria-label="Ajouter une information">+</button>
+                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-info-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                        </div>
                     </div>
 
                     <div class="table-wrapper">
@@ -111,13 +118,6 @@
                             </thead>
                             <tbody id="budget-info-table-body"></tbody>
                         </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn" id="add-budget-info-btn" type="button" title="Ajouter une information" aria-label="Ajouter une information">+</button>
-                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-budget-info-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                        </div>
                     </div>
                 </div>
             </aside>

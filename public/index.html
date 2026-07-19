@@ -53,6 +53,15 @@
                 <h2>Parties Prenantes</h2>
             </div>
 
+            <div class="table-actions table-actions-top">
+                <div class="left-actions">
+                    <button class="btn icon-action-btn icon-add-btn" id="add-person-btn" type="button" title="Ajouter une personne" aria-label="Ajouter une personne">+</button>
+                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                </div>
+
+                <button class="btn btn-danger btn-reset" id="reset-btn" type="button">Réinitialiser</button>
+            </div>
+
             <div class="table-wrapper">
                 <table>
                     <thead>
@@ -71,15 +80,6 @@
                     </thead>
                     <tbody id="stakeholders-table"></tbody>
                 </table>
-            </div>
-
-            <div class="table-actions">
-                <div class="left-actions">
-                    <button class="btn icon-action-btn icon-add-btn" id="add-person-btn" type="button" title="Ajouter une personne" aria-label="Ajouter une personne">+</button>
-                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                </div>
-
-                <button class="btn btn-danger btn-reset" id="reset-btn" type="button">Réinitialiser</button>
             </div>
         </section>
     </main>

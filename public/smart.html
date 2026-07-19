@@ -57,6 +57,14 @@
                 <p>Transforme les objectifs du projet en objectifs SMART. Les objectifs créés dans l’onglet Objectifs sont disponibles ici automatiquement.</p>
             </div>
 
+            <div class="table-actions table-actions-top">
+                <div class="left-actions">
+                    <button class="btn icon-action-btn icon-add-btn" id="add-smart-btn" type="button" title="Ajouter un objectif" aria-label="Ajouter un objectif">+</button>
+                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-smart-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                </div>
+                <button class="btn btn-danger btn-reset" id="reset-smart-btn" type="button">Réinitialiser SMART</button>
+            </div>
+
             <div class="table-wrapper smart-table-wrapper">
                 <table class="smart-table">
                     <thead>
@@ -77,14 +85,6 @@
                     </thead>
                     <tbody id="smart-table-body"></tbody>
                 </table>
-            </div>
-
-            <div class="table-actions">
-                <div class="left-actions">
-                    <button class="btn icon-action-btn icon-add-btn" id="add-smart-btn" type="button" title="Ajouter un objectif" aria-label="Ajouter un objectif">+</button>
-                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-smart-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                </div>
-                <button class="btn btn-danger btn-reset" id="reset-smart-btn" type="button">Réinitialiser SMART</button>
             </div>
         </section>
     </main>

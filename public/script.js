@@ -3916,6 +3916,13 @@ function renderKpiGroupCard(group) {
                 <h2><span class="kpi-group-color-dot" style="background-color: ${escapeHtml(group.color)};"></span>${escapeHtml(group.title)}</h2>
             </div>
 
+            <div class="table-actions table-actions-top">
+                <div class="left-actions">
+                    <button class="btn icon-action-btn icon-add-btn kpi-group-add-btn" type="button" data-smart-id="${escapeHtml(group.smartId)}" title="Ajouter un KPI" aria-label="Ajouter un KPI">+</button>
+                    <button class="btn btn-danger icon-action-btn icon-delete-btn kpi-group-delete-btn" type="button" data-smart-id="${escapeHtml(group.smartId)}" ${selectedInGroup.length === 0 ? "disabled" : ""} title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                </div>
+            </div>
+
             <div class="table-wrapper">
                 <table class="kpi-table">
                     <thead>
@@ -3937,13 +3944,6 @@ function renderKpiGroupCard(group) {
                     </thead>
                     <tbody>${rowsHtml}</tbody>
                 </table>
-            </div>
-
-            <div class="table-actions">
-                <div class="left-actions">
-                    <button class="btn icon-action-btn icon-add-btn kpi-group-add-btn" type="button" data-smart-id="${escapeHtml(group.smartId)}" title="Ajouter un KPI" aria-label="Ajouter un KPI">+</button>
-                    <button class="btn btn-danger icon-action-btn icon-delete-btn kpi-group-delete-btn" type="button" data-smart-id="${escapeHtml(group.smartId)}" ${selectedInGroup.length === 0 ? "disabled" : ""} title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                </div>
             </div>
         </div>
     `;
@@ -12223,6 +12223,12 @@ function renderAtoutsLimitesMatrices() {
                         <button class="btn btn-danger icon-action-btn icon-delete-btn atouts-limites-delete-matrix-btn" type="button" data-matrix-id="${matrix.id}" title="Supprimer cette matrice" aria-label="Supprimer cette matrice">-</button>
                     </div>
 
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn atouts-limites-add-row-btn" type="button" data-matrix-id="${matrix.id}" title="Ajouter une ligne" aria-label="Ajouter une ligne">+</button>
+                        </div>
+                    </div>
+
                     <div class="table-wrapper">
                         <table class="atouts-limites-table">
                             <colgroup>
@@ -12241,12 +12247,6 @@ function renderAtoutsLimitesMatrices() {
                             </thead>
                             <tbody>${rowsHtml}</tbody>
                         </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn atouts-limites-add-row-btn" type="button" data-matrix-id="${matrix.id}" title="Ajouter une ligne" aria-label="Ajouter une ligne">+</button>
-                        </div>
                     </div>
                 </section>
             `;
@@ -12644,6 +12644,11 @@ function renderTestScenarioDetailCards() {
 
                 <div class="tests-context-steps">
                     <div class="tests-section-label">Contexte détaillé</div>
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn tests-add-context-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter un élément" aria-label="Ajouter un élément">+</button>
+                        </div>
+                    </div>
                     <table class="tests-steps-table">
                         <thead>
                             <tr>
@@ -12655,11 +12660,6 @@ function renderTestScenarioDetailCards() {
                         </thead>
                         <tbody>${stepsHtml}</tbody>
                     </table>
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn tests-add-context-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter un élément" aria-label="Ajouter un élément">+</button>
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
@@ -12859,6 +12859,11 @@ function renderTestDerouleCards() {
                 </div>
 
                 <div class="tests-context-steps">
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn tests-add-deroule-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+                        </div>
+                    </div>
                     <table class="tests-steps-table">
                         <thead>
                             <tr>
@@ -12870,11 +12875,6 @@ function renderTestDerouleCards() {
                         </thead>
                         <tbody>${stepsHtml}</tbody>
                     </table>
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn tests-add-deroule-step-btn" type="button" data-scenario-id="${escapeHtml(scenario.id)}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
@@ -13123,6 +13123,12 @@ function renderFreeTables() {
                         <button class="btn btn-danger icon-action-btn icon-delete-btn free-table-delete-btn" type="button" data-table-id="${table.id}" title="Supprimer ce tableau" aria-label="Supprimer ce tableau">-</button>
                     </div>
 
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn free-table-add-row-btn" type="button" data-table-id="${table.id}" title="Ajouter une ligne" aria-label="Ajouter une ligne">+</button>
+                        </div>
+                    </div>
+
                     <div class="table-wrapper">
                         <table class="free-table">
                             <thead>
@@ -13136,12 +13142,6 @@ function renderFreeTables() {
                             </thead>
                             <tbody>${rowsHtml}</tbody>
                         </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn free-table-add-row-btn" type="button" data-table-id="${table.id}" title="Ajouter une ligne" aria-label="Ajouter une ligne">+</button>
-                        </div>
                     </div>
                 </section>
             `;
@@ -13493,6 +13493,12 @@ function renderMigrationPlans() {
                         <button class="btn btn-danger icon-action-btn icon-delete-btn migration-delete-plan-btn" type="button" data-plan-id="${plan.id}" title="Supprimer ce plan" aria-label="Supprimer ce plan">-</button>
                     </div>
 
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn migration-add-row-btn" type="button" data-plan-id="${plan.id}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+                        </div>
+                    </div>
+
                     <div class="table-wrapper">
                         <table class="migration-table">
                             <thead>
@@ -13518,12 +13524,6 @@ function renderMigrationPlans() {
                             </thead>
                             <tbody>${rowsHtml}</tbody>
                         </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn migration-add-row-btn" type="button" data-plan-id="${plan.id}" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
-                        </div>
                     </div>
                 </section>
             `;

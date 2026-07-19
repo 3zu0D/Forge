@@ -54,6 +54,14 @@
                     <h2>Catégorie</h2>
                 </div>
 
+                <div class="table-actions table-actions-top">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-decision-category-btn" type="button" title="Ajouter une catégorie" aria-label="Ajouter une catégorie">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-decision-categories-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="reset-decision-btn" type="button">Réinitialiser</button>
+                </div>
+
                 <div class="table-wrapper">
                     <table class="decision-categories-table">
                         <thead>
@@ -95,14 +103,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-
-                <div class="table-actions">
-                    <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="add-decision-category-btn" type="button" title="Ajouter une catégorie" aria-label="Ajouter une catégorie">+</button>
-                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-decision-categories-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                    </div>
-                    <button class="btn btn-danger btn-reset" id="reset-decision-btn" type="button">Réinitialiser</button>
                 </div>
 
                 <p class="decision-hint" id="decision-weight-sum">Somme des poids : 0%</p>

@@ -5,6 +5,7 @@ const VMSIZING_ACTIVE_PROFILE_KEY = "forge_existant_active_profile_id_v1";
 
 const VMSIZING_SPEC_FIELDS = [
     "model",
+    "cpuModel",
     "cpuSockets",
     "cpuCoresPerSocket",
     "cpuThreadsPerCore",
@@ -15,7 +16,7 @@ const VMSIZING_SPEC_FIELDS = [
     "volume2Type"
 ];
 
-const VMSIZING_SERVER_TEXT_FIELDS = ["model", "volume1Type", "volume2Type"];
+const VMSIZING_SERVER_TEXT_FIELDS = ["model", "cpuModel", "volume1Type", "volume2Type"];
 const VMSIZING_VM_TEXT_FIELDS = ["name", "role"];
 const VMSIZING_DISK_KEYS = ["disk1", "disk2", "disk3"];
 const VMSIZING_VOLUME_KEYS = ["volume1", "volume2"];
@@ -42,6 +43,7 @@ function vmSizingDefaultProfile(name, colorIndex) {
         id: vmSizingCreateId(),
         name: name || "",
         model: "",
+        cpuModel: "",
         color: predefinedColors[colorIndex % predefinedColors.length],
         cpuSockets: 2,
         cpuCoresPerSocket: 16,
@@ -162,6 +164,7 @@ function vmSizingLoadProfiles() {
         profile.volume1Type = profile.volume1Type === "HDD" ? "HDD" : "SSD";
         profile.volume2Type = profile.volume2Type === "HDD" ? "HDD" : "SSD";
         profile.model = typeof profile.model === "string" ? profile.model : "";
+        profile.cpuModel = typeof profile.cpuModel === "string" ? profile.cpuModel : "";
     });
 
     vmSizingActiveProfileId = localStorage.getItem(VMSIZING_ACTIVE_PROFILE_KEY) || "";

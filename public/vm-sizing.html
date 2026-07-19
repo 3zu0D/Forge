@@ -54,6 +54,14 @@
                     <h2>Serveurs</h2>
                 </div>
 
+                <div class="table-actions table-actions-top">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="vmsizing-new-server-btn" type="button" title="Ajouter un serveur" aria-label="Ajouter un serveur">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="vmsizing-delete-selected-servers-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="vmsizing-reset-servers-btn" type="button">Réinitialiser</button>
+                </div>
+
                 <div class="table-wrapper">
                     <table class="vmsizing-servers-table">
                         <thead>
@@ -69,14 +77,6 @@
                         <tbody id="vmsizing-server-table-body"></tbody>
                     </table>
                 </div>
-
-                <div class="table-actions">
-                    <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="vmsizing-new-server-btn" type="button" title="Ajouter un serveur" aria-label="Ajouter un serveur">+</button>
-                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="vmsizing-delete-selected-servers-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
-                    </div>
-                    <button class="btn btn-danger btn-reset" id="vmsizing-reset-servers-btn" type="button">Réinitialiser</button>
-                </div>
             </aside>
 
             <div class="vmsizing-main-zone">
@@ -90,6 +90,10 @@
                         <label class="vmsizing-field vmsizing-field-wide vmsizing-field-model">
                             <span>Modèle du serveur</span>
                             <input type="text" data-field="model" placeholder="ex. Dell PowerEdge R740" />
+                        </label>
+                        <label class="vmsizing-field vmsizing-field-wide">
+                            <span>Modèle du processeur</span>
+                            <input type="text" data-field="cpuModel" placeholder="ex. Intel® Xeon® E-2356G @ 3.20GHz" />
                         </label>
                         <label class="vmsizing-field">
                             <span>Sockets CPU</span>
@@ -168,6 +172,9 @@
                         <h3>Machines virtuelles</h3>
                         <span id="vmsizing-vm-count">0 VM</span>
                     </div>
+                    <div class="table-actions table-actions-top">
+                        <button class="btn" id="vmsizing-add-vm-btn" type="button">+ Ajouter une VM</button>
+                    </div>
                     <div class="table-wrapper">
                         <table class="vmsizing-vm-table">
                             <thead>
@@ -195,9 +202,6 @@
                             </thead>
                             <tbody id="vmsizing-vm-table-body"></tbody>
                         </table>
-                    </div>
-                    <div class="table-actions">
-                        <button class="btn" id="vmsizing-add-vm-btn" type="button">+ Ajouter une VM</button>
                     </div>
                 </section>
             </div>

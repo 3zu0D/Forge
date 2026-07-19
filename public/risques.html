@@ -55,6 +55,14 @@
                         <h2>Types de risques</h2>
                     </div>
 
+                    <div class="table-actions table-actions-top">
+                        <div class="left-actions">
+                            <button class="btn icon-action-btn icon-add-btn" id="add-risk-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
+                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-risk-types-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
+                        </div>
+                        <button class="btn btn-danger btn-reset" id="reset-risk-types-btn" type="button">Réinitialiser</button>
+                    </div>
+
                     <div class="table-wrapper">
                         <table class="risk-types-table">
                             <thead>
@@ -69,14 +77,6 @@
                             </thead>
                             <tbody id="risk-types-table-body"></tbody>
                         </table>
-                    </div>
-
-                    <div class="table-actions">
-                        <div class="left-actions">
-                            <button class="btn icon-action-btn icon-add-btn" id="add-risk-type-btn" type="button" title="Ajouter un type" aria-label="Ajouter un type">+</button>
-                            <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-risk-types-btn" type="button" disabled title="Supprimer" aria-label="Supprimer">-</button>
-                        </div>
-                        <button class="btn btn-danger btn-reset" id="reset-risk-types-btn" type="button">Réinitialiser</button>
                     </div>
                 </div>
 
@@ -139,6 +139,14 @@
                     <p>Tableau prêt à remplir : probabilité × gravité = criticité automatique, avec mitigation associée.</p>
                 </div>
 
+                <div class="table-actions table-actions-top">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-risk-btn" type="button" title="Ajouter un risque" aria-label="Ajouter un risque">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-risks-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="reset-risks-btn" type="button">Réinitialiser risques</button>
+                </div>
+
                 <div class="table-wrapper risks-table-wrapper">
                     <table class="risks-table">
                         <thead>
@@ -159,14 +167,6 @@
                         </thead>
                         <tbody id="risks-table-body"></tbody>
                     </table>
-                </div>
-
-                <div class="table-actions">
-                    <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="add-risk-btn" type="button" title="Ajouter un risque" aria-label="Ajouter un risque">+</button>
-                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-risks-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                    </div>
-                    <button class="btn btn-danger btn-reset" id="reset-risks-btn" type="button">Réinitialiser risques</button>
                 </div>
             </section>
         </section>

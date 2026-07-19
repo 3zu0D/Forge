@@ -57,6 +57,14 @@
                 <p>Ajoute les objectifs généraux du projet. Ils seront automatiquement disponibles dans l’onglet SMART.</p>
             </div>
 
+            <div class="table-actions table-actions-top">
+                <div class="left-actions">
+                    <button class="btn icon-action-btn icon-add-btn" id="add-redaction-row-btn" type="button" title="Ajouter un objectif" aria-label="Ajouter un objectif">+</button>
+                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-redaction-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                </div>
+                <button class="btn btn-danger btn-reset" id="reset-redaction-btn" type="button">Réinitialiser objectifs</button>
+            </div>
+
             <div class="table-wrapper redaction-table-wrapper">
                 <table class="redaction-table">
                     <thead>
@@ -72,14 +80,6 @@
                     </thead>
                     <tbody id="redaction-table-body"></tbody>
                 </table>
-            </div>
-
-            <div class="table-actions">
-                <div class="left-actions">
-                    <button class="btn icon-action-btn icon-add-btn" id="add-redaction-row-btn" type="button" title="Ajouter un objectif" aria-label="Ajouter un objectif">+</button>
-                    <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-redaction-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                </div>
-                <button class="btn btn-danger btn-reset" id="reset-redaction-btn" type="button">Réinitialiser objectifs</button>
             </div>
         </section>
     </main>

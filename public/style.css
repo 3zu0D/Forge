@@ -411,6 +411,17 @@ th:nth-child(2) {
     border-top: 1px solid var(--border);
 }
 
+/* Barre d'ajout/suppression placée AU-DESSUS du tableau plutôt qu'en dessous :
+   cliquer plusieurs fois de suite sur "+" pour ajouter des lignes ne fait
+   plus fuir le bouton vers le bas à chaque ligne ajoutée, puisque le tableau
+   grandit maintenant sous la barre au lieu de la repousser. Le séparateur
+   passe du haut vers le bas de la barre pour continuer à marquer la
+   frontière avec le tableau. */
+.table-actions.table-actions-top {
+    border-top: none;
+    border-bottom: 1px solid var(--border);
+}
+
 .left-actions {
     display: flex;
     flex-wrap: wrap;

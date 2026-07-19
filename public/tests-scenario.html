@@ -54,6 +54,14 @@
                     <h2>Scénario</h2>
                 </div>
 
+                <div class="table-actions table-actions-top">
+                    <div class="left-actions">
+                        <button class="btn icon-action-btn icon-add-btn" id="add-test-scenario-btn" type="button" title="Ajouter un scénario" aria-label="Ajouter un scénario">+</button>
+                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-test-scenarios-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
+                    </div>
+                    <button class="btn btn-danger btn-reset" id="reset-test-scenarios-btn" type="button">Réinitialiser</button>
+                </div>
+
                 <div class="table-wrapper">
                     <table class="tests-scenario-list-table">
                         <thead>
@@ -68,14 +76,6 @@
                         </thead>
                         <tbody id="test-scenarios-table-body"></tbody>
                     </table>
-                </div>
-
-                <div class="table-actions">
-                    <div class="left-actions">
-                        <button class="btn icon-action-btn icon-add-btn" id="add-test-scenario-btn" type="button" title="Ajouter un scénario" aria-label="Ajouter un scénario">+</button>
-                        <button class="btn btn-danger icon-action-btn icon-delete-btn" id="delete-selected-test-scenarios-btn" type="button" disabled title="Supprimer la sélection" aria-label="Supprimer la sélection">-</button>
-                    </div>
-                    <button class="btn btn-danger btn-reset" id="reset-test-scenarios-btn" type="button">Réinitialiser</button>
                 </div>
 
                 <p class="decision-hint">Écris le contexte général de chaque scénario, puis détaille-le élément par élément à droite.</p>
