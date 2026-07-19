@@ -155,7 +155,7 @@ h2 {
     position: sticky;
     top: var(--formatting-toolbar-top, 132px);
     z-index: 40;
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -268,8 +268,16 @@ h2 {
     box-shadow: 0 8px 20px rgba(251, 59, 95, 0.18);
 }
 
+/* Même plafond + centrage que .topbar/.grouped-page-nav (règle plus bas dans
+   ce fichier) : avant, ce conteneur avait son propre plafond, plus étroit
+   (1300px) — les tableaux flottaient décalés par rapport aux barres de menu
+   au-dessus au lieu d'aligner leurs bords. Le plafond commun est passé de
+   1800px à 2200px (toujours centré, pas de plafond du tout) : sans plafond,
+   la carte s'étirait pleine largeur sur un grand écran alors que le tableau
+   à l'intérieur garde sa largeur fixe, laissant un vide à droite — l'effet
+   recherché était "centré mais plus large", pas "collé aux bords". */
 .container {
-    width: min(1300px, calc(100% - 32px));
+    width: min(2200px, calc(100% - 18px));
     margin: 24px auto;
 }
 
@@ -1005,7 +1013,7 @@ body {
 }
 
 .container {
-    width: min(1500px, calc(100% - 24px));
+    width: min(2200px, calc(100% - 18px));
     margin: 16px auto;
 }
 
@@ -1777,9 +1785,6 @@ footer {
 
 
 /* V19 — RACI */
-.raci-container {
-    width: min(1500px, calc(100% - 24px));
-}
 
 .raci-card .card-header h2 {
     text-align: center;
@@ -2046,7 +2051,7 @@ footer {
 
 /* V23 — GANTT automatique */
 .gantt-container {
-    width: min(1600px, calc(100% - 24px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .gantt-card {
@@ -3281,9 +3286,6 @@ footer {
    à 900px (plus aucun moyen de changer de thème à cette largeur). */
 
 /* KPIs */
-.kpi-container {
-    width: min(1600px, calc(100% - 24px));
-}
 
 .kpi-layout {
     display: grid;
@@ -3688,7 +3690,7 @@ body[data-theme="light"] select option:checked {
 
 /* KPIs : tout visible sans scroll horizontal */
 .kpi-container {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .kpi-layout {
@@ -3795,7 +3797,7 @@ body[data-theme="light"] select option:checked {
 
 /* Analyse des risques */
 .risks-container {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .risks-layout {
@@ -5131,7 +5133,7 @@ body[data-theme="light"] .risk-matrix-layout .risk-axis-dot span {
 
 /* V41 — Objectifs SMART + lien KPIs */
 .smart-container {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .smart-toolbar {
@@ -5207,7 +5209,7 @@ body[data-theme="light"] .smart-toolbar p {
 
 /* V42 — Matrice de compétences */
 .competences-container {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .competences-layout {
@@ -5504,7 +5506,7 @@ body[data-theme="light"] .competence-level-select {
 }
 
 .context-container {
-    width: min(1750px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .context-intro-card {
@@ -5617,7 +5619,7 @@ body[data-theme="light"] .context-textarea::placeholder {
 
 /* V44 — Rédactionnel par onglets + objectifs liés au SMART */
 .redaction-container {
-    width: min(1700px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .redaction-intro {
@@ -5745,7 +5747,7 @@ body[data-theme="light"] .smart-objective-link-select {
 
 /* V45 — Menu plus clair, onglets toujours visibles */
 .grouped-page-nav {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
     margin: 10px auto 0;
     padding: 9px;
     border: 1px solid rgba(103, 232, 249, 0.14);
@@ -5834,7 +5836,7 @@ body[data-theme="light"] .grouped-page-nav .nav-link.active {
 
 /* V45 — Périmètre séparé en colonnes */
 .scope-container {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .scope-overview-card {
@@ -6065,7 +6067,7 @@ body[data-theme="light"] .scope-out-card .scope-column-header {
 
 /* V47 — Tableau de bord global + contrôles de cohérence */
 .dashboard-container {
-    width: min(1800px, calc(100% - 18px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .dashboard-hero-card {
@@ -7071,11 +7073,6 @@ body {
     overflow-x: hidden;
 }
 
-.container {
-    margin-left: auto !important;
-    margin-right: auto !important;
-}
-
 .card,
 .modal,
 .table-wrapper,
@@ -7088,7 +7085,7 @@ body {
 
 /* Barre du haut après déplacement des dates */
 .topbar {
-    width: min(1800px, calc(100% - 18px)) !important;
+    width: min(2200px, calc(100% - 18px)) !important;
     margin: 10px auto 0 !important;
     padding: 8px 16px !important;
     display: grid !important;
@@ -8139,7 +8136,7 @@ body[data-theme="light"] .risk-matrix-grid th {
 
 /* V57 — Menu structuré en blocs, pas en longue ligne */
 .structured-page-nav {
-    width: min(1800px, calc(100% - 18px)) !important;
+    width: min(2200px, calc(100% - 18px)) !important;
     margin: 10px auto 0 !important;
     padding: 10px !important;
     display: grid !important;
@@ -8890,7 +8887,7 @@ body[data-theme="executive"] .capture-exact-mode .card-header h2 {
 
 /* V60 — Correction affichage RACI dans l’application */
 .raci-container {
-    width: min(1800px, calc(100% - 18px)) !important;
+    width: min(2200px, calc(100% - 18px)) !important;
 }
 
 .raci-card {
@@ -9896,7 +9893,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 /* ===== Dimensionnement VM (fonctionnalité Diamond intégrée à Forge) ===== */
 
 .vmsizing-container {
-    width: min(1600px, calc(100% - 20px));
+    width: min(2200px, calc(100% - 18px));
 }
 
 .vmsizing-layout {
@@ -10063,6 +10060,12 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
 .vmsizing-field-wide {
     grid-column: 1 / -1;
+}
+
+/* Ni pleine largeur (rejeté : ça agrandissait toute la carte), ni une seule
+   colonne (trop juste pour un nom de CPU) : 2 colonnes de la grille. */
+.vmsizing-field-cpu-model {
+    grid-column: span 2;
 }
 
 .vmsizing-field-model span {
@@ -12360,4 +12363,258 @@ body[data-theme="executive"] .migration-planning-day-field {
     background: rgba(255, 255, 255, 0.9);
     color: #102033;
     border-color: rgba(15, 23, 42, 0.16);
+}
+
+/* ===== Inventaire de Migration ===== */
+
+.mig-inv-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.mig-inv-locations-card {
+    position: sticky;
+    top: var(--sticky-content-top, 161px);
+}
+
+.mig-inv-locations-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.mig-inv-locations-table .mig-inv-location-col-number {
+    width: 48px;
+}
+
+.mig-inv-location-col-name {
+    width: auto;
+}
+
+.mig-inv-locations-table th,
+.mig-inv-locations-table td {
+    padding: 5px 7px;
+    font-size: 0.76rem;
+}
+
+.mig-inv-location-number-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow:
+        0 0 10px var(--row-glow),
+        0 4px 10px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.mig-inv-locations-zone {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.mig-inv-card-title {
+    margin: 0;
+}
+
+.mig-inv-table-actions {
+    flex-wrap: wrap;
+}
+
+.mig-inv-hint {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.74rem;
+    max-width: 380px;
+    text-align: right;
+}
+
+.mig-inv-empty-card {
+    min-height: 200px;
+    display: grid;
+    place-items: center;
+}
+
+.mig-inv-empty-content {
+    padding: 26px;
+    text-align: center;
+}
+
+.mig-inv-empty-content h2 {
+    margin-bottom: 8px;
+}
+
+.mig-inv-empty-content p {
+    color: var(--muted);
+    margin: 0;
+}
+
+/* Beaucoup de colonnes, chacune réduite au minimum vital (demande d'Olivier) :
+   table-layout fixed + largeurs explicites, le tableau dépasse volontairement
+   la largeur de la carte et défile horizontalement (.table-wrapper a déjà
+   overflow-x:auto en règle générale). Largeur fixée en dur (somme exacte des
+   colonnes ci-dessous : 3 select-col à 46px + les .mig-inv-col-* explicites)
+   plutôt que width:max-content — même bug que sur les Tableaux libres avant
+   leur correction : sous table-layout:fixed, une largeur qui dépend du
+   contenu (max-content) réintroduit une distribution non déterministe entre
+   ligne vide et ligne remplie, au lieu d'honorer les largeurs de colonnes
+   fixées. Colonnes de données élargies (~+15%) pour remplir la carte
+   maintenant que le conteneur global va jusqu'à 2200px ; les 3 colonnes
+   utilitaires (case à cocher, poignée, suppression) restent compactes,
+   inutile de les agrandir. */
+.mig-inv-table {
+    table-layout: fixed;
+    width: 1899px;
+}
+
+.mig-inv-table th,
+.mig-inv-table td {
+    padding: 5px 6px;
+    font-size: 0.70rem;
+}
+
+.mig-inv-table .mig-inv-col-num {
+    width: 26px;
+    text-align: center;
+}
+
+.mig-inv-table .mig-inv-col-name {
+    width: 155px;
+}
+
+.mig-inv-table .mig-inv-col-server {
+    width: 115px;
+}
+
+.mig-inv-table .mig-inv-col-role {
+    width: 196px;
+}
+
+.mig-inv-table .mig-inv-col-os {
+    width: 150px;
+}
+
+.mig-inv-table .mig-inv-col-network {
+    width: 110px;
+}
+
+.mig-inv-table .mig-inv-col-ipv4 {
+    width: 120px;
+}
+
+.mig-inv-table .mig-inv-col-cpu {
+    width: 58px;
+}
+
+.mig-inv-table .mig-inv-col-ram {
+    width: 72px;
+}
+
+.mig-inv-table .mig-inv-col-storage {
+    width: 108px;
+}
+
+.mig-inv-table .mig-inv-col-criticality {
+    width: 140px;
+}
+
+.mig-inv-table .mig-inv-col-treatment {
+    width: 135px;
+}
+
+.mig-inv-table .mig-inv-col-offline {
+    width: 160px;
+}
+
+.mig-inv-input {
+    width: 100%;
+    height: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 5px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #f8fafc;
+    padding: 3px 6px;
+    font: inherit;
+    font-size: 0.70rem;
+}
+
+.mig-inv-input:focus {
+    border-color: rgba(34, 211, 238, 0.52);
+    outline-color: rgba(34, 211, 238, 0.30);
+}
+
+.mig-inv-input-num {
+    text-align: center;
+}
+
+.mig-inv-storage-cell {
+    text-align: center;
+}
+
+/* Statut visuel : même langage rouge/orange/vert que les jauges de
+   Dimensionnement VM (.vmsizing-status-*), déclinés ici en classes dédiées
+   pour ne pas coupler les deux pages entre elles. */
+.mig-inv-status-select.mig-inv-crit-vitale,
+.mig-inv-status-select.mig-inv-offline-inacceptable {
+    color: #fecdd3;
+    border-color: rgba(251, 59, 95, 0.45);
+    background: rgba(251, 59, 95, 0.14);
+}
+
+.mig-inv-status-select.mig-inv-crit-operationnelle,
+.mig-inv-status-select.mig-inv-offline-tolerable,
+.mig-inv-status-select.mig-inv-treatment-migration {
+    color: #fde68a;
+    border-color: rgba(255, 145, 0, 0.45);
+    background: rgba(255, 145, 0, 0.14);
+}
+
+.mig-inv-status-select.mig-inv-crit-secondaire,
+.mig-inv-status-select.mig-inv-offline-acceptable,
+.mig-inv-status-select.mig-inv-treatment-reste-en-place {
+    color: #bbf7d0;
+    border-color: rgba(0, 230, 118, 0.45);
+    background: rgba(0, 230, 118, 0.14);
+}
+
+.mig-inv-status-select.mig-inv-treatment-decommission {
+    color: #fecdd3;
+    border-color: rgba(251, 59, 95, 0.45);
+    background: rgba(251, 59, 95, 0.14);
+}
+
+/* Réseau : couleurs bien pétantes (plus saturées que les statuts ci-dessus,
+   à la demande d'Olivier) pour repérer le réseau d'un coup d'œil. */
+.mig-inv-status-select.mig-inv-network-admin {
+    color: #ff8a95;
+    border-color: rgba(255, 23, 68, 0.55);
+    background: rgba(255, 23, 68, 0.20);
+}
+
+.mig-inv-status-select.mig-inv-network-peda {
+    color: #ffb340;
+    border-color: rgba(255, 145, 0, 0.55);
+    background: rgba(255, 145, 0, 0.20);
+}
+
+.mig-inv-status-select.mig-inv-network-recherche {
+    color: #ffe600;
+    border-color: rgba(255, 214, 0, 0.55);
+    background: rgba(255, 214, 0, 0.20);
+}
+
+@media (max-width: 1050px) {
+    .mig-inv-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .mig-inv-locations-card {
+        position: static;
+    }
 }

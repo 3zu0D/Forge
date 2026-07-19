@@ -13,10 +13,11 @@ const VMSIZING_SPEC_FIELDS = [
     "volume1GB",
     "volume1Type",
     "volume2GB",
-    "volume2Type"
+    "volume2Type",
+    "lieuId"
 ];
 
-const VMSIZING_SERVER_TEXT_FIELDS = ["model", "cpuModel", "volume1Type", "volume2Type"];
+const VMSIZING_SERVER_TEXT_FIELDS = ["model", "cpuModel", "volume1Type", "volume2Type", "lieuId"];
 const VMSIZING_VM_TEXT_FIELDS = ["name", "role"];
 const VMSIZING_DISK_KEYS = ["disk1", "disk2", "disk3"];
 const VMSIZING_VOLUME_KEYS = ["volume1", "volume2"];
@@ -44,6 +45,7 @@ function vmSizingDefaultProfile(name, colorIndex) {
         name: name || "",
         model: "",
         cpuModel: "",
+        lieuId: "",
         color: predefinedColors[colorIndex % predefinedColors.length],
         cpuSockets: 2,
         cpuCoresPerSocket: 16,
@@ -165,6 +167,7 @@ function vmSizingLoadProfiles() {
         profile.volume2Type = profile.volume2Type === "HDD" ? "HDD" : "SSD";
         profile.model = typeof profile.model === "string" ? profile.model : "";
         profile.cpuModel = typeof profile.cpuModel === "string" ? profile.cpuModel : "";
+        profile.lieuId = typeof profile.lieuId === "string" ? profile.lieuId : "";
     });
 
     vmSizingActiveProfileId = localStorage.getItem(VMSIZING_ACTIVE_PROFILE_KEY) || "";
@@ -478,6 +481,12 @@ function vmSizingRenderServerForm() {
     const form = document.getElementById("vmsizing-server-form");
     if (!form) return;
 
+    // N'existe que sur existant.html (pas sur vm-sizing.html — assigner un
+    // lieu de migration à un serveur pas encore déployé n'aurait pas de
+    // sens) : populate avant la boucle générique ci-dessous pour que la
+    // valeur sauvegardée (profile.lieuId) puisse déjà matcher une <option>.
+    vmSizingPopulateLieuOptions();
+
     VMSIZING_SPEC_FIELDS.forEach((field) => {
         const input = form.querySelector(`[data-field="${field}"]`);
         if (input) input.value = profile[field];
@@ -487,6 +496,30 @@ function vmSizingRenderServerForm() {
     // liste à gauche) : plus besoin d'un champ "Nom du serveur" dupliqué ici.
     const title = document.getElementById("vmsizing-server-title");
     if (title) title.textContent = profile.name || "Caractéristiques du serveur";
+}
+
+// Alimente le <select> "Lieu (migration)" avec les lieux déjà créés dans
+// l'Inventaire de Migration (migration-inventaire.js, non chargé sur cette
+// page — lecture directe de sa clé de stockage plutôt qu'un import). Simple
+// affectation, pas de lien permanent : renommer/supprimer un lieu là-bas se
+// répercute ici au prochain rendu, sans script de migration à écrire.
+function vmSizingPopulateLieuOptions() {
+    const select = document.getElementById("vmsizing-lieu-select");
+    if (!select) return;
+
+    let locations = [];
+    try {
+        const parsed = JSON.parse(localStorage.getItem(getProjectKey("migration_inventory_locations")) || "[]");
+        locations = Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        locations = [];
+    }
+
+    const previousValue = select.value;
+    select.innerHTML = `<option value="">— Aucun —</option>` + locations
+        .map((location) => `<option value="${escapeHtml(location.id)}">${escapeHtml(location.name || "Lieu sans nom")}</option>`)
+        .join("");
+    select.value = previousValue;
 }
 
 function vmSizingSetGauge(prefix, dimension) {

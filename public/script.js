@@ -239,6 +239,7 @@ const FORGE_NAV_GROUPS = [
         links: [
             { page: "vmsizing", href: "vm-sizing.html", label: "Dimensionnement VM", icon: "vmsizing" },
             { page: "existant", href: "existant.html", label: "Existant", icon: "vmsizing" },
+            { page: "migration-inventaire", href: "migration-inventaire.html", label: "Inventaire de Migration", icon: "migration" },
             { page: "migration", href: "migration.html", label: "Migration", icon: "migration" },
             { page: "migration-planning", href: "planning.html", label: "Planning", icon: "migration-planning" }
         ]
@@ -4809,6 +4810,15 @@ const COLOR_TARGET_REGISTRY = {
         getItems: () => migrationPlans,
         save: saveMigrationPlans,
         render: renderMigrationPlans
+    },
+    migInvLocation: {
+        badgeClass: "mig-inv-location-number-btn",
+        getItems: () => migInvLocations,
+        save: () => saveMigInvLocations(),
+        render: () => {
+            renderMigInvLocationsTable();
+            renderMigInvCards();
+        }
     },
     // Les deux entrées ci-dessous sont imbriquées dans UN tableau parmi
     // plusieurs (freeTables) : getItems reçoit activeColorTarget en entier
@@ -10720,6 +10730,7 @@ async function bootstrapForgeAsync() {
     if (currentPage === "kpis") initKpisPage();
     if (currentPage === "vmsizing" && typeof initVmSizingPage === "function") initVmSizingPage();
     if (currentPage === "existant" && typeof initExistantPage === "function") initExistantPage();
+    if (currentPage === "migration-inventaire" && typeof initMigInventoryPage === "function") initMigInventoryPage();
     if (currentPage === "decoupage") initDecoupagePage();
     if (currentPage === "decision") initDecisionPage();
     if (currentPage === "atouts-limites") initAtoutsLimitesPage();
