@@ -79,9 +79,14 @@ module.exports = async function ({ page, baseUrl, assert }) {
     assert.equal(copiedStorage1Used, seedDisk1Used, "le stockage copié doit rester en Go, même unité que dans Existant (pas de conversion en To)");
     assert.equal(copiedCpu, seedVcpu, "le CPU copié doit correspondre à la VM Existant");
 
-    // Tous les champs, y compris ceux copiés, doivent être modifiables.
+    // Tous les champs, y compris ceux copiés, doivent être modifiables. Les
+    // champs de stockage réutilisent un balisage différent (.vmsizing-input)
+    // du reste de la ligne (.mig-inv-input) : ils ont eu leur propre bug de
+    // sauvegarde (aucun écouteur dédié), d'où un test explicite ici plutôt
+    // que de supposer qu'ils suivent le même chemin que les autres champs.
     await firstRow.locator('input[data-item-field="name"]').fill("Renommé après copie");
     await firstRow.locator('input[data-item-field="cpu"]').fill("99");
+    await firstRow.locator('input[data-item-field="storage1.used"]').fill("123");
     await firstRow.locator('select[data-item-field="criticality"]').selectOption("vitale");
     await firstRow.locator('select[data-item-field="treatment"]').selectOption("migration");
     await firstRow.locator('select[data-item-field="network"]').selectOption("admin");
@@ -147,8 +152,10 @@ module.exports = async function ({ page, baseUrl, assert }) {
     const firstRowAfterReload = dijonCard.locator(".mig-inv-table tbody tr").first();
     const nameAfterReload = await firstRowAfterReload.locator('input[data-item-field="name"]').inputValue();
     const cpuAfterReload = await firstRowAfterReload.locator('input[data-item-field="cpu"]').inputValue();
+    const storageAfterReload = await firstRowAfterReload.locator('input[data-item-field="storage1.used"]').inputValue();
     assert.equal(nameAfterReload, "Renommé après copie", "le nom modifié sur la ligne copiée doit être persisté");
     assert.equal(cpuAfterReload, "99", "le CPU modifié sur la ligne copiée doit être persisté");
+    assert.equal(storageAfterReload, "123", "le stockage modifié sur la ligne copiée doit être persisté");
 
     // 7) Supprimer une ligne copiée ne doit pas la faire réapparaître.
     await firstRowAfterReload.locator(".row-delete-btn").click();

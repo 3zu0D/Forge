@@ -240,6 +240,7 @@ const FORGE_NAV_GROUPS = [
             { page: "vmsizing", href: "vm-sizing.html", label: "Dimensionnement VM", icon: "vmsizing" },
             { page: "existant", href: "existant.html", label: "Existant", icon: "vmsizing" },
             { page: "migration-inventaire", href: "migration-inventaire.html", label: "Inventaire de Migration", icon: "migration" },
+            { page: "rationalisation", href: "rationalisation.html", label: "Rationalisation", icon: "migration" },
             { page: "migration", href: "migration.html", label: "Migration", icon: "migration" },
             { page: "migration-planning", href: "planning.html", label: "Planning", icon: "migration-planning" }
         ]
@@ -10015,7 +10016,13 @@ function shouldPreferLocalForgeValue(key, localSnapshot, pendingKeys) {
 
     if (pendingKeys.includes(key)) return true;
 
-    if (/_wbs_v1$/.test(key) || /_phases_v1$/.test(key) || /_wbs_settings_v1$/.test(key)) {
+    if (
+        /_wbs_v1$/.test(key) ||
+        /_phases_v1$/.test(key) ||
+        /_wbs_settings_v1$/.test(key) ||
+        /_migration_inventory_locations_v1$/.test(key) ||
+        /_rationalisation_targets_v1$/.test(key)
+    ) {
         return true;
     }
 
@@ -10731,6 +10738,7 @@ async function bootstrapForgeAsync() {
     if (currentPage === "vmsizing" && typeof initVmSizingPage === "function") initVmSizingPage();
     if (currentPage === "existant" && typeof initExistantPage === "function") initExistantPage();
     if (currentPage === "migration-inventaire" && typeof initMigInventoryPage === "function") initMigInventoryPage();
+    if (currentPage === "rationalisation" && typeof initRationalisationPage === "function") initRationalisationPage();
     if (currentPage === "decoupage") initDecoupagePage();
     if (currentPage === "decision") initDecisionPage();
     if (currentPage === "atouts-limites") initAtoutsLimitesPage();

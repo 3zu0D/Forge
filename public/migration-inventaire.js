@@ -26,7 +26,8 @@ const MIG_INV_OFFLINE_OPTIONS = [
 const MIG_INV_NETWORK_OPTIONS = [
     { value: "admin", label: "Admin" },
     { value: "peda", label: "Péda" },
-    { value: "recherche", label: "Recherche" }
+    { value: "recherche", label: "Recherche" },
+    { value: "wifi", label: "WIFI" }
 ];
 
 const MIG_INV_TREATMENT_OPTIONS = [
@@ -615,6 +616,44 @@ function migInvRecolorRows(location) {
     });
 }
 
+// Après suppression d'une ligne : renumérote les N° restants et réaligne
+// data-index sur les cases à cocher (les index se décalent dès qu'une ligne
+// disparaît). La sélection est réinitialisée par sécurité plutôt que remappée
+// — supprimer une ligne pendant qu'on en a d'autres cochées pour une
+// suppression groupée reste un cas rare, mieux vaut vider proprement que
+// risquer un index qui pointe sur la mauvaise ligne.
+function migInvRenumberRows(location) {
+    const tableBody = document.querySelector(`.mig-inv-card[data-location-id="${cssEscape(location.id)}"] tbody`);
+    if (!tableBody) return;
+
+    getMigInvSelectedItemSet(location.id).clear();
+
+    if (location.items.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="18" class="empty-state">Aucune ligne pour le moment.</td></tr>`;
+        return;
+    }
+
+    location.items.forEach((item, index) => {
+        const row = tableBody.querySelector(`tr[data-row-id="${cssEscape(item.id)}"]`);
+        if (!row) return;
+
+        const numCell = row.querySelector(".mig-inv-col-num");
+        if (numCell) numCell.textContent = String(index + 1);
+
+        row.classList.remove("selected-row");
+
+        const checkbox = row.querySelector(".mig-inv-item-checkbox");
+        if (checkbox) {
+            checkbox.dataset.index = String(index);
+            checkbox.checked = false;
+            checkbox.setAttribute("aria-label", `Sélectionner la ligne ${index + 1}`);
+        }
+
+        const dragHandle = row.querySelector(".row-drag-handle");
+        if (dragHandle) dragHandle.setAttribute("aria-label", `Glisser pour réorganiser la ligne ${index + 1}`);
+    });
+}
+
 function bindMigInvCardEvents() {
     document.querySelectorAll(".mig-inv-add-item-btn").forEach((button) => {
         button.addEventListener("click", () => {
@@ -645,11 +684,21 @@ function bindMigInvCardEvents() {
             if (!confirmation) return;
 
             const idsToRemove = location.items.filter((_, index) => selectedSet.has(index)).map((item) => item.id);
-            idsToRemove.forEach((itemId) => migInvRemoveItem(location, itemId));
+            const tableBody = document.querySelector(`.mig-inv-card[data-location-id="${cssEscape(locationId)}"] tbody`);
+            idsToRemove.forEach((itemId) => {
+                migInvRemoveItem(location, itemId);
+                tableBody?.querySelector(`tr[data-row-id="${cssEscape(itemId)}"]`)?.remove();
+            });
             selectedSet.clear();
 
             saveMigInvLocations();
-            renderMigInvCards();
+
+            // Mise à jour ciblée, même principe que la suppression d'une
+            // seule ligne : pas de renderMigInvCards() pour ne pas faire
+            // sauter la page.
+            migInvRenumberRows(location);
+            migInvRecolorRows(location);
+            button.disabled = true;
         });
     });
 
@@ -683,7 +732,16 @@ function bindMigInvCardEvents() {
 
             migInvRemoveItem(location, button.dataset.rowId);
             saveMigInvLocations();
-            renderMigInvCards();
+
+            // Mise à jour ciblée (pas de renderMigInvCards()) : même principe
+            // que pour les cases à cocher/menus déroulants — reconstruire
+            // tout le tableau à chaque suppression faisait sauter la page.
+            button.closest("tr")?.remove();
+            migInvRenumberRows(location);
+            migInvRecolorRows(location);
+
+            const deleteButton = document.querySelector(`.mig-inv-delete-items-btn[data-location-id="${cssEscape(location.id)}"]`);
+            if (deleteButton) deleteButton.disabled = true;
         });
     });
 
@@ -730,6 +788,22 @@ function bindMigInvCardEvents() {
                     migInvRecolorRows(location);
                 }
             }
+        });
+    });
+
+    // Les champs de stockage réutilisent le balisage/style de VM Sizing
+    // (.vmsizing-disk-input) plutôt que .mig-inv-input, donc ils ont besoin
+    // de leur propre écouteur : sinon rien ne les sauvegarde jamais (bug
+    // rapporté par Olivier — les colonnes stockage ne gardaient aucune
+    // saisie, y compris sur les lignes ajoutées à la main).
+    document.querySelectorAll(".mig-inv-card .vmsizing-disk-input").forEach((input) => {
+        input.addEventListener("input", (event) => {
+            const location = migInvGetLocation(event.target.dataset.locationId);
+            const item = location?.items.find((row) => row.id === event.target.dataset.rowId);
+            if (!item) return;
+
+            migInvSetItemField(item, event.target.dataset.itemField, event.target.value, true);
+            saveMigInvLocations();
         });
     });
 

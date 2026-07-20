@@ -12609,6 +12609,12 @@ body[data-theme="executive"] .migration-planning-day-field {
     background: rgba(255, 214, 0, 0.20);
 }
 
+.mig-inv-status-select.mig-inv-network-wifi {
+    color: #c4ccd6;
+    border-color: rgba(100, 116, 139, 0.55);
+    background: rgba(100, 116, 139, 0.20);
+}
+
 @media (max-width: 1050px) {
     .mig-inv-layout {
         grid-template-columns: 1fr;
@@ -12617,4 +12623,170 @@ body[data-theme="executive"] .migration-planning-day-field {
     .mig-inv-locations-card {
         position: static;
     }
+}
+
+/* ===== Rationalisation : miroir lecture seule + cible éditable ===== */
+
+.rationalisation-hint {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.rationalisation-card-title {
+    margin: 0;
+}
+
+/* La carte s'ajuste à la largeur réelle du tableau plutôt que d'étirer le
+   fond de carte jusqu'au bord du conteneur global (jusqu'à 2200px) : sinon
+   ça laisse un grand pan vide à droite dès que la table (1240px) est plus
+   étroite que le conteneur. */
+.rationalisation-card {
+    width: fit-content;
+    max-width: 100%;
+}
+
+.rationalisation-empty-card {
+    min-height: 200px;
+    display: grid;
+    place-items: center;
+}
+
+/* Table de 13 colonnes (N°/Nom/Serveur + 5 État actuel + 5 Cible), largeur
+   déterministe pour la même raison qu'ailleurs dans l'app (table-layout:fixed
+   + width dépendant du contenu = colonnes qui dansent selon les lignes) :
+   38 + 180 + 160 + 2×(68 + 80 + 3×160) = 1634px. Le <colgroup> (voir
+   rationalisation.js) fige la largeur de chacune des 13 colonnes
+   explicitement : sans lui, la ligne "État actuel"/"Cible" (2 cellules à
+   colspan=5, sans largeur propre) et la ligne CPU/RAM/Stockage (10 cellules
+   normales) pouvaient être mesurées différemment par le navigateur, laissant
+   le bandeau État actuel plus court que ses colonnes réelles. */
+.rationalisation-table {
+    table-layout: fixed;
+    width: 1634px;
+}
+
+.rationalisation-table th,
+.rationalisation-table td {
+    padding: 8px 8px;
+    font-size: 0.86rem;
+}
+
+.rationalisation-table .rationalisation-col-num {
+    width: 38px;
+    text-align: center;
+}
+
+.rationalisation-table .rationalisation-col-name {
+    width: 180px;
+}
+
+.rationalisation-table .rationalisation-col-server {
+    width: 160px;
+}
+
+.rationalisation-table .rationalisation-col-cpu {
+    width: 68px;
+}
+
+.rationalisation-table .rationalisation-col-ram {
+    width: 80px;
+}
+
+.rationalisation-table .rationalisation-col-storage {
+    width: 160px;
+}
+
+.rationalisation-table .vmsizing-disk-header-sub {
+    font-size: 0.68rem;
+}
+
+.rationalisation-table .vmsizing-input {
+    height: 32px;
+    font-size: 0.92rem;
+}
+
+.rationalisation-table .vmsizing-disk-input {
+    font-size: 0.82rem;
+}
+
+.rationalisation-readonly-cell {
+    color: var(--muted);
+}
+
+/* Valeurs numériques "État actuel" habillées comme de petits champs (même
+   hauteur/coins arrondis que les champs Cible juste à côté), pour que les
+   deux moitiés du tableau se répondent visuellement au lieu que l'État
+   actuel ait l'air posé au hasard, sans aucune structure, à côté de la
+   Cible bien encadrée. */
+.rationalisation-readonly-chip {
+    display: inline-flex;
+    min-width: 26px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: rgba(148, 163, 184, 0.07);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    font-size: 0.92rem;
+}
+
+.rationalisation-readonly-cell .vmsizing-disk-mini-row {
+    justify-content: center;
+}
+
+.rationalisation-readonly-cell .vmsizing-disk-mini-row .rationalisation-readonly-chip {
+    flex: 1;
+}
+
+.rationalisation-num-cell {
+    text-align: center;
+}
+
+.rationalisation-group-header {
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.92rem;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    padding: 10px !important;
+    vertical-align: middle;
+}
+
+.rationalisation-group-current {
+    background: linear-gradient(135deg, rgba(51, 65, 85, 0.92), rgba(71, 85, 105, 0.78));
+}
+
+.rationalisation-group-target {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(3, 105, 161, 0.78));
+}
+
+/* Séparation visuelle entre "État actuel" et "Cible" sur la colonne CPU
+   cible (première colonne du 2e groupe). */
+.rationalisation-target-divider {
+    border-left: 2px solid rgba(148, 163, 184, 0.35);
+}
+
+/* "Util."/"Dispo." abrégés pour tenir dans des colonnes de 115px (voir
+   .vmsizing-disk-header-sub span, flex:1 sans min-width:0 par défaut :
+   sur une colonne trop étroite le texte déborde sur la colonne suivante
+   au lieu de rétrécir). */
+.rationalisation-table .vmsizing-disk-header-sub span {
+    min-width: 0;
+}
+
+/* Ligne survolée : léger éclaircissement, par-dessus la teinte lieu/serveur
+   déjà posée en box-shadow inline sur chaque <tr>. */
+.rationalisation-table tbody tr:hover {
+    filter: brightness(1.14);
+}
+
+/* Cible non encore remplie (voir rationDisplayValue dans rationalisation.js) :
+   placeholder discret plutôt qu'un "0" plein contraste partout. */
+.rationalisation-table input::placeholder {
+    color: var(--muted);
+    opacity: 0.55;
 }
