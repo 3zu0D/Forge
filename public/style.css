@@ -156,14 +156,15 @@ h2 {
     top: var(--formatting-toolbar-top, 132px);
     z-index: 40;
     width: min(2200px, calc(100% - 18px));
-    margin: 0 auto;
+    margin: 10px auto 0;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
     padding: 8px 16px;
     background: var(--card);
-    border-bottom: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
 }
 
 .formatting-toolbar-sep {
@@ -7095,6 +7096,7 @@ body {
     width: min(2200px, calc(100% - 18px)) !important;
     margin: 10px auto 0 !important;
     padding: 8px 16px !important;
+    border-radius: 10px !important;
     display: grid !important;
     grid-template-columns: auto auto minmax(160px, 260px) auto auto auto auto !important;
     justify-content: flex-start !important;
@@ -12684,16 +12686,19 @@ body[data-theme="executive"] .migration-planning-day-field {
 /* Table de 14 colonnes (N°/Nom/Serveur + 5 État actuel + 5 Cible +
    Justification), largeur déterministe pour la même raison qu'ailleurs dans
    l'app (table-layout:fixed + width dépendant du contenu = colonnes qui
-   dansent selon les lignes) : 38 + 180 + 160 + 2×(68 + 80 + 3×160) + 260 =
-   1894px. Le <colgroup> (voir rationalisation.js) fige la largeur de chacune
+   dansent selon les lignes) : 38 + 180 + 160 + 2×(68 + 80 + 3×160) + 561 =
+   2195px. Le <colgroup> (voir rationalisation.js) fige la largeur de chacune
    des 14 colonnes explicitement : sans lui, la ligne "État actuel"/"Cible"
    (2 cellules à colspan=5, sans largeur propre) et la ligne CPU/RAM/Stockage
    (10 cellules normales) pouvaient être mesurées différemment par le
    navigateur, laissant le bandeau État actuel plus court que ses colonnes
-   réelles. */
+   réelles. La colonne Justification absorbe toute la largeur restante
+   (561px, calculé pour que la carte, en width:fit-content, atteigne
+   exactement le même bord droit que .topbar/.grouped-page-nav — demande
+   d'Olivier) plutôt que d'être une largeur arbitraire. */
 .rationalisation-table {
     table-layout: fixed;
-    width: 1894px;
+    width: 2195px;
 }
 
 /* Centre tous les intitulés de colonnes (demande d'Olivier) : le double
@@ -12735,7 +12740,7 @@ body[data-theme="executive"] .migration-planning-day-field {
 }
 
 .rationalisation-table .rationalisation-col-justification {
-    width: 260px;
+    width: 561px;
 }
 
 .rationalisation-table .vmsizing-disk-header-sub {
@@ -12761,6 +12766,17 @@ body[data-theme="executive"] .migration-planning-day-field {
     border-color: rgba(255, 23, 68, 0.65) !important;
     background: rgba(255, 23, 68, 0.20) !important;
     color: #fecdd3 !important;
+}
+
+/* #fecdd3 (rose pâle) est illisible sur un fond clair : Light et Executive
+   report ont un fond blanc/gris pâle, donc un texte foncé plutôt que le
+   pastel pensé pour le fond sombre par défaut (même bug déjà rencontré sur
+   les badges Actif/Inactif). Orange dusk garde le texte clair : son fond
+   reste sombre comme le thème par défaut. */
+body[data-theme="light"] .rationalisation-diff,
+body[data-theme="executive"] .rationalisation-diff {
+    background: rgba(225, 29, 72, 0.16) !important;
+    color: #9f1239 !important;
 }
 
 .rationalisation-readonly-cell {
