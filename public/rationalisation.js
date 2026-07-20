@@ -31,7 +31,8 @@ function rationDefaultTarget() {
         ramGB: 0,
         storage1: { used: 0, available: 0 },
         storage2: { used: 0, available: 0 },
-        storage3: { used: 0, available: 0 }
+        storage3: { used: 0, available: 0 },
+        justification: ""
     };
 }
 
@@ -39,7 +40,8 @@ function rationNormalizeTarget(raw) {
     const source = raw && typeof raw === "object" ? raw : {};
     const normalized = {
         cpu: parseNumber(source.cpu),
-        ramGB: parseNumber(source.ramGB)
+        ramGB: parseNumber(source.ramGB),
+        justification: typeof source.justification === "string" ? source.justification : ""
     };
 
     ["storage1", "storage2", "storage3"].forEach((key) => {
@@ -114,6 +116,18 @@ function rationDisplayValue(value) {
     return value ? value : "";
 }
 
+// Une cible non encore remplie (0/vide, voir rationDisplayValue) n'est pas
+// "différente" de l'état actuel — seule une valeur explicitement saisie qui
+// ne correspond pas à l'état actuel doit ressortir en rouge (demande
+// d'Olivier : rendre visibles les écarts entre les deux tableaux jumeaux).
+function rationIsDifferent(targetValue, currentValue) {
+    return Boolean(targetValue) && targetValue !== currentValue;
+}
+
+function rationDiffClass(targetValue, currentValue) {
+    return rationIsDifferent(targetValue, currentValue) ? " rationalisation-diff" : "";
+}
+
 function rationBuildReadonlyStorageCell(storage) {
     const safe = storage && typeof storage === "object" ? storage : { used: 0, available: 0 };
     return `
@@ -126,13 +140,17 @@ function rationBuildReadonlyStorageCell(storage) {
     `;
 }
 
-function rationBuildEditableStorageCell(itemId, target, storageKey) {
+function rationBuildEditableStorageCell(itemId, target, storageKey, currentStorage) {
     const storage = target[storageKey];
+    const current = currentStorage && typeof currentStorage === "object" ? currentStorage : { used: 0, available: 0 };
+    const usedCurrent = parseNumber(current.used);
+    const availableCurrent = parseNumber(current.available);
+
     return `
         <td>
             <div class="vmsizing-disk-mini-row">
-                <input type="number" class="vmsizing-input vmsizing-input-num vmsizing-disk-input" min="0" placeholder="0" title="Utilisé (Go)" aria-label="${storageKey} cible utilisé (Go)" data-item-id="${escapeHtml(itemId)}" data-target-field="${storageKey}.used" value="${rationDisplayValue(storage.used)}" />
-                <input type="number" class="vmsizing-input vmsizing-input-num vmsizing-disk-input" min="0" placeholder="0" title="Disponible (Go)" aria-label="${storageKey} cible disponible (Go)" data-item-id="${escapeHtml(itemId)}" data-target-field="${storageKey}.available" value="${rationDisplayValue(storage.available)}" />
+                <input type="number" class="vmsizing-input vmsizing-input-num vmsizing-disk-input${rationDiffClass(storage.used, usedCurrent)}" min="0" placeholder="0" title="Utilisé (Go)" aria-label="${storageKey} cible utilisé (Go)" data-item-id="${escapeHtml(itemId)}" data-target-field="${storageKey}.used" data-current-value="${usedCurrent}" value="${rationDisplayValue(storage.used)}" />
+                <input type="number" class="vmsizing-input vmsizing-input-num vmsizing-disk-input${rationDiffClass(storage.available, availableCurrent)}" min="0" placeholder="0" title="Disponible (Go)" aria-label="${storageKey} cible disponible (Go)" data-item-id="${escapeHtml(itemId)}" data-target-field="${storageKey}.available" data-current-value="${availableCurrent}" value="${rationDisplayValue(storage.available)}" />
             </div>
         </td>
     `;
@@ -140,6 +158,8 @@ function rationBuildEditableStorageCell(itemId, target, storageKey) {
 
 function rationBuildRowHtml(item, index, color, serverVariantIndex) {
     const target = rationGetTarget(item.id);
+    const cpuCurrent = parseNumber(item.cpu);
+    const ramCurrent = parseNumber(item.ramGB);
 
     return `
         <tr data-row-id="${escapeHtml(item.id)}" style="box-shadow: ${rationRowBoxShadow(color, serverVariantIndex)};">
@@ -151,11 +171,12 @@ function rationBuildRowHtml(item, index, color, serverVariantIndex) {
             ${rationBuildReadonlyStorageCell(item.storage1)}
             ${rationBuildReadonlyStorageCell(item.storage2)}
             ${rationBuildReadonlyStorageCell(item.storage3)}
-            <td class="rationalisation-target-divider"><input type="number" class="vmsizing-input vmsizing-input-num" min="0" placeholder="0" aria-label="CPU cible" data-item-id="${escapeHtml(item.id)}" data-target-field="cpu" value="${rationDisplayValue(target.cpu)}" /></td>
-            <td><input type="number" class="vmsizing-input vmsizing-input-num" min="0" placeholder="0" aria-label="RAM cible (Go)" data-item-id="${escapeHtml(item.id)}" data-target-field="ramGB" value="${rationDisplayValue(target.ramGB)}" /></td>
-            ${rationBuildEditableStorageCell(item.id, target, "storage1")}
-            ${rationBuildEditableStorageCell(item.id, target, "storage2")}
-            ${rationBuildEditableStorageCell(item.id, target, "storage3")}
+            <td class="rationalisation-target-divider"><input type="number" class="vmsizing-input vmsizing-input-num${rationDiffClass(target.cpu, cpuCurrent)}" min="0" placeholder="0" aria-label="CPU cible" data-item-id="${escapeHtml(item.id)}" data-target-field="cpu" data-current-value="${cpuCurrent}" value="${rationDisplayValue(target.cpu)}" /></td>
+            <td><input type="number" class="vmsizing-input vmsizing-input-num${rationDiffClass(target.ramGB, ramCurrent)}" min="0" placeholder="0" aria-label="RAM cible (Go)" data-item-id="${escapeHtml(item.id)}" data-target-field="ramGB" data-current-value="${ramCurrent}" value="${rationDisplayValue(target.ramGB)}" /></td>
+            ${rationBuildEditableStorageCell(item.id, target, "storage1", item.storage1)}
+            ${rationBuildEditableStorageCell(item.id, target, "storage2", item.storage2)}
+            ${rationBuildEditableStorageCell(item.id, target, "storage3", item.storage3)}
+            <td><input type="text" class="vmsizing-input rationalisation-justification-input" placeholder="—" aria-label="Justification" data-item-id="${escapeHtml(item.id)}" data-target-field="justification" value="${escapeHtml(target.justification || "")}" /></td>
         </tr>
     `;
 }
@@ -170,7 +191,7 @@ function rationBuildTableHtml(location, color) {
             const serverVariantIndex = serverKey ? serverVariants.get(serverKey) : undefined;
             return rationBuildRowHtml(item, index, color, serverVariantIndex);
         }).join("")
-        : `<tr><td colspan="13" class="empty-state">Aucune ligne pour le moment — ajoute des VM à ce lieu dans Inventaire de Migration.</td></tr>`;
+        : `<tr><td colspan="14" class="empty-state">Aucune ligne pour le moment — ajoute des VM à ce lieu dans Inventaire de Migration.</td></tr>`;
 
     return `
         <table class="rationalisation-table">
@@ -188,6 +209,7 @@ function rationBuildTableHtml(location, color) {
                 <col class="rationalisation-col-storage" />
                 <col class="rationalisation-col-storage" />
                 <col class="rationalisation-col-storage" />
+                <col class="rationalisation-col-justification" />
             </colgroup>
             <thead>
                 <tr>
@@ -196,6 +218,7 @@ function rationBuildTableHtml(location, color) {
                     <th class="rationalisation-col-server" rowspan="2">Serveur physique</th>
                     <th colspan="5" class="rationalisation-group-header rationalisation-group-current">État actuel</th>
                     <th colspan="5" class="rationalisation-group-header rationalisation-group-target">Cible</th>
+                    <th class="rationalisation-col-justification" rowspan="2">Justification</th>
                 </tr>
                 <tr>
                     <th class="rationalisation-col-cpu">CPU</th>
@@ -277,7 +300,9 @@ function bindRationalisationEvents() {
             const field = event.target.dataset.targetField;
             const target = rationGetTarget(itemId);
 
-            if (field.includes(".")) {
+            if (field === "justification") {
+                target.justification = event.target.value;
+            } else if (field.includes(".")) {
                 const [group, subField] = field.split(".");
                 target[group][subField] = parseNumber(event.target.value);
             } else {
@@ -285,6 +310,16 @@ function bindRationalisationEvents() {
             }
 
             rationSaveTargets();
+
+            // Écart visible en direct pendant la saisie, pas seulement au
+            // rendu initial (voir rationIsDifferent) — seuls les champs
+            // numériques ont un jumeau "état actuel" à comparer (repéré par
+            // data-current-value) ; la justification n'en a pas.
+            if (event.target.dataset.currentValue !== undefined) {
+                const currentValue = parseNumber(event.target.dataset.currentValue);
+                const newValue = parseNumber(event.target.value);
+                event.target.classList.toggle("rationalisation-diff", rationIsDifferent(newValue, currentValue));
+            }
         });
     });
 }

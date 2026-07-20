@@ -955,7 +955,7 @@ footer {
     border-radius: 5px;
     background: rgba(15, 23, 42, 0.72);
     color: #f8fafc;
-    padding: 4px 6px;
+    padding: 6px 6px 2px;
     font: inherit;
     font-size: 0.82rem;
     outline: 1px solid transparent;
@@ -1342,7 +1342,7 @@ body[data-theme="executive"] .wbs-phase-count {
 .wbs-progress-input,
 .wbs-date-input {
     height: 24px;
-    padding: 2px 3px;
+    padding: 4px 3px 0;
     font-size: 0.66rem;
 }
 
@@ -2577,6 +2577,13 @@ body[data-theme="executive"] .gantt-period-type-select {
 
 html {
     scroll-behavior: smooth;
+    /* Base 16px -> 18px (+12.5%) : agrandit tout le texte de l'app d'un
+       coup, car les 304 tailles de police de la feuille sont TOUTES en rem
+       (aucune en px) — demande d'Olivier ("les caractères sont un peu
+       trop petits"), sans toucher aux largeurs de colonnes/tableaux, qui
+       restent en pixels fixes (voir la doctrine table-layout:fixed +
+       largeur déterministe déjà en place). */
+    font-size: 18px;
 }
 
 body {
@@ -8356,17 +8363,22 @@ body[data-theme="executive"] {
     --card: #ffffff;
     --card-2: #f8fafc;
     --text: #111827;
-    --muted: #5b677a;
-    --border: rgba(30, 41, 59, 0.14);
-    --border-strong: rgba(30, 41, 59, 0.28);
-    --primary: #1e3a5f;
-    --primary-2: #2f5d8c;
-    --glow: rgba(30, 58, 95, 0.10);
-    --glow-cyan: rgba(47, 93, 140, 0.08);
+    --muted: #4b5768;
+    /* Accentué à la demande d'Olivier (thème trop plat/lavé) : bordures et
+       lueur plus marquées, bleu marine plus saturé — ces variables sont
+       reprises par de nombreux styles génériques (boutons, focus, glows...)
+       dans tout le reste de la feuille, donc ce changement se répercute
+       largement au-delà des règles propres au thème Executive report. */
+    --border: rgba(30, 41, 59, 0.22);
+    --border-strong: rgba(30, 41, 59, 0.40);
+    --primary: #15396c;
+    --primary-2: #1f66a8;
+    --glow: rgba(21, 57, 108, 0.18);
+    --glow-cyan: rgba(31, 102, 168, 0.16);
     background:
-        radial-gradient(circle at top left, rgba(47, 93, 140, 0.10), transparent 34rem),
-        radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.06), transparent 34rem),
-        linear-gradient(180deg, #f4f7fb 0%, #e7edf5 100%);
+        radial-gradient(circle at top left, rgba(31, 102, 168, 0.16), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.09), transparent 34rem),
+        linear-gradient(180deg, #f4f7fb 0%, #e3eaf3 100%);
     color: #111827;
 }
 
@@ -8376,22 +8388,22 @@ body[data-theme="executive"] .grouped-page-nav,
 body[data-theme="executive"] .structured-page-nav {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 247, 251, 0.94));
-    border: 1px solid rgba(30, 41, 59, 0.13);
+    border: 1px solid rgba(30, 41, 59, 0.20);
     box-shadow:
-        0 12px 32px rgba(15, 23, 42, 0.08),
+        0 12px 32px rgba(15, 23, 42, 0.13),
         inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 body[data-theme="executive"] .topbar {
-    border-top: 4px solid #1e3a5f;
+    border-top: 4px solid #15396c;
 }
 
 body[data-theme="executive"] .nav-group-links {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
-    border-color: rgba(30, 41, 59, 0.13);
+    border-color: rgba(30, 41, 59, 0.20);
     box-shadow:
-        0 16px 38px rgba(15, 23, 42, 0.08),
+        0 16px 38px rgba(15, 23, 42, 0.13),
         inset 0 1px 0 rgba(255, 255, 255, 0.88);
     color: #111827;
 }
@@ -8408,9 +8420,9 @@ body[data-theme="executive"] .risk-matrix-panel,
 body[data-theme="executive"] .competence-level-legend {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 250, 252, 0.96));
-    border-color: rgba(30, 41, 59, 0.13);
+    border-color: rgba(30, 41, 59, 0.20);
     box-shadow:
-        0 16px 38px rgba(15, 23, 42, 0.08),
+        0 16px 38px rgba(15, 23, 42, 0.13),
         inset 0 1px 0 rgba(255, 255, 255, 0.88);
     color: #111827;
 }
@@ -10006,7 +10018,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
     border-radius: 5px;
     background: rgba(15, 23, 42, 0.78);
     color: #f8fafc;
-    padding: 5px 8px;
+    padding: 7px 8px 3px;
     font: inherit;
     font-size: 0.80rem;
     font-weight: 700;
@@ -10085,7 +10097,13 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
     border-radius: 5px;
     background: rgba(15, 23, 42, 0.72);
     color: #f8fafc;
-    padding: 3px 6px;
+    /* Padding asymétrique volontaire (pas 3px/3px) : le texte d'un <input>
+       à hauteur fixe ne se centre pas via line-height dans Chromium/Edge
+       (testé, aucun effet) — seul un padding-top plus grand que le
+       padding-bottom compense le biais vers le haut du texte pour cette
+       police/cette taille (vérifié visuellement en zoomant fortement).
+       Demande d'Olivier : texte visiblement pas centré dans les captures. */
+    padding: 5px 6px 1px;
     font: inherit;
     font-size: 0.80rem;
 }
@@ -10165,7 +10183,7 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
 .vmsizing-disk-input {
     min-width: 0;
-    padding: 3px 2px;
+    padding: 5px 2px 1px;
     font-size: 0.70rem;
 }
 
@@ -10526,7 +10544,7 @@ body[data-theme="light"] .vmsizing-server-name-cell {
     border-radius: 6px;
     background: rgba(15, 23, 42, 0.78);
     color: #f8fafc;
-    padding: 4px 6px;
+    padding: 6px 6px 2px;
     font: inherit;
     font-size: 0.76rem;
     font-weight: 800;
@@ -11087,6 +11105,15 @@ body[data-theme="executive"] .gantt-periods-count {
     font: inherit;
     font-size: 0.76rem;
     font-weight: 600;
+}
+
+/* <select> se centre correctement tout seul (testé) : seuls les <input>
+   ont besoin du padding asymétrique (voir le commentaire sur
+   .vmsizing-input pour le pourquoi). */
+.budget-price-input,
+.budget-quantity-input,
+.budget-carbon-input {
+    padding: 4px 6px 0;
 }
 
 .budget-nature-select:focus,
@@ -12539,7 +12566,9 @@ body[data-theme="executive"] .migration-planning-day-field {
     border-radius: 5px;
     background: rgba(15, 23, 42, 0.72);
     color: #f8fafc;
-    padding: 3px 6px;
+    /* Padding asymétrique volontaire : voir le commentaire sur
+       .vmsizing-input (même correction de centrage vertical). */
+    padding: 5px 6px 1px;
     font: inherit;
     font-size: 0.70rem;
 }
@@ -12652,18 +12681,26 @@ body[data-theme="executive"] .migration-planning-day-field {
     place-items: center;
 }
 
-/* Table de 13 colonnes (N°/Nom/Serveur + 5 État actuel + 5 Cible), largeur
-   déterministe pour la même raison qu'ailleurs dans l'app (table-layout:fixed
-   + width dépendant du contenu = colonnes qui dansent selon les lignes) :
-   38 + 180 + 160 + 2×(68 + 80 + 3×160) = 1634px. Le <colgroup> (voir
-   rationalisation.js) fige la largeur de chacune des 13 colonnes
-   explicitement : sans lui, la ligne "État actuel"/"Cible" (2 cellules à
-   colspan=5, sans largeur propre) et la ligne CPU/RAM/Stockage (10 cellules
-   normales) pouvaient être mesurées différemment par le navigateur, laissant
-   le bandeau État actuel plus court que ses colonnes réelles. */
+/* Table de 14 colonnes (N°/Nom/Serveur + 5 État actuel + 5 Cible +
+   Justification), largeur déterministe pour la même raison qu'ailleurs dans
+   l'app (table-layout:fixed + width dépendant du contenu = colonnes qui
+   dansent selon les lignes) : 38 + 180 + 160 + 2×(68 + 80 + 3×160) + 260 =
+   1894px. Le <colgroup> (voir rationalisation.js) fige la largeur de chacune
+   des 14 colonnes explicitement : sans lui, la ligne "État actuel"/"Cible"
+   (2 cellules à colspan=5, sans largeur propre) et la ligne CPU/RAM/Stockage
+   (10 cellules normales) pouvaient être mesurées différemment par le
+   navigateur, laissant le bandeau État actuel plus court que ses colonnes
+   réelles. */
 .rationalisation-table {
     table-layout: fixed;
-    width: 1634px;
+    width: 1894px;
+}
+
+/* Centre tous les intitulés de colonnes (demande d'Olivier) : le double
+   class nécessaire pour battre .table-wrapper table th qui force
+   text-align:left !important en style global (voir plus haut). */
+.rationalisation-card .rationalisation-table th {
+    text-align: center !important;
 }
 
 .rationalisation-table th,
@@ -12697,6 +12734,10 @@ body[data-theme="executive"] .migration-planning-day-field {
     width: 160px;
 }
 
+.rationalisation-table .rationalisation-col-justification {
+    width: 260px;
+}
+
 .rationalisation-table .vmsizing-disk-header-sub {
     font-size: 0.68rem;
 }
@@ -12708,6 +12749,18 @@ body[data-theme="executive"] .migration-planning-day-field {
 
 .rationalisation-table .vmsizing-disk-input {
     font-size: 0.82rem;
+}
+
+/* Un champ Cible dont la valeur saisie diffère de son jumeau État actuel
+   ressort en rouge (demande d'Olivier — tableaux "jumeaux", donc les écarts
+   volontaires doivent sauter aux yeux). Un 0/vide (cible pas encore
+   réfléchie, voir rationDisplayValue côté JS) n'est jamais considéré comme
+   un écart. Même famille de rouge que les statuts "vitale"/critiques déjà
+   utilisés dans Inventaire de Migration, pour rester cohérent. */
+.rationalisation-diff {
+    border-color: rgba(255, 23, 68, 0.65) !important;
+    background: rgba(255, 23, 68, 0.20) !important;
+    color: #fecdd3 !important;
 }
 
 .rationalisation-readonly-cell {

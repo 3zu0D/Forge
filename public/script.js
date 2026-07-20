@@ -8275,6 +8275,78 @@ function lockAutoLayoutTableColumnWidths(measurements) {
     return () => restores.forEach((restore) => restore());
 }
 
+// box-shadow peut porter plusieurs couches séparées par des virgules, mais
+// une couleur rgba(...)/rgb(...) contient elle-même des virgules : on ne
+// coupe que sur les virgules HORS parenthèses pour ne pas couper une couleur
+// en deux morceaux.
+function splitBoxShadowLayers(value) {
+    const layers = [];
+    let depth = 0;
+    let current = "";
+
+    for (const char of value) {
+        if (char === "(") depth += 1;
+        if (char === ")") depth -= 1;
+
+        if (char === "," && depth === 0) {
+            layers.push(current.trim());
+            current = "";
+        } else {
+            current += char;
+        }
+    }
+
+    if (current.trim()) layers.push(current.trim());
+    return layers;
+}
+
+// html2canvas ne rend quasiment pas un box-shadow inset à très grand rayon
+// (inset 0 0 0 9999px <couleur>), la technique utilisée partout dans l'app
+// (VM Sizing, Existant, Inventaire de Migration, Rationalisation, Tableaux
+// libres) pour teindre toute une ligne/cellule tout en battant de façon
+// fiable les box-shadow de rayures de lignes posés par certains thèmes
+// (tbody tr:nth-child(even), voir style.css) — sur la capture, ce
+// remplissage ne ressort quasiment pas (juste un fin liseré au bord). Fix :
+// juste avant la capture, convertit temporairement la couche "9999px" de
+// chaque box-shadow inline en un vrai background-color (que html2canvas
+// rend très bien), en gardant intactes d'éventuelles autres couches (ex. le
+// liseré du haut sur .free-table-cell) — restauré après capture, la page
+// réelle ne change jamais.
+function convertCaptureFillBoxShadows(card) {
+    const elements = Array.from(card.querySelectorAll('[style*="9999px"]'));
+    if ((card.getAttribute("style") || "").includes("9999px")) elements.push(card);
+
+    const entries = elements.map((element) => ({
+        element,
+        previousBoxShadow: element.style.boxShadow,
+        previousBackgroundColor: element.style.backgroundColor
+    }));
+
+    entries.forEach(({ element, previousBoxShadow }) => {
+        const layers = splitBoxShadowLayers(previousBoxShadow);
+        const fillLayer = layers.find((layer) => layer.includes("9999px"));
+        if (!fillLayer) return;
+
+        // Pas d'ancrage de position ($) : une fois relue via element.style
+        // (plutôt que l'attribut HTML brut), la couleur peut se retrouver
+        // n'importe où dans la couche selon la sérialisation du navigateur
+        // (ex. Chromium/Edge la remettent en tête : "rgba(...) 0px 0px 0px
+        // 9999px inset" au lieu de l'ordre écrit à la main).
+        const colorMatch = /rgba?\([^)]+\)|#[0-9a-fA-F]{3,8}/.exec(fillLayer);
+        if (colorMatch) element.style.backgroundColor = colorMatch[0];
+
+        const keptLayers = layers.filter((layer) => !layer.includes("9999px"));
+        element.style.boxShadow = keptLayers.join(", ");
+    });
+
+    return () => {
+        entries.forEach(({ element, previousBoxShadow, previousBackgroundColor }) => {
+            element.style.boxShadow = previousBoxShadow;
+            element.style.backgroundColor = previousBackgroundColor;
+        });
+    };
+}
+
 function prepareCardForExactCapture(card) {
     // Doit être mesuré AVANT d'ajouter .capture-exact-mode : cette classe
     // (règle sans rapport direct, tout en bas du fichier) fait retomber les
@@ -8353,6 +8425,8 @@ function prepareCardForExactCapture(card) {
         card.style.width = `${Math.ceil(card.scrollWidth)}px`;
     }
 
+    const restoreCaptureFillBoxShadows = convertCaptureFillBoxShadows(card);
+
     const selectedRows = Array.from(card.querySelectorAll(".selected-row"));
     selectedRows.forEach((row) => row.classList.add("capture-row-was-selected"));
     selectedRows.forEach((row) => row.classList.remove("selected-row"));
@@ -8368,6 +8442,7 @@ function prepareCardForExactCapture(card) {
     return () => {
         restoreColumnWidths();
         restoreStructuralColumns();
+        restoreCaptureFillBoxShadows();
 
         card.className = previousClasses;
         if (previousDataset) {

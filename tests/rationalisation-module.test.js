@@ -82,6 +82,31 @@ module.exports = async function ({ page, baseUrl, assert }) {
     await rationRow.locator('input[data-target-field="storage1.available"]').fill("200");
     await page.waitForTimeout(150);
 
+    // 6) Un écart entre Cible et État actuel (4 ≠ 8, 16 ≠ 32, 50 ≠ 100)
+    // doit ressortir en rouge, en direct pendant la saisie.
+    assert.ok(await targetCpuInput.evaluate((el) => el.classList.contains("rationalisation-diff")), "un CPU cible différent de l'actuel doit être surligné en rouge");
+    assert.ok(await targetRamInput.evaluate((el) => el.classList.contains("rationalisation-diff")), "une RAM cible différente de l'actuelle doit être surlignée en rouge");
+    const storageUsedInput = rationRow.locator('input[data-target-field="storage1.used"]');
+    assert.ok(await storageUsedInput.evaluate((el) => el.classList.contains("rationalisation-diff")), "un stockage cible différent de l'actuel doit être surligné en rouge");
+
+    // Remettre la même valeur que l'actuel doit retirer le surlignage.
+    await targetCpuInput.fill("8");
+    await page.waitForTimeout(100);
+    assert.ok(!(await targetCpuInput.evaluate((el) => el.classList.contains("rationalisation-diff"))), "un CPU cible identique à l'actuel ne doit plus être surligné");
+    await targetCpuInput.fill("4");
+    await page.waitForTimeout(100);
+
+    // 7) Colonne Justification : champ libre par ligne, jamais surligné
+    // (pas de jumeau côté État actuel).
+    const justificationInput = rationRow.locator('input[data-target-field="justification"]');
+    await justificationInput.fill("Test de justification");
+    await page.waitForTimeout(150);
+    assert.ok(!(await justificationInput.evaluate((el) => el.classList.contains("rationalisation-diff"))), "la justification ne doit jamais être surlignée (pas de jumeau à comparer)");
+
+    // 8) Les intitulés de colonnes doivent être centrés.
+    const headerAlign = await lyonCard.locator(".rationalisation-table thead th").first().evaluate((el) => getComputedStyle(el).textAlign);
+    assert.equal(headerAlign, "center", "les intitulés de colonnes doivent être centrés");
+
     await page.reload({ waitUntil: "load" });
     await page.waitForSelector("#rationalisation-list");
     await page.waitForTimeout(300);
@@ -91,6 +116,11 @@ module.exports = async function ({ page, baseUrl, assert }) {
     assert.equal(await rationRowAfterReload.locator('input[data-target-field="cpu"]').inputValue(), "4", "la cible CPU doit être persistée après rechargement");
     assert.equal(await rationRowAfterReload.locator('input[data-target-field="ramGB"]').inputValue(), "16", "la cible RAM doit être persistée après rechargement");
     assert.equal(await rationRowAfterReload.locator('input[data-target-field="storage1.used"]').inputValue(), "50", "la cible stockage utilisé doit être persistée après rechargement");
+    assert.equal(await rationRowAfterReload.locator('input[data-target-field="justification"]').inputValue(), "Test de justification", "la justification doit être persistée après rechargement");
+    assert.ok(
+        await rationRowAfterReload.locator('input[data-target-field="cpu"]').evaluate((el) => el.classList.contains("rationalisation-diff")),
+        "le surlignage rouge doit être recalculé au rendu après rechargement, pas seulement en direct"
+    );
 
     await gotoPage(page, baseUrl, "migration-inventaire.html", "#mig-inv-locations-zone");
     await page.waitForTimeout(300);
