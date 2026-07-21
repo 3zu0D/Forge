@@ -34,7 +34,7 @@ module.exports = async function ({ page, baseUrl, assert }) {
     const columnHeaders = (await page.locator(".migration-table thead tr").nth(1).locator("th").allTextContents()).map((t) => t.trim());
     assert.deepEqual(
         columnHeaders,
-        ["", "Étape / Opération", "Temporalité", "Temps estimé", "Quand", "Crit.", "Risque", "Possibilité", "Prévention", "Correction", ""],
+        ["", "Étape / Opération", "Temporalité", "Temps estimé", "Quand", "Crit.", "Risque", "Probabilité", "Prévention", "Correction", ""],
         "les 9 colonnes réelles doivent être présentes, sans la colonne Test"
     );
 

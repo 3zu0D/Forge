@@ -116,7 +116,7 @@ module.exports = async function ({ page, baseUrl, assert }) {
     // L'option "Week-end" doit être disponible et colorer la case en conséquence.
     const row2Select = page.locator("tr[data-row-id]").nth(1).locator(".migration-planning-day-select");
     const optionLabels = (await row2Select.first().locator("option").allTextContents()).map((t) => t.trim());
-    assert.ok(optionLabels.includes("Week-end"), "l'option Week-end doit être proposée dans la liste des jours");
+    assert.ok(optionLabels.includes("WEEK-END"), "l'option Week-end doit être proposée dans la liste des jours");
 
     await row2Select.first().selectOption("weekend");
     await page.waitForTimeout(150);

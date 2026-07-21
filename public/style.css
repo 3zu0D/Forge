@@ -10015,7 +10015,13 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
 
 .vmsizing-field input {
     width: 100%;
-    height: 30px;
+    /* 30px ne laissait plus assez de place pour le texte une fois le
+       padding asymétrique (voir plus bas) combiné à l'agrandissement
+       global de la police (18px racine) : la ligne de texte dépassait la
+       zone de contenu et se retrouvait rognée en haut. 32px redonne la
+       même hauteur de contenu que .vmsizing-input (20px), déjà vérifiée
+       visuellement correcte. */
+    height: 32px;
     border: 1px solid rgba(148, 163, 184, 0.18);
     border-radius: 5px;
     background: rgba(15, 23, 42, 0.78);
@@ -10212,19 +10218,36 @@ body[data-theme="executive"] .gantt-v76-date-cell.period-formation {
     cursor: pointer;
 }
 
+/* Fond bien opaque (pas juste une légère teinte à 0.18) : sinon la couleur
+   de fond de la ligne (teinte du serveur, voir rowTint) transparaît à
+   travers le badge et le mélange (ex. "Actif" qui vire à l'orange/rouge sur
+   une ligne teintée ambre) — et sur un thème clair, un texte pastel sur un
+   fond quasi transparent devient carrément illisible. Un fond presque plein
+   règle les deux problèmes d'un coup, quel que soit le thème ou la couleur
+   de la ligne en dessous. */
 .vmsizing-active-toggle strong {
     min-width: 40px;
     padding: 2px 5px;
     border-radius: 5px;
-    background: rgba(255, 23, 68, 0.18);
+    background: rgba(255, 23, 68, 0.85);
     color: #fecdd3;
     text-align: center;
     font-size: 0.62rem;
     font-weight: 900;
 }
 
-.vmsizing-active-toggle input:checked ~ strong {
-    background: rgba(0, 230, 118, 0.18);
+/* Le sélecteur input:checked ~ strong marche très bien à l'écran, mais
+   html2canvas (bouton 📸) n'évalue pas correctement ce combinateur de
+   frères + pseudo-classe pendant la capture : le badge "Actif" ressortait
+   en rouge sur l'image téléchargée alors qu'il était bien vert à l'écran.
+   .vmsizing-active-toggle-on (posée par JS selon vm.active, voir
+   buildVmTableRow) est calculée à l'avance plutôt que dépendre d'un état
+   CSS live — html2canvas la lit sans problème puisque c'est une classe
+   normale, pas un pseudo-sélecteur. On garde le sélecteur :checked en plus,
+   inoffensif et redondant à l'écran. */
+.vmsizing-active-toggle input:checked ~ strong,
+.vmsizing-active-toggle strong.vmsizing-active-toggle-on {
+    background: rgba(0, 230, 118, 0.85);
     color: #bbf7d0;
 }
 
@@ -12154,16 +12177,18 @@ body[data-theme="executive"] .column-drag-handle {
     box-shadow: 0 0 8px var(--row-glow);
 }
 
+/* table-layout:fixed + <colgroup> (voir script.js) + largeur déterministe :
+   même doctrine que .mig-inv-table/.rationalisation-table. Largeur totale =
+   somme exacte des colonnes ci-dessous (dernier ajustement d'Olivier :
+   Risque +15%, Prévention/Correction -10% — laisse volontairement un peu
+   plus de blanc au bord droit, pas redistribué ailleurs puisque ce tour-ci
+   ne portait que sur ces 3 colonnes) :
+   2×36 (select) + 420 (step) + 161 (timing) + 85 (duration) + 85 (when)
+   + 75 (crit) + 196 (risk) + 130 (probability) + 284 (prevention)
+   + 284 (correction) = 1792px. */
 .migration-table {
-    /* width:100% pour occuper toute la carte (comme .decision-options-table).
-       Cette table a un en-tête à deux niveaux (bandeau Migration/Rollback à
-       colspan + colonnes réelles) — même piège capture 📸 que la matrice de
-       décision pondérée (html2canvas ne réplique pas l'étirement des
-       colonnes) si on ne verrouillait pas les largeurs. C'est géré via
-       CAPTURE_COLUMN_LOCK_SELECTOR (script.js), qui mesure la dernière ligne
-       du thead pour ignorer le bandeau à colspan. */
-    width: 100%;
-    min-width: 720px;
+    table-layout: fixed;
+    width: 1792px;
 }
 
 .migration-table th,
@@ -12173,14 +12198,57 @@ body[data-theme="executive"] .column-drag-handle {
     line-height: 1.25;
 }
 
+.migration-table .migration-col-select {
+    width: 36px;
+}
+
+.migration-table .migration-col-step {
+    width: 420px;
+}
+
+.migration-table .migration-col-timing {
+    width: 161px;
+}
+
+.migration-table .migration-col-duration {
+    width: 85px;
+}
+
+.migration-table .migration-col-when {
+    width: 85px;
+}
+
+.migration-table .migration-col-crit {
+    width: 75px;
+}
+
+.migration-table .migration-col-risk {
+    width: 196px;
+}
+
+.migration-table .migration-col-probability {
+    width: 130px;
+}
+
+.migration-table .migration-col-prevention {
+    width: 284px;
+}
+
+.migration-table .migration-col-correction {
+    width: 284px;
+}
+
+/* Teinte de ligne (toute la <tr>, voir buildMigrationRowHtml dans script.js)
+   à la couleur choisie pour le plan — plus de bandeau bleu/orange fixe : les
+   deux bandeaux "Migration"/"Rollback" et le corps du tableau reprennent
+   maintenant la couleur du plan (posée en style inline, calculée avec
+   hexToRgba), donc rien de fixe à déclarer ici. */
 .migration-group-header {
     text-align: center;
     font-weight: 900;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     font-size: 0.76rem;
-    color: #ffffff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     padding: 8px !important;
     vertical-align: middle;
 }
@@ -12190,14 +12258,6 @@ body[data-theme="executive"] .column-drag-handle {
     height: 15px;
     margin-right: 6px;
     vertical-align: -3px;
-}
-
-.migration-group-migration {
-    background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(3, 105, 161, 0.78));
-}
-
-.migration-group-rollback {
-    background: linear-gradient(135deg, rgba(124, 45, 18, 0.88), rgba(194, 65, 12, 0.72));
 }
 
 .migration-cell {
@@ -12320,16 +12380,19 @@ body[data-theme="executive"] .migration-crit-select {
     font-style: italic;
 }
 
+/* Doublées (67px -> 134px) à la demande d'Olivier : même en majuscule/gras,
+   les libellés longs ("Journée entière", "Après-midi") ne rentraient pas
+   dans la case fermée avant ce doublement. */
 .migration-planning-day-header {
-    width: 58px;
-    min-width: 58px;
+    width: 134px;
+    min-width: 134px;
     text-align: center;
     border-left: 1px solid var(--border);
 }
 
 .migration-planning-day-cell {
-    width: 58px;
-    min-width: 58px;
+    width: 134px;
+    min-width: 134px;
     text-align: center;
     padding: 3px 4px !important;
     border-left: 1px solid var(--border);
@@ -12345,13 +12408,20 @@ body[data-theme="executive"] .migration-crit-select {
     );
 }
 
+/* Étirées de 15 % (26px -> 30px) et police agrandie de 20 % (0.62rem ->
+   0.74rem) à la demande d'Olivier, les cases jour étant peu lisibles. Pas de
+   text-transform ici : les libellés (MIGRATION_DAY_PARTS, script.js) sont
+   déjà écrits en majuscule dans le HTML — html2canvas n'applique pas
+   fiablement text-transform sur un <select>, la capture 📸 retombait en
+   minuscule malgré un live correct. Case fermée et options partagent donc
+   naturellement la même casse, sans dépendre du rendu CSS. */
 .migration-planning-day-select {
     width: 100%;
-    height: 26px;
+    height: 30px;
     border: 1px solid rgba(148, 163, 184, 0.3);
     border-radius: 5px;
     font: inherit;
-    font-size: 0.62rem;
+    font-size: 0.74rem;
     font-weight: 800;
     text-align: center;
     text-align-last: center;
@@ -12360,22 +12430,17 @@ body[data-theme="executive"] .migration-crit-select {
     cursor: pointer;
 }
 
-.migration-planning-day-cell[data-part="full"] .migration-planning-day-select {
-    background: linear-gradient(135deg, rgba(3, 105, 161, 0.95), rgba(8, 47, 73, 0.92));
+/* Police des options (liste déroulante ouverte) : même agrandissement que
+   la case fermée ci-dessus, pour la lisibilité. */
+.migration-planning-day-select option {
+    font-size: 0.74rem;
+    font-weight: 800;
 }
 
-.migration-planning-day-cell[data-part="morning"] .migration-planning-day-select {
-    background: linear-gradient(to right, rgba(3, 105, 161, 0.95) 0%, rgba(3, 105, 161, 0.95) 33%, rgba(15, 23, 42, 0.35) 33%, rgba(15, 23, 42, 0.35) 100%);
-}
-
-.migration-planning-day-cell[data-part="afternoon"] .migration-planning-day-select {
-    background: linear-gradient(to right, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.35) 33%, rgba(3, 105, 161, 0.95) 33%, rgba(3, 105, 161, 0.95) 66%, rgba(15, 23, 42, 0.35) 66%, rgba(15, 23, 42, 0.35) 100%);
-}
-
-.migration-planning-day-cell[data-part="evening"] .migration-planning-day-select {
-    background: linear-gradient(to right, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0.35) 66%, rgba(3, 105, 161, 0.95) 66%, rgba(3, 105, 161, 0.95) 100%);
-}
-
+/* full/morning/afternoon/evening : couleur posée en style inline (voir
+   migrationDayPartBackground dans script.js), à la couleur du plan plutôt
+   qu'un bleu fixe — demande d'Olivier. Weekend reste un motif gris hachuré
+   neutre, sans rapport avec le plan. */
 .migration-planning-day-cell[data-part="weekend"] .migration-planning-day-select {
     background: repeating-linear-gradient(
         135deg,
@@ -12384,7 +12449,7 @@ body[data-theme="executive"] .migration-crit-select {
         rgba(71, 85, 105, 0.7) 5px,
         rgba(71, 85, 105, 0.7) 10px
     );
-    font-size: 0.56rem;
+    font-size: 0.67rem;
 }
 
 body[data-theme="light"] .migration-planning-day-field,
@@ -12830,6 +12895,32 @@ body[data-theme="executive"] .rationalisation-diff {
 }
 
 .rationalisation-group-target {
+    background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(3, 105, 161, 0.78));
+}
+
+/* Light et Executive report posent un fond clair générique sur TOUS les
+   <th> à l'intérieur de .table-wrapper table (body[data-theme="..."]
+   .table-wrapper table th — 1 attribut + 1 classe + 3 types, plus
+   spécifique qu'une simple classe) qui écrasait entièrement le dégradé
+   foncé + texte blanc de ces bandeaux "État actuel"/"Cible" — les deux
+   ressortaient dans la même couleur bleu pâle générique, sans distinction,
+   et le texte blanc aurait basculé en bleu marine sur fond déjà foncé
+   (illisible). Il faut .rationalisation-table dans le sélecteur (pas juste
+   body[data-theme] .rationalisation-group-current) pour dépasser cette
+   spécificité-là précisément. */
+body[data-theme="light"] .rationalisation-table .rationalisation-group-header,
+body[data-theme="executive"] .rationalisation-table .rationalisation-group-header {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+body[data-theme="light"] .rationalisation-table .rationalisation-group-current,
+body[data-theme="executive"] .rationalisation-table .rationalisation-group-current {
+    background: linear-gradient(135deg, rgba(51, 65, 85, 0.92), rgba(71, 85, 105, 0.78));
+}
+
+body[data-theme="light"] .rationalisation-table .rationalisation-group-target,
+body[data-theme="executive"] .rationalisation-table .rationalisation-group-target {
     background: linear-gradient(135deg, rgba(8, 47, 73, 0.92), rgba(3, 105, 161, 0.78));
 }
 

@@ -589,7 +589,7 @@ function vmSizingRenderVmTable() {
             <td>
                 <label class="vmsizing-active-toggle">
                     <input type="checkbox" data-vm-field="active" ${vm.active !== false ? "checked" : ""} aria-label="VM active" />
-                    <strong>${vm.active !== false ? "Actif" : "Inactif"}</strong>
+                    <strong class="${vm.active !== false ? "vmsizing-active-toggle-on" : ""}">${vm.active !== false ? "Actif" : "Inactif"}</strong>
                 </label>
             </td>
             <td><input type="number" class="vmsizing-input vmsizing-input-num" min="1" data-vm-field="vcpu" value="${vm.vcpu}" /></td>

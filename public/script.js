@@ -8232,12 +8232,13 @@ function hideStructuralCaptureColumns(card) {
 // classe (measureAutoLayoutTableColumnWidths, tout en haut de
 // prepareCardForExactCapture), puis seulement les figer une fois la classe et
 // hideStructuralCaptureColumns appliquées (lockAutoLayoutTableColumnWidths).
-// .migration-table a en plus un bandeau Migration/Rollback à colspan au-dessus
-// de sa vraie ligne d'en-têtes (thead à 2 lignes) : on mesure toujours la
-// DERNIÈRE ligne du thead (tr:last-child), qui porte les vraies colonnes —
-// pour un thead à une seule ligne (matrice de décision, tableaux libres),
-// c'est cette même ligne, donc aucun changement de comportement là-bas.
-const CAPTURE_COLUMN_LOCK_SELECTOR = ".decision-options-table, .migration-table, .free-table";
+// .migration-table est passée à table-layout:fixed + <colgroup> propre (même
+// doctrine que .mig-inv-table/.rationalisation-table) : elle n'a plus besoin
+// de ce verrouillage a posteriori, et lui laisser SON PROPRE <colgroup> en
+// plus de celui inséré ici créerait un conflit (deux colgroup sur la même
+// table). Pour un thead à une seule ligne (matrice de décision, tableaux
+// libres), on mesure toujours la dernière ligne du thead (tr:last-child).
+const CAPTURE_COLUMN_LOCK_SELECTOR = ".decision-options-table, .free-table";
 
 function measureAutoLayoutTableColumnWidths(card) {
     const tables = Array.from(card.querySelectorAll(CAPTURE_COLUMN_LOCK_SELECTOR));
@@ -13570,11 +13571,11 @@ function renderMigrationPlans() {
         .map((plan, planIndex) => {
             const color = normalizeColor(plan.color, planIndex);
             const rowsHtml = plan.rows.length
-                ? plan.rows.map((row) => buildMigrationRowHtml(plan.id, row)).join("")
+                ? plan.rows.map((row) => buildMigrationRowHtml(plan.id, row, color)).join("")
                 : `<tr><td colspan="11" class="empty-state">Aucune étape pour le moment.</td></tr>`;
 
             return `
-                <section class="card migration-plan-card" data-plan-id="${plan.id}" style="border-left: 6px solid ${color}; background-image: linear-gradient(${hexToRgba(color, 0.22)}, ${hexToRgba(color, 0.22)});">
+                <section class="card migration-plan-card" data-plan-id="${plan.id}" style="border-left: 6px solid ${color}; background-color: ${hexToRgba(color, 0.22)};">
                     <div class="card-header">
                         <button
                             class="migration-plan-color-btn"
@@ -13595,6 +13596,19 @@ function renderMigrationPlans() {
 
                     <div class="table-wrapper">
                         <table class="migration-table">
+                            <colgroup>
+                                <col class="migration-col-select" />
+                                <col class="migration-col-step" />
+                                <col class="migration-col-timing" />
+                                <col class="migration-col-duration" />
+                                <col class="migration-col-when" />
+                                <col class="migration-col-crit" />
+                                <col class="migration-col-risk" />
+                                <col class="migration-col-probability" />
+                                <col class="migration-col-prevention" />
+                                <col class="migration-col-correction" />
+                                <col class="migration-col-select" />
+                            </colgroup>
                             <thead>
                                 <!-- Les colspan=5/4 ci-dessous doivent rester la somme exacte des
                                      colonnes de chaque groupe sur la ligne du dessous (Étape...Crit. =
@@ -13606,8 +13620,8 @@ function renderMigrationPlans() {
                                      "Migration" plutôt que sur le bon groupe. -->
                                 <tr>
                                     <th class="select-col"></th>
-                                    <th colspan="5" class="migration-group-header migration-group-migration">${navIcon("migration")}Migration</th>
-                                    <th colspan="4" class="migration-group-header migration-group-rollback">${navIcon("migration-rollback")}Rollback</th>
+                                    <th colspan="5" class="migration-group-header" style="background: linear-gradient(135deg, ${hexToRgba(color, 0.92)}, ${hexToRgba(color, 0.72)}); color: #ffffff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);">${navIcon("migration")}Migration</th>
+                                    <th colspan="4" class="migration-group-header" style="background: linear-gradient(135deg, ${hexToRgba(color, 0.68)}, ${hexToRgba(color, 0.48)}); color: #ffffff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);">${navIcon("migration-rollback")}Rollback</th>
                                     <th class="select-col"></th>
                                 </tr>
                                 <tr>
@@ -13618,7 +13632,7 @@ function renderMigrationPlans() {
                                     <th>Quand</th>
                                     <th>Crit.</th>
                                     <th>Risque</th>
-                                    <th>Possibilité</th>
+                                    <th>Probabilité</th>
                                     <th>Prévention</th>
                                     <th>Correction</th>
                                     <th class="select-col"></th>
@@ -13635,15 +13649,22 @@ function renderMigrationPlans() {
     bindMigrationEvents();
 }
 
-function buildMigrationRowHtml(planId, row) {
+function buildMigrationRowHtml(planId, row, color) {
     const criticalityClass = row.criticality ? ` migration-criticality-${row.criticality}` : "";
 
     const editableCell = (field) => `
         <td class="editable migration-cell" contenteditable="true" data-plan-id="${planId}" data-row-id="${row.id}" data-field="${field}" spellcheck="true">${sanitizeRichText(row[field])}</td>
     `;
 
+    // La teinte se pose sur la <tr> (pas sur chaque <td>) : un fond posé sur
+    // un enfant (.migration-crit-cell.migration-criticality-N) prime toujours
+    // sur celui de son parent, quelle que soit la spécificité CSS comparée —
+    // la couleur de criticité reste donc intacte sans avoir à l'exclure
+    // colonne par colonne (bug précédent : un fond posé directement sur les
+    // <td> avait plus de spécificité que .migration-criticality-N et
+    // l'écrasait).
     return `
-        <tr data-row-id="${row.id}" data-plan-id="${planId}">
+        <tr data-row-id="${row.id}" data-plan-id="${planId}" style="background-color: ${hexToRgba(color, 0.06)};">
             <td class="select-col">
                 <button class="row-drag-handle" type="button" title="Glisser pour réorganiser" aria-label="Glisser pour réorganiser l'étape">${dragHandleIconSvg()}</button>
             </td>
@@ -13814,12 +13835,17 @@ if (typeof helpTexts !== "undefined") {
 
 /* V95 — Planning (Gantt automatique par jour/demi-journée, basé sur les étapes de Migration) */
 
+// Libellés déjà en majuscule (plutôt qu'un text-transform CSS) : html2canvas
+// n'applique pas fiablement text-transform sur un <select> (élément "replaced"
+// rendu à part), donc la capture 📸 retombait en minuscule alors que l'affichage
+// live était bien en majuscule — même famille de bug que les autres quirks de
+// rendu html2canvas de cette session (voir capture_color_rendering_gotchas).
 const MIGRATION_DAY_PARTS = [
-    { value: "morning", label: "Matin" },
-    { value: "afternoon", label: "Après-midi" },
-    { value: "evening", label: "Soirée" },
-    { value: "full", label: "Journée entière" },
-    { value: "weekend", label: "Week-end" }
+    { value: "morning", label: "MATIN" },
+    { value: "afternoon", label: "APRÈS-MIDI" },
+    { value: "evening", label: "SOIRÉE" },
+    { value: "full", label: "JOURNÉE ENTIÈRE" },
+    { value: "weekend", label: "WEEK-END" }
 ];
 
 const MIGRATION_PLANNING_MAX_DAYS = 60;
@@ -13901,6 +13927,27 @@ function migrationDayPartOptions(selected) {
     ).join("");
 }
 
+// Reprend la couleur du plan (au lieu d'un bleu fixe, demande d'Olivier)
+// pour la portion "occupée" du dégradé de chaque tranche horaire — "weekend"
+// garde son motif gris hachuré neutre (voir CSS), sans rapport avec le plan.
+function migrationDayPartBackground(part, color) {
+    const active = hexToRgba(color, 0.95);
+    const inactive = "rgba(15, 23, 42, 0.35)";
+
+    if (part === "morning") {
+        return `linear-gradient(to right, ${active} 0%, ${active} 33%, ${inactive} 33%, ${inactive} 100%)`;
+    }
+    if (part === "afternoon") {
+        return `linear-gradient(to right, ${inactive} 0%, ${inactive} 33%, ${active} 33%, ${active} 66%, ${inactive} 66%, ${inactive} 100%)`;
+    }
+    if (part === "evening") {
+        return `linear-gradient(to right, ${inactive} 0%, ${inactive} 66%, ${active} 66%, ${active} 100%)`;
+    }
+
+    // "full" (et tout autre cas non prévu) : entièrement occupé.
+    return `linear-gradient(135deg, ${active}, ${hexToRgba(color, 0.92)})`;
+}
+
 function renderMigrationPlanningPlans() {
     const list = document.getElementById("migration-planning-list");
     if (!list) return;
@@ -13913,7 +13960,7 @@ function renderMigrationPlanningPlans() {
     list.innerHTML = migrationPlans
         .map((plan, planIndex) => {
             const color = normalizeColor(plan.color, planIndex);
-            const cardStyle = `border-left: 6px solid ${color}; background-image: linear-gradient(${hexToRgba(color, 0.22)}, ${hexToRgba(color, 0.22)});`;
+            const cardStyle = `border-left: 6px solid ${color}; background-color: ${hexToRgba(color, 0.22)};`;
             const planTitle = `<h2>${sanitizeRichText(plan.name) || "Plan sans nom"}</h2>`;
 
             if (plan.rows.length === 0) {
@@ -13944,9 +13991,10 @@ function renderMigrationPlanningPlans() {
                         }
 
                         const part = planning.days[localIndex];
+                        const selectStyle = part === "weekend" ? "" : ` style="background: ${migrationDayPartBackground(part, color)};"`;
                         return `
                             <td class="migration-planning-day-cell" data-part="${part}">
-                                <select class="migration-planning-day-select" data-row-id="${row.id}" data-day-index="${localIndex}" aria-label="Jour ${i + 1}">
+                                <select class="migration-planning-day-select" data-row-id="${row.id}" data-day-index="${localIndex}" aria-label="Jour ${i + 1}"${selectStyle}>
                                     ${migrationDayPartOptions(part)}
                                 </select>
                             </td>
@@ -13954,7 +14002,7 @@ function renderMigrationPlanningPlans() {
                     }).join("");
 
                     return `
-                        <tr data-row-id="${row.id}">
+                        <tr data-row-id="${row.id}" style="background-color: ${hexToRgba(color, 0.06)};">
                             <td class="migration-planning-task-cell">${sanitizeRichText(row.step) || `<span class="migration-planning-placeholder">Étape sans nom</span>`}</td>
                             <td class="migration-planning-short-cell">
                                 <input type="number" class="migration-planning-day-field migration-planning-startday-input" min="1" step="1" value="${planning.startDay}" data-row-id="${row.id}" data-field="startDay" title="Jour de début (modifiable)" aria-label="Jour de début" />
